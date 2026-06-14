@@ -1,15 +1,10 @@
 import json
 
-
 def load_samples(jsonl_path):
 
     samples = []
 
-    with open(
-        jsonl_path,
-        "r",
-        encoding="utf-8"
-    ) as f:
+    with open(jsonl_path, "r", encoding="utf-8") as f:
 
         for line in f:
 
@@ -24,31 +19,20 @@ def load_samples(jsonl_path):
                         {}
                     )
 
-                    for file in files.values():
+                    for file_name, file_data in files.items():
 
-                        for change in file.get(
-                            "changes",
-                            []
-                        ):
+                        source = file_data.get(
+                            "sourceWithComments",
+                            file_data.get("source", "")
+                        )
 
-                            for code in change.get(
-                                "badparts",
-                                []
-                            ):
+                        if not source.strip():
+                            continue
 
-                                samples.append({
-                                    "code": code,
-                                    "label": 1
-                                })
-
-                            for code in change.get(
-                                "goodparts",
-                                []
-                            ):
-
-                                samples.append({
-                                    "code": code,
-                                    "label": 0
-                                })
+                        samples.append({
+                            "code": source,
+                            "label": 1,
+                            "file": file_name
+                        })
 
     return samples

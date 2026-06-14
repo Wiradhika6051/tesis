@@ -2,10 +2,6 @@ import torch
 
 from torch.utils.data import Dataset
 
-from dataset.graph_builder import (
-    build_token_graph
-)
-
 
 class VulnerabilityDataset(
     Dataset
@@ -14,36 +10,24 @@ class VulnerabilityDataset(
     def __init__(
         self,
         samples,
-        tokenizer,
         vocab,
         max_len=100
     ):
 
         self.samples = samples
-        self.tokenizer = tokenizer
         self.vocab = vocab
         self.max_len = max_len
 
     def __len__(self):
         return len(self.samples)
 
-    def pad(
-        self,
-        token_ids
-    ):
+    def pad(self, ids):
 
-        if len(token_ids) >= self.max_len:
+        if len(ids) > self.max_len:
+            return ids[:self.max_len]
 
-            return token_ids[
-                :self.max_len
-            ]
-
-        return token_ids + (
-            [0] *
-            (
-                self.max_len -
-                len(token_ids)
-            )
+        return ids + [0] * (
+            self.max_len - len(ids)
         )
 
     def __getitem__(
@@ -51,13 +35,14 @@ class VulnerabilityDataset(
         idx
     ):
 
+        from vocab import encode_code
+        from graph_builder import build_token_graph
+
         sample = self.samples[idx]
 
-        token_ids = (
-            self.tokenizer.encode(
-                sample["code"],
-                self.vocab
-            )
+        token_ids = encode_code(
+            sample["code"],
+            self.vocab
         )
 
         token_ids = self.pad(

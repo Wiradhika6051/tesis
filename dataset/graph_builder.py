@@ -21,26 +21,21 @@ def build_token_graph(
         len(token_ids) - 1
     ):
 
-        edges.append(
-            [i, i + 1]
-        )
-
-        edges.append(
-            [i + 1, i]
-        )
+        edges.append([i, i + 1])
+        edges.append([i + 1, i])
 
     if edges:
 
-        edge_index = torch.tensor(
-            edges,
-            dtype=torch.long
-        ).t()
+        edge_index = (
+            torch.tensor(edges)
+            .t()
+            .contiguous()
+        )
 
     else:
 
         edge_index = torch.tensor(
-            [[0], [0]],
-            dtype=torch.long
+            [[0], [0]]
         )
 
     return Data(
