@@ -1,4 +1,4 @@
-from .base import DatasetStrategy
+from tesis.dataset.pruning_strategies.base_strategy import DatasetStrategy
 
 class DiffStrategy(
     DatasetStrategy

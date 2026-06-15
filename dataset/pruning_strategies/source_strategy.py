@@ -17,7 +17,7 @@ class SourceStrategy(DatasetStrategy):
             []
         )
 
-        fixed_source = self.reconstruct_fixed_source(
+        fixed_source = reconstruct_fixed_source(
             source,
             changes
         )
@@ -33,46 +33,45 @@ class SourceStrategy(DatasetStrategy):
             }
         ]
     
-    def reconstruct_fixed_source(self, source, changes):
-        """
-        Reconstruct fixed source code by replacing
-        vulnerable snippets with patched snippets.
-        """
+def reconstruct_fixed_source(source, changes):
+    """
+    Reconstruct fixed source code by replacing
+    vulnerable snippets with patched snippets.
+    """
+    fixed_source = source
 
-        fixed_source = source
+    for change in changes:
     
-        for change in changes:
-        
-            badparts = change.get(
-                "badparts",
-                []
+        badparts = change.get(
+            "badparts",
+            []
+        )
+
+        goodparts = change.get(
+            "goodparts",
+            []
+        )
+
+        pairs = min(
+            len(badparts),
+            len(goodparts)
+        )
+
+        for bad, good in zip(
+            badparts,
+            goodparts
+        ):
+
+            bad = bad.strip()
+            good = good.strip()
+
+            if not bad:
+                continue
+            
+            fixed_source = fixed_source.replace(
+                bad,
+                good,
+                1
             )
-    
-            goodparts = change.get(
-                "goodparts",
-                []
-            )
-    
-            pairs = min(
-                len(badparts),
-                len(goodparts)
-            )
-    
-            for bad, good in zip(
-                badparts,
-                goodparts
-            ):
-    
-                bad = bad.strip()
-                good = good.strip()
-    
-                if not bad:
-                    continue
-                
-                fixed_source = fixed_source.replace(
-                    bad,
-                    good,
-                    1
-                )
-    
-        return fixed_source
+
+    return fixed_source
