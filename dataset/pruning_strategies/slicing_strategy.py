@@ -41,7 +41,7 @@ class SlicingStrategy(
                 snippet = extract_slice(
                     source,
                     bad,
-                    context=5
+                    context=20
                 )
 
                 if snippet:
@@ -59,7 +59,7 @@ class SlicingStrategy(
                 snippet = extract_slice(
                     fixed_source,
                     good,
-                    context=5
+                    context=20
                 )
 
                 if snippet:
