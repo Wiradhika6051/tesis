@@ -1,6 +1,6 @@
 from collections import Counter
 
-from tokenizer import tokenize_python
+from dataset.tokenizer import tokenize_python
 
 
 def build_vocab(
@@ -30,16 +30,30 @@ def build_vocab(
 
     return vocab
 
-
+MAX_LEN = 4096
 def encode_code(
     code,
     vocab
 ):
 
-    return [
+    tokens = tokenize_python(code)
+
+    ids = [
         vocab.get(
             token,
             vocab["<UNK>"]
         )
-        for token in tokenize_python(code)
+        for token in tokens
     ]
+
+    if len(ids) > MAX_LEN:
+
+        ids = ids[:MAX_LEN]
+
+    else:
+
+        ids += [0] * (
+            MAX_LEN - len(ids)
+        )
+
+    return ids
