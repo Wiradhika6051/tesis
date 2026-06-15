@@ -1,0 +1,39 @@
+from .base import DatasetStrategy
+
+class DiffStrategy(
+    DatasetStrategy
+):
+
+    def extract(
+        self,
+        file
+    ):
+
+        samples = []
+
+        for change in file.get(
+            "changes",
+            []
+        ):
+
+            for snippet in change.get(
+                "badparts",
+                []
+            ):
+
+                samples.append({
+                    "code": snippet,
+                    "label": 1
+                })
+
+            for snippet in change.get(
+                "goodparts",
+                []
+            ):
+
+                samples.append({
+                    "code": snippet,
+                    "label": 0
+                })
+
+        return samples

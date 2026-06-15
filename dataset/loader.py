@@ -1,6 +1,6 @@
 import json
 
-def load_samples(jsonl_path):
+def load_samples(jsonl_path, strategy):
 
     samples = []
 
@@ -17,37 +17,7 @@ def load_samples(jsonl_path):
                     files = commit.get("files", {})
 
                     for file in files.values():
-                    
-                        source = file.get(
-                            "sourceWithComments",
-                            file.get("source", "")
-                        )
-
-                        if not source:
-                            continue
-                        
-                        changes = file.get(
-                            "changes",
-                            []
-                        )
-
-                        fixed_source = reconstruct_fixed_source(
-                            source,
-                            changes
-                        )
-
-                        if fixed_source != source:
-                            # positive
-                            samples.append({
-                                "code": source,
-                                "label": 1
-                            })
-    
-                            # negative
-                            samples.append({
-                                "code": fixed_source,
-                                "label": 0
-                            })
+                        samples.extend(strategy.extract(file))
 
     return samples
 
