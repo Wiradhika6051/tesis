@@ -13,26 +13,72 @@ def load_samples(jsonl_path):
             for repo in data.values():
 
                 for commit in repo.values():
+                
+                    files = commit.get("files", {})
 
-                    files = commit.get(
-                        "files",
-                        {}
-                    )
-
-                    for file_name, file_data in files.items():
-
-                        source = file_data.get(
+                    for file in files.values():
+                    
+                        source = file.get(
                             "sourceWithComments",
-                            file_data.get("source", "")
+                            file.get("source", "")
                         )
 
-                        if not source.strip():
+                        if not source:
                             continue
+                        
+                        changes = file.get(
+                            "changes",
+                            []
+                        )
 
-                        samples.append({
-                            "code": source,
-                            "label": 1,
-                            "file": file_name
-                        })
+                        fixed_source = reconstruct_fixed_source(
+                            source,
+                            changes
+                        )
+
+                        if fixed_source != source:
+                            # positive
+                            samples.append({
+                                "code": source,
+                                "label": 1
+                            })
+    
+                            # negative
+                            samples.append({
+                                "code": fixed_source,
+                                "label": 0
+                            })
 
     return samples
+
+def reconstruct_fixed_source(source, changes):
+    """
+    Reconstruct fixed source code by replacing
+    vulnerable snippets with patched snippets.
+    """
+
+    fixed_source = source
+
+    for change in changes:
+
+        badparts = change.get("badparts", [])
+        goodparts = change.get("goodparts", [])
+
+        pairs = min(
+            len(badparts),
+            len(goodparts)
+        )
+
+        for i in range(pairs):
+
+            bad = badparts[i].strip()
+            good = goodparts[i].strip()
+
+            if bad and bad in fixed_source:
+                fixed_source = fixed_source.replace(
+                    bad,
+                    good,
+                    1
+                )
+
+    return fixed_source

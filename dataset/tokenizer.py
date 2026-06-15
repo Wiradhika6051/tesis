@@ -53,3 +53,4 @@ def pad_sequence(seq):
     return seq + (
         [0] * (MAX_LEN - len(seq))
     )
+    

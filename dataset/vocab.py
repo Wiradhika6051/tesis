@@ -1,6 +1,6 @@
 from collections import Counter
 
-from dataset.tokenizer import tokenize_python
+from tesis.dataset.tokenizer import tokenize_python
 
 
 def build_vocab(
