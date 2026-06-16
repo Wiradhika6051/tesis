@@ -3,13 +3,10 @@ from tesis.dataset.pruning_strategies.base_strategy import (
     DatasetStrategy
 )
 
-from tesis.dataset.utils.reconstruct import (
+from tesis.dataset.pruning_strategies.source_strategy import (
     reconstruct_fixed_source
 )
 
-from tesis.dataset.utils.taint import (
-    extract_taint_slice
-)
 
 
 class TaintStrategy(
