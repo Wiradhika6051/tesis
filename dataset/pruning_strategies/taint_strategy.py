@@ -3,6 +3,15 @@ from tesis.dataset.pruning_strategies.base_strategy import (
     DatasetStrategy
 )
 
+from tesis.dataset.utils.reconstruct import (
+    reconstruct_fixed_source
+)
+
+from tesis.dataset.utils.taint import (
+    extract_taint_slice
+)
+
+
 class TaintStrategy(
     DatasetStrategy
 ):
@@ -23,6 +32,14 @@ class TaintStrategy(
         if not source:
             return []
 
+        fixed_source = reconstruct_fixed_source(
+            source,
+            file.get(
+                "changes",
+                []
+            )
+        )
+
         result = []
 
         for change in file.get(
@@ -30,21 +47,50 @@ class TaintStrategy(
             []
         ):
 
-            for badpart in change.get(
+            badparts = change.get(
                 "badparts",
                 []
-            ):
+            )
 
-                taint = extract_taint_slice(
+            goodparts = change.get(
+                "goodparts",
+                []
+            )
+
+            pairs = min(
+                len(badparts),
+                len(goodparts)
+            )
+
+            for i in range(pairs):
+
+                bad = badparts[i]
+                good = goodparts[i]
+
+                # positive
+                vuln_slice = extract_taint_slice(
                     source,
-                    badpart
+                    bad
                 )
 
-                if taint:
+                if vuln_slice:
 
                     result.append({
-                        "code": taint,
+                        "code": vuln_slice,
                         "label": 1
+                    })
+
+                # negative
+                fixed_slice = extract_taint_slice(
+                    fixed_source,
+                    good
+                )
+
+                if fixed_slice:
+
+                    result.append({
+                        "code": fixed_slice,
+                        "label": 0
                     })
 
         return result
