@@ -17,6 +17,6 @@ def load_samples(jsonl_path, strategy):
                     files = commit.get("files", {})
 
                     for file in files.values():
-                        samples.extend(strategy.extract(file,repo))
+                        samples.extend(strategy.extract(file,next(iter(data))))
 
     return samples
