@@ -15,7 +15,8 @@ class TaintStrategy(
 
     def extract(
         self,
-        file
+        file,
+        repo
     ):
 
         source = file.get(
@@ -74,7 +75,8 @@ class TaintStrategy(
 
                     result.append({
                         "code": vuln_slice,
-                        "label": 1
+                        "label": 1,
+                        "repo": repo
                     })
 
                 # negative
@@ -87,7 +89,8 @@ class TaintStrategy(
 
                     result.append({
                         "code": fixed_slice,
-                        "label": 0
+                        "label": 0,
+                        "repo": repo
                     })
 
         return result

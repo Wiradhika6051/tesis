@@ -2,7 +2,7 @@ from tesis.dataset.pruning_strategies.base_strategy import DatasetStrategy
 
 class SourceStrategy(DatasetStrategy):
 
-    def extract(self, file):
+    def extract(self, file, repo):
 
         source = file.get(
             "sourceWithComments",
@@ -25,11 +25,13 @@ class SourceStrategy(DatasetStrategy):
         return [
             {
                 "code": source,
-                "label": 1
+                "label": 1,
+                "repo": repo
             },
             {
                 "code": fixed_source,
-                "label": 0
+                "label": 0,
+                "repo": repo
             }
         ]
     

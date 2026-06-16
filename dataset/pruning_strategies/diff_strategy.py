@@ -6,7 +6,8 @@ class DiffStrategy(
 
     def extract(
         self,
-        file
+        file,
+        repo
     ):
 
         samples = []
@@ -23,7 +24,8 @@ class DiffStrategy(
 
                 samples.append({
                     "code": snippet,
-                    "label": 1
+                    "label": 1,
+                    "repo": repo
                 })
 
             for snippet in change.get(
@@ -33,7 +35,8 @@ class DiffStrategy(
 
                 samples.append({
                     "code": snippet,
-                    "label": 0
+                    "label": 0,
+                    "repo": repo
                 })
 
         return samples
