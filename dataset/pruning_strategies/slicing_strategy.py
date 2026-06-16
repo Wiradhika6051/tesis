@@ -4,6 +4,8 @@ from tesis.dataset.pruning_strategies.source_strategy import reconstruct_fixed_s
 class SlicingStrategy(
     DatasetStrategy
 ):
+    def __init__(self, context_window=20):
+        self.context_window = context_window
 
     def extract(
         self,
@@ -41,7 +43,7 @@ class SlicingStrategy(
                 snippet = extract_slice(
                     source,
                     bad,
-                    context=20
+                    context= self.context_window
                 )
 
                 if snippet:
@@ -59,7 +61,7 @@ class SlicingStrategy(
                 snippet = extract_slice(
                     fixed_source,
                     good,
-                    context=20
+                    context= self.context_window
                 )
 
                 if snippet:
