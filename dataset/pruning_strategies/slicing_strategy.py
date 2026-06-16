@@ -2,7 +2,7 @@ from tesis.dataset.pruning_strategies.base_strategy import DatasetStrategy
 from tesis.dataset.pruning_strategies.source_strategy import reconstruct_fixed_source
 
 
-class TaintStrategy(
+class SlicingStrategy(
     DatasetStrategy
 ):
 
