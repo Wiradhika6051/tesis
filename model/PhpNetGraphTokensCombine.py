@@ -156,7 +156,7 @@ class PhpNetGraphTokensCombine(nn.Module):
         self.embed = nn.Embedding(num_embeddings=5000,
                                   embedding_dim=100)
         self.lstm1 = nn.GRU(input_size=200,
-                            # hidden_size=64,
+                            hidden_size=64,
                             num_layers=3,
                             batch_first=True,
                             bidirectional=True)
