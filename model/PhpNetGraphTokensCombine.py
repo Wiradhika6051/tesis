@@ -139,10 +139,10 @@ class PhpNetGraphTokensCombine(nn.Module):
         )
 
         self.fusion_head = nn.Sequential(
-            nn.Linear(512,256),
+            nn.Linear(1456,512),
             nn.ReLU(),
             nn.Dropout(0.3),
-            nn.Linear(256,2)
+            nn.Linear(512,2)
         )
 
         self.conv1 = GCNConv(100,128)
@@ -155,9 +155,9 @@ class PhpNetGraphTokensCombine(nn.Module):
         #
         self.embed = nn.Embedding(num_embeddings=5000,
                                   embedding_dim=100)
-        self.lstm1 = nn.GRU(input_size=100,
-                            hidden_size=64,
-                            num_layers=2,
+        self.lstm1 = nn.GRU(input_size=200,
+                            # hidden_size=64,
+                            num_layers=3,
                             batch_first=True,
                             bidirectional=True)
 
