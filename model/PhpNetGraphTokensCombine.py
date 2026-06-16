@@ -128,9 +128,9 @@ class PhpNetGraphTokensCombine(nn.Module):
         self.embed1 = nn.Embedding(num_embeddings=5000,
                                   embedding_dim=100)
         self.cfg_head = nn.Sequential(
-            nn.Linear(4000, 1000),
+            nn.Linear(256,128),
             nn.ReLU(),
-            nn.Linear(1000, 2)
+            nn.Linear(128,2)
         )
         self.tok_head = nn.Sequential(
             nn.Linear(1200, 1000),
@@ -139,38 +139,31 @@ class PhpNetGraphTokensCombine(nn.Module):
         )
 
         self.fusion_head = nn.Sequential(
-            nn.Linear(5200, 1000),
+            nn.Linear(512,256),
             nn.ReLU(),
-            nn.Linear(1000, 2)
+            nn.Dropout(0.3),
+            nn.Linear(256,2)
         )
 
-        self.conv1 = GCNConv(100,2000)
-        self.pool1 = EdgePooling(2000)
-        self.conv2 = GCNConv(2000, 4000)
-        self.pool2 = EdgePooling(4000)
-        self.conv3 = GCNConv(4000, 4000)
-        self.pool3 = EdgePooling(4000)
-        self.conv4 = GCNConv(2000, 2000)
-        self.pool4 = EdgePooling(8000)
+        self.conv1 = GCNConv(100,128)
+        self.pool1 = EdgePooling(128)
+        self.conv2 = GCNConv(128, 256)
+        self.pool2 = EdgePooling(256)
+        self.conv3 = GCNConv(256, 256)
+        self.pool3 = EdgePooling(256)
 
         #
         self.embed = nn.Embedding(num_embeddings=5000,
                                   embedding_dim=100)
         self.lstm1 = nn.GRU(input_size=100,
-                            hidden_size=200,
-                            num_layers=3,
+                            hidden_size=64,
+                            num_layers=2,
                             batch_first=True,
                             bidirectional=True)
 
-
-
-        self.lin1 = nn.Linear(5200, 1000)
-        self.lin11 = nn.Linear(1000, 500)
-        self.lin2 = nn.Linear(500, 2)
-        self.lin3 = nn.Linear(200, 100)
-        self.lin4 = nn.Linear(100,2)
-
     def forward(self, cfg_emb, tok_emb):
+        print(cfg_emb.shape)
+        print(tok_emb.shape)
         x = torch.cat([cfg_emb, tok_emb], dim=1)
         return self.fusion_head(x)
 
@@ -197,8 +190,9 @@ class PhpNetGraphTokensCombine(nn.Module):
         # pre_x_len = len(x)
         # x = self.embed1(x).reshape(pre_x_len, -1)
 
-        x = self.embed1(x)      # [N, T, 100]
-        x = x.mean(dim=1)       # [N, 100]
+        # x = self.embed1(x)      # [N, T, 100]
+        # x = x.mean(dim=1)       # [N, 100]
+        x = self.embed1(x.squeeze(-1))
 
     
         x = self.conv1(x, edge_index)
