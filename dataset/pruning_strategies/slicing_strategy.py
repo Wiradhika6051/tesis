@@ -1,11 +1,16 @@
 from tesis.dataset.pruning_strategies.base_strategy import DatasetStrategy
 from tesis.dataset.pruning_strategies.source_strategy import reconstruct_fixed_source
 
-class SlicingStrategy(
+
+class TaintStrategy(
     DatasetStrategy
 ):
-    def __init__(self, context_window=20):
-        self.context_window = context_window
+
+    def __init__(
+        self,
+        context=100
+    ):
+        self.context = context
 
     def extract(
         self,
@@ -14,7 +19,10 @@ class SlicingStrategy(
 
         source = file.get(
             "sourceWithComments",
-            file.get("source", "")
+            file.get(
+                "source",
+                ""
+            )
         )
 
         if not source:
@@ -40,10 +48,10 @@ class SlicingStrategy(
                 []
             ):
 
-                snippet = extract_slice(
+                snippet = extract_token_slice(
                     source,
                     bad,
-                    context= self.context_window
+                    context=self.context
                 )
 
                 if snippet:
@@ -58,10 +66,10 @@ class SlicingStrategy(
                 []
             ):
 
-                snippet = extract_slice(
+                snippet = extract_token_slice(
                     fixed_source,
                     good,
-                    context= self.context_window
+                    context=self.context
                 )
 
                 if snippet:
@@ -74,19 +82,39 @@ class SlicingStrategy(
         return result
 
 
-def extract_slice(
+def extract_token_slice(
     source,
     snippet,
-    context=5
+    context=100
 ):
+    """
+    context = tokens before/after
+    """
 
-    lines = source.splitlines()
+    source_tokens = tokenize_python(
+        source
+    )
 
-    target = snippet.strip()
+    snippet_tokens = tokenize_python(
+        snippet
+    )
 
-    for i, line in enumerate(lines):
+    if not snippet_tokens:
+        return None
 
-        if target in line:
+    target_len = len(
+        snippet_tokens
+    )
+
+    for i in range(
+        len(source_tokens)
+    ):
+
+        if (
+            source_tokens[i:i+target_len]
+            ==
+            snippet_tokens
+        ):
 
             start = max(
                 0,
@@ -94,12 +122,12 @@ def extract_slice(
             )
 
             end = min(
-                len(lines),
-                i + context
+                len(source_tokens),
+                i + target_len + context
             )
 
-            return "\n".join(
-                lines[start:end]
+            return " ".join(
+                source_tokens[start:end]
             )
 
     return None
