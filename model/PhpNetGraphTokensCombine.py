@@ -123,9 +123,9 @@ class PhpNetGraphTokensCombineFull(nn.Module):
         return x    
 
 class PhpNetGraphTokensCombine(nn.Module):
-    def __init__(self):
+    def __init__(self, vocab_size):
         super(PhpNetGraphTokensCombine, self).__init__()
-        self.embed1 = nn.Embedding(num_embeddings=5000,
+        self.embed1 = nn.Embedding(num_embeddings=vocab_size,
                                   embedding_dim=100)
         self.cfg_head = nn.Sequential(
             nn.Linear(256,128),
@@ -139,7 +139,7 @@ class PhpNetGraphTokensCombine(nn.Module):
         )
 
         self.fusion_head = nn.Sequential(
-            nn.Linear(1456,512),
+            nn.Linear(640,512),
             nn.ReLU(),
             nn.Dropout(0.3),
             nn.Linear(512,2)
@@ -153,9 +153,9 @@ class PhpNetGraphTokensCombine(nn.Module):
         self.pool3 = EdgePooling(256)
 
         #
-        self.embed = nn.Embedding(num_embeddings=5000,
+        self.embed = nn.Embedding(num_embeddings=vocab_size,
                                   embedding_dim=100)
-        self.lstm1 = nn.GRU(input_size=200,
+        self.lstm1 = nn.GRU(input_size=100,
                             hidden_size=64,
                             num_layers=3,
                             batch_first=True,
