@@ -200,7 +200,11 @@ class CFGBuilder:
         self,
         source
     ):
-
+    
+        self.nodes = []
+        self.edges = []
+        self.counter = 0
+    
         try:
         
             tree = ast.parse(
