@@ -1,6 +1,6 @@
 import ast
 
-from tesis.dataset.cfg_node import CFGNode
+from tesis.dataset.cfg.cfg_node import CFGNode
 
 class CFGBuilder:
 
