@@ -1,59 +1,121 @@
 from collections import Counter
+import ast
+import re
 
-from tesis.dataset.tokenizer import tokenize_python
+
+SPECIAL_TOKENS = [
+    "<PAD>",
+    "<UNK>"
+]
 
 
-def build_vocab(
-    samples,
-    min_freq=2
+def tokenize_code(
+    code
 ):
+
+    return re.findall(
+        r"[A-Za-z_][A-Za-z0-9_]*|\d+|[^\s]",
+        code
+    )
+
+
+def build_token_vocab(
+    samples,
+    min_freq=1
+):
+    """
+    Build vocab for source code tokens.
+    Used by GRU branch.
+    """
 
     counter = Counter()
 
     for sample in samples:
 
-        counter.update(
-            tokenize_python(
-                sample["code"]
+        source = sample.get(
+            "source",
+            sample.get(
+                "code",
+                ""
             )
         )
+
+        counter.update(
+            tokenize_code(
+                source
+            )
+        )
+
+    vocab = {
+        token: idx
+        for idx, token in enumerate(
+            SPECIAL_TOKENS
+        )
+    }
+
+    for token, count in counter.items():
+
+        if count >= min_freq:
+
+            if token not in vocab:
+
+                vocab[token] = len(
+                    vocab
+                )
+
+    return vocab
+
+def build_cfg_vocab():
+    """
+    Build vocabulary for CFG nodes.
+    Used by GCN branch.
+    """
 
     vocab = {
         "<PAD>": 0,
         "<UNK>": 1
     }
 
-    for token, freq in counter.items():
+    cfg_node_types = [
 
-        if freq >= min_freq:
-            vocab[token] = len(vocab)
+        "Assign",
+        "AugAssign",
 
-    return vocab
+        "Call",
 
-MAX_LEN = 4096
-def encode_code(
-    code,
-    vocab
-):
+        "If",
+        "For",
+        "While",
 
-    tokens = tokenize_python(code)
+        "Return",
 
-    ids = [
-        vocab.get(
-            token,
-            vocab["<UNK>"]
-        )
-        for token in tokens
+        "Try",
+        "ExceptHandler",
+
+        "With",
+
+        "FunctionDef",
+        "AsyncFunctionDef",
+
+        "ClassDef",
+
+        "Expr",
+
+        "Break",
+        "Continue",
+
+        "Raise",
+
+        "Import",
+        "ImportFrom",
+
+        "Pass"
     ]
 
-    if len(ids) > MAX_LEN:
+    for node_type in cfg_node_types:
 
-        ids = ids[:MAX_LEN]
-
-    else:
-
-        ids += [0] * (
-            MAX_LEN - len(ids)
+        vocab[node_type] = len(
+            vocab
         )
 
-    return ids
+    return vocab

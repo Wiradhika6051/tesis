@@ -101,7 +101,6 @@ class PhpNetGraphTokensCombineFull(nn.Module):
 
     def _encode_graph(self, dataGraph):
         x, edge_index = dataGraph.x.long(), dataGraph.edge_index
-        print(dataGraph)
         batch = dataGraph.batch
 
         pre_x_len = len(x)
@@ -123,9 +122,9 @@ class PhpNetGraphTokensCombineFull(nn.Module):
         return x    
 
 class PhpNetGraphTokensCombine(nn.Module):
-    def __init__(self, vocab_size):
+    def __init__(self, token_vocab_size, cfg_vocab_size):
         super(PhpNetGraphTokensCombine, self).__init__()
-        self.embed1 = nn.Embedding(num_embeddings=vocab_size,
+        self.embed1 = nn.Embedding(num_embeddings=cfg_vocab_size,
                                   embedding_dim=100)
         self.cfg_head = nn.Sequential(
             nn.Linear(256,128),
@@ -153,7 +152,7 @@ class PhpNetGraphTokensCombine(nn.Module):
         self.pool3 = EdgePooling(256)
 
         #
-        self.embed = nn.Embedding(num_embeddings=vocab_size,
+        self.embed = nn.Embedding(num_embeddings=token_vocab_size,
                                   embedding_dim=100)
         self.lstm1 = nn.GRU(input_size=100,
                             hidden_size=64,
@@ -162,8 +161,6 @@ class PhpNetGraphTokensCombine(nn.Module):
                             bidirectional=True)
 
     def forward(self, cfg_emb, tok_emb):
-        print(cfg_emb.shape)
-        print(tok_emb.shape)
         x = torch.cat([cfg_emb, tok_emb], dim=1)
         return self.fusion_head(x)
 
@@ -213,7 +210,6 @@ class PhpNetGraphTokensCombine(nn.Module):
 
     def _encode_graph(self, dataGraph):
         x, edge_index = dataGraph.x.long(), dataGraph.edge_index
-        print(dataGraph)
         batch = dataGraph.batch
 
         pre_x_len = len(x)
