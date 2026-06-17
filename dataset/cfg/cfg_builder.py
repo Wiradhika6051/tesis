@@ -201,14 +201,24 @@ class CFGBuilder:
         source
     ):
 
-        tree = ast.parse(
-            source
-        )
-
+        try:
+        
+            tree = ast.parse(
+                source
+            )
+    
+        except Exception as e:
+        
+            print(
+                f"CFG parse failed: {e}"
+            )
+    
+            return None
+    
         self.process_block(
             tree.body
         )
-
+    
         return {
             "nodes": self.nodes,
             "edges": self.edges
