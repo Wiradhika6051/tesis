@@ -1,7 +1,7 @@
 from collections import deque
 
 from tesis.dataset.pruners.base_pruner import BasePruner
-from tesis.dataset.pruners.prune_utils import prune_cfg
+from tesis.dataset.pruners.utils import prune_cfg
 
 class NeighborhoodPruner(
     BasePruner
