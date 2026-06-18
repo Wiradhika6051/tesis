@@ -129,8 +129,14 @@ def prune_cfg(
         )
     ]
 
+    keep_lines = {
+        node.lineno
+        for node in nodes
+    }
+
     return {
         **cfg,
         "nodes": nodes,
-        "edges": edges
+        "edges": edges,
+        "kept_lines": keep_lines
     }
