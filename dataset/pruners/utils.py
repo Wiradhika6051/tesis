@@ -202,10 +202,31 @@ def prune_cfg(
             "empty_after_prune"
         ] += 1
 
+    old_to_new = {}
+
+    for new_id, node in enumerate(nodes):
+
+        old_to_new[
+            node.node_id
+        ] = new_id
+
+    new_edges = []
+
+    for src, dst in edges:
+
+        new_edges.append(
+            (
+                old_to_new[src],
+                old_to_new[dst]
+            )
+        )
+    for new_id, node in enumerate(nodes):
+
+        node.node_id = new_id
     return {
         **cfg,
         "nodes": nodes,
-        "edges": edges,
+        "edges": new_edges,
         "kept_lines": keep_lines
     }
 
