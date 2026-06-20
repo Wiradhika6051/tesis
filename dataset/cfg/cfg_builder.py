@@ -41,6 +41,39 @@ class CFGBuilder:
         self,
         statements
     ):
+    
+        previous = None
+        first = None
+    
+        for stmt in statements:
+        
+            current = self.process_stmt(
+                stmt
+            )
+    
+            if current is None:
+                continue
+            
+            if first is None:
+                first = current
+    
+            if previous is not None:
+            
+                self.edges.append(
+                    (
+                        previous,
+                        current
+                    )
+                )
+    
+            previous = current
+    
+        return first
+
+    def old_process_block(
+        self,
+        statements
+    ):
 
         previous = None
 
@@ -64,7 +97,7 @@ class CFGBuilder:
 
             previous = current
 
-    def process_if(
+    def old_process_if(
         self,
         stmt
     ):
@@ -101,6 +134,43 @@ class CFGBuilder:
 
         return if_id
     
+    def process_if(
+        self,
+        stmt
+    ):
+
+        if_id = self.add_node(
+            stmt
+        )
+
+        if stmt.body:
+
+            body_start = self.process_block(
+                stmt.body
+            )
+
+            self.edges.append(
+                (
+                    if_id,
+                    body_start
+                )
+            )
+
+        if stmt.orelse:
+
+            else_start = self.process_block(
+                stmt.orelse
+            )
+
+            self.edges.append(
+                (
+                    if_id,
+                    else_start
+                )
+            )
+
+        return if_id
+
     def process_while(
         self,
         stmt

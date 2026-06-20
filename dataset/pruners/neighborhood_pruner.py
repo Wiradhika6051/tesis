@@ -23,6 +23,14 @@ class NeighborhoodPruner(
         targets = cfg[
             "target_nodes"
         ]
+        if not targets:
+            return {
+                **cfg,
+                "kept_lines": {
+                    n.lineno
+                    for n in cfg["nodes"]
+                }
+            }
 
         keep = set(
             targets
