@@ -11,6 +11,8 @@ class CFGBuilder:
 
         self.counter = 0
 
+        self.reset_statistics()
+
     def add_node(
         self,
         ast_node
@@ -495,48 +497,158 @@ class CFGBuilder:
         self,
         source
     ):
-    
+
         self.nodes = []
         self.edges = []
         self.counter = 0
-    
+        self.quality_stats["total_files"] += 1
+
         try:
-        
+
             tree = ast.parse(source)
-    
+
         except SyntaxError as e:
-        
             print(f"CFG parse failed: {e}")
-    
+            self.quality_stats["parse_fail"] += 1
             return None
-    
+        self.quality_stats["parse_success"] += 1
         entry = self.add_virtual_node("ENTRY")
-    
+
         start, end = self.process_block(
             tree.body
         )
-    
+
         exit_node = self.add_virtual_node("EXIT")
-    
+
         if start is not None:
-        
+
             self.edges.append(
                 (
                     entry,
                     start
                 )
             )
-    
+
         if end is not None:
-        
+
             self.edges.append(
                 (
                     end,
                     exit_node
                 )
             )
-    
+
+        if len(self.nodes) == 0:
+            self.quality_stats["empty_cfg"] += 1
+
+        self.update_graph_statistics()
+
         return {
             "nodes": self.nodes,
             "edges": self.edges
         }
+    
+    def reset_statistics(self):
+
+        #
+        # CFG quality
+        #
+        self.quality_stats = {
+
+            "total_files": 0,
+
+            "parse_success": 0,
+
+            "parse_fail": 0,
+
+            "empty_cfg": 0,
+        }
+
+        #
+        # Graph statistics
+        #
+        self.graph_stats = {
+            "total_nodes": 0,
+            "total_edges": 0,
+            "max_nodes": 0,
+            "max_edges": 0,
+            "min_nodes": float("inf"),
+            "min_edges": float("inf"),
+            "total_target_nodes": 0,
+            "target_detection_fail": 0,
+            "total_pruned_nodes": 0,
+            "total_pruned_edges": 0
+        }
+
+    def update_graph_statistics(
+            self
+        ):
+
+        n_nodes = len(self.nodes)
+
+        n_edges = len(self.edges)
+
+        self.graph_stats["total_nodes"] += n_nodes
+
+        self.graph_stats["total_edges"] += n_edges
+
+        self.graph_stats["max_nodes"] = max(
+            self.graph_stats["max_nodes"],
+            n_nodes
+        )
+
+        self.graph_stats["max_edges"] = max(
+            self.graph_stats["max_edges"],
+            n_edges
+        )
+
+        self.graph_stats["min_nodes"] = min(
+            self.graph_stats["min_nodes"],
+            n_nodes
+        )
+
+        self.graph_stats["min_edges"] = min(
+            self.graph_stats["min_edges"],
+            n_edges
+        )   
+
+    def get_graph_stats(self):
+
+        success = max(
+            self.quality_stats["parse_success"],
+            1
+        )
+
+        return {
+            **self.graph_stats,
+            "avg_nodes":
+                self.graph_stats["total_nodes"] / success,
+            "avg_edges":
+                self.graph_stats["total_edges"] / success
+        }
+    
+    def get_quality_stats(self):
+        total = max(self.quality_stats["total_files"], 1)
+
+        return {
+            **self.quality_stats,
+            "parse_success_rate":
+                self.quality_stats["parse_success"] / total,
+            "parse_failure_rate":
+                self.quality_stats["parse_fail"] / total
+        }
+    
+    def print_report(self):
+        q = self.get_quality_stats()
+        g = self.get_graph_stats()
+
+        print("========== CFG Report ==========")
+        print()
+        print("CFG Quality")
+        for k, v in q.items():
+            print(f"{k}: {v}")
+
+        print()
+        print("Graph Statistics")
+        for k, v in g.items():
+            print(f"{k}: {v}")
