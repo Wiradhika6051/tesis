@@ -614,6 +614,66 @@ class CFGBuilder:
         )   
 
     def get_graph_stats(self):
+    
+        success = max(
+            self.quality_stats["parse_success"],
+            1
+        )
+    
+        avg_nodes = (
+            self.graph_stats["total_nodes"]
+            / success
+        )
+    
+        avg_edges = (
+            self.graph_stats["total_edges"]
+            / success
+        )
+    
+        avg_pruned_nodes = (
+            self.graph_stats["total_pruned_nodes"]
+            / success
+        )
+    
+        avg_pruned_edges = (
+            self.graph_stats["total_pruned_edges"]
+            / success
+        )
+    
+        return {
+        
+            **self.graph_stats,
+    
+            "avg_nodes": avg_nodes,
+    
+            "avg_edges": avg_edges,
+    
+            "avg_pruned_nodes": avg_pruned_nodes,
+    
+            "avg_pruned_edges": avg_pruned_edges,
+    
+            "avg_target_nodes":
+                self.graph_stats["total_target_nodes"]
+                / success,
+    
+            "target_detection_rate":
+                1
+                -
+                (
+                    self.graph_stats["target_detection_fail"]
+                    / success
+                ),
+    
+            "node_reduction_ratio":
+                avg_pruned_nodes
+                / max(avg_nodes, 1),
+    
+            "edge_reduction_ratio":
+                avg_pruned_edges
+                / max(avg_edges, 1)
+        }
+    
+    def old_get_graph_stats(self):
 
         success = max(
             self.quality_stats["parse_success"],
@@ -658,23 +718,58 @@ class CFGBuilder:
         self,
         output_file
     ):
-    
+
         report = {
             "quality": self.get_quality_stats(),
             "graph": self.get_graph_stats()
         }
-    
+
         with open(
             output_file,
             "w"
         ) as f:
-    
+
             json.dump(
                 report,
                 f,
                 indent=4
             )
-    
+
         print(
             f"CFG report saved to {output_file}"
+        )
+
+    def update_target_statistics(
+        self,
+        target_nodes
+    ):
+
+        self.graph_stats[
+            "total_target_nodes"
+        ] += len(target_nodes)
+
+        if len(target_nodes) == 0:
+
+            self.graph_stats[
+                "target_detection_fail"
+            ] += 1
+
+    def update_pruning_statistics(
+        self,
+        before_nodes,
+        after_nodes,
+        before_edges,
+        after_edges
+    ):
+
+        self.graph_stats[
+            "total_pruned_nodes"
+        ] += (
+            before_nodes - after_nodes
+        )
+
+        self.graph_stats[
+            "total_pruned_edges"
+        ] += (
+            before_edges - after_edges
         )
