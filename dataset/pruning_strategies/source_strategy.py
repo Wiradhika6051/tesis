@@ -3,33 +3,25 @@ from tesis.dataset.pruning_strategies.base_strategy import DatasetStrategy
 class SourceStrategy(DatasetStrategy):
 
     def extract(self, file, repo):
-
-        source = file.get(
-            "sourceWithComments",
-            file.get("source", "")
+        current_source = file.get(
+            "sourceWithComments"
         )
 
-        if not source:
+        previous_source = file.get(
+            "previousSource"
+        )
+
+        if previous_source is None:
             return []
-
-        changes = file.get(
-            "changes",
-            []
-        )
-
-        fixed_source = reconstruct_fixed_source(
-            source,
-            changes
-        )
 
         return [
             {
-                "code": source,
+                "code": previous_source,
                 "label": 1,
                 "repo": repo
             },
             {
-                "code": fixed_source,
+                "code": current_source,
                 "label": 0,
                 "repo": repo
             }

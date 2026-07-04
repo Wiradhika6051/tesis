@@ -1,4 +1,5 @@
 import ast
+import json
 
 from tesis.dataset.cfg.cfg_node import CFGNode
 
@@ -652,3 +653,28 @@ class CFGBuilder:
         print("Graph Statistics")
         for k, v in g.items():
             print(f"{k}: {v}")
+
+    def save_report(
+        self,
+        output_file
+    ):
+    
+        report = {
+            "quality": self.get_quality_stats(),
+            "graph": self.get_graph_stats()
+        }
+    
+        with open(
+            output_file,
+            "w"
+        ) as f:
+    
+            json.dump(
+                report,
+                f,
+                indent=4
+            )
+    
+        print(
+            f"CFG report saved to {output_file}"
+        )

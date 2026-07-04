@@ -20,7 +20,7 @@ class FunctionStrategy(
         repo
     ):
 
-        source = file.get(
+        current_source = file.get(
             "sourceWithComments",
             file.get(
                 "source",
@@ -28,7 +28,15 @@ class FunctionStrategy(
             )
         )
 
-        if not source:
+        previous_source = file.get(
+            "previousSource"
+        )
+
+        if (
+            not current_source
+            or
+            not previous_source
+        ):
             return []
 
         result = []
@@ -38,18 +46,17 @@ class FunctionStrategy(
             []
         ):
 
-            fixed_source = reconstruct_fixed_source(
-                source,
-                [change]
-            )
+            # fixed_source = reconstruct_fixed_source(
+            #     source,
+            #     [change]
+            # )
 
             for bad in change.get(
                 "badparts",
                 []
             ):
-
                 result.append({
-                    "source": source,
+                    "source": previous_source,
                     "snippet": bad,
                     "label": 1,
                     "repo": repo
@@ -59,9 +66,8 @@ class FunctionStrategy(
                 "goodparts",
                 []
             ):
-
                 result.append({
-                    "source": fixed_source,
+                    "source": current_source,
                     "snippet": good,
                     "label": 0,
                     "repo": repo

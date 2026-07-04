@@ -1,6 +1,14 @@
 import json
+import pickle
+
+
 
 def load_samples(jsonl_path, strategy):
+    with open(
+        "dataset/previous_sources.pkl",
+        "rb"
+    ) as f:
+        previous_lookup = pickle.load(f)
 
     samples = []
 
@@ -17,6 +25,13 @@ def load_samples(jsonl_path, strategy):
                     files = commit.get("files", {})
 
                     for file in files.values():
+                        file["previousSource"] = previous_lookup.get(                    
+                            (
+                                repo,
+                                commit["sha"],
+                                file["filename"]
+                            )
+                        )
                         samples.extend(strategy.extract(file,next(iter(data))))
 
     return samples
