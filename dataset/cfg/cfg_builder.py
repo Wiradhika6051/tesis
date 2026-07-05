@@ -699,183 +699,183 @@ class CFGBuilder:
                 self.quality_stats["parse_fail"] / total
         }
     
-def print_report(
-    self,
-    use_pruning=True
-):
-
-    q = self.get_quality_stats()
-    g = self.get_graph_stats()
-
-    print("=" * 50)
-    print("CFG Report")
-    print("=" * 50)
-
-    print("\nCFG Quality")
-    print("-" * 30)
-
-    for k, v in q.items():
-        print(f"{k}: {v}")
-
-    print("\nGraph Statistics")
-    print("-" * 30)
-
-    graph_keys = [
-
-        "total_nodes",
-        "total_edges",
-
-        "avg_nodes",
-        "avg_edges",
-
-        "max_nodes",
-        "max_edges",
-
-        "min_nodes",
-        "min_edges"
-    ]
-
-    for key in graph_keys:
-
-        print(
-            f"{key}: {g[key]}"
-        )
-
-    if use_pruning:
-
-        print("\nTarget Detection")
-        print("-" * 30)
-
-        print(
-            "total_target_nodes:",
-            g["total_target_nodes"]
-        )
-
-        print(
-            "target_detection_fail:",
-            g["target_detection_fail"]
-        )
-
-        print(
-            "target_detection_rate:",
-            g["target_detection_rate"]
-        )
-
-        print("\nPruning")
-        print("-" * 30)
-
-        print(
-            "total_pruned_nodes:",
-            g["total_pruned_nodes"]
-        )
-
-        print(
-            "total_pruned_edges:",
-            g["total_pruned_edges"]
-        )
-
-        print(
-            "avg_pruned_nodes:",
-            g["avg_pruned_nodes"]
-        )
-
-        print(
-            "avg_pruned_edges:",
-            g["avg_pruned_edges"]
-        )
-
-        print(
-            "node_reduction_ratio:",
-            g["node_reduction_ratio"]
-        )
-
-        print(
-            "edge_reduction_ratio:",
-            g["edge_reduction_ratio"]
-        )
-
-def save_report(
-    self,
-    output_file,
-    use_pruning=True
-):
-
-    graph = self.get_graph_stats()
-
-    report = {
-
-        "quality": self.get_quality_stats(),
-
-        "graph": {
-
-            "total_nodes": graph["total_nodes"],
-            "total_edges": graph["total_edges"],
-
-            "avg_nodes": graph["avg_nodes"],
-            "avg_edges": graph["avg_edges"],
-
-            "max_nodes": graph["max_nodes"],
-            "max_edges": graph["max_edges"],
-
-            "min_nodes": graph["min_nodes"],
-            "min_edges": graph["min_edges"]
-
-        }
-
-    }
-
-    if use_pruning:
-
-        report["target_detection"] = {
-
-            "total_target_nodes":
-                graph["total_target_nodes"],
-
-            "target_detection_fail":
-                graph["target_detection_fail"],
-
-            "target_detection_rate":
-                graph["target_detection_rate"]
-
-        }
-
-        report["pruning"] = {
-
-            "total_pruned_nodes":
-                graph["total_pruned_nodes"],
-
-            "total_pruned_edges":
-                graph["total_pruned_edges"],
-
-            "avg_pruned_nodes":
-                graph["avg_pruned_nodes"],
-
-            "avg_pruned_edges":
-                graph["avg_pruned_edges"],
-
-            "node_reduction_ratio":
-                graph["node_reduction_ratio"],
-
-            "edge_reduction_ratio":
-                graph["edge_reduction_ratio"]
-
-        }
-
-    with open(
-        output_file,
-        "w"
-    ) as f:
-
-        json.dump(
-            report,
-            f,
-            indent=4
-        )
-
-    print(
-        f"CFG report saved to {output_file}"
-    )
+    def print_report(
+        self,
+        use_pruning=True
+    ):
     
+        q = self.get_quality_stats()
+        g = self.get_graph_stats()
+    
+        print("=" * 50)
+        print("CFG Report")
+        print("=" * 50)
+    
+        print("\nCFG Quality")
+        print("-" * 30)
+    
+        for k, v in q.items():
+            print(f"{k}: {v}")
+    
+        print("\nGraph Statistics")
+        print("-" * 30)
+    
+        graph_keys = [
+        
+            "total_nodes",
+            "total_edges",
+    
+            "avg_nodes",
+            "avg_edges",
+    
+            "max_nodes",
+            "max_edges",
+    
+            "min_nodes",
+            "min_edges"
+        ]
+    
+        for key in graph_keys:
+        
+            print(
+                f"{key}: {g[key]}"
+            )
+    
+        if use_pruning:
+        
+            print("\nTarget Detection")
+            print("-" * 30)
+    
+            print(
+                "total_target_nodes:",
+                g["total_target_nodes"]
+            )
+    
+            print(
+                "target_detection_fail:",
+                g["target_detection_fail"]
+            )
+    
+            print(
+                "target_detection_rate:",
+                g["target_detection_rate"]
+            )
+    
+            print("\nPruning")
+            print("-" * 30)
+    
+            print(
+                "total_pruned_nodes:",
+                g["total_pruned_nodes"]
+            )
+    
+            print(
+                "total_pruned_edges:",
+                g["total_pruned_edges"]
+            )
+    
+            print(
+                "avg_pruned_nodes:",
+                g["avg_pruned_nodes"]
+            )
+    
+            print(
+                "avg_pruned_edges:",
+                g["avg_pruned_edges"]
+            )
+    
+            print(
+                "node_reduction_ratio:",
+                g["node_reduction_ratio"]
+            )
+    
+            print(
+                "edge_reduction_ratio:",
+                g["edge_reduction_ratio"]
+            )
+
+    def save_report(
+        self,
+        output_file,
+        use_pruning=True
+    ):
+
+        graph = self.get_graph_stats()
+
+        report = {
+
+            "quality": self.get_quality_stats(),
+
+            "graph": {
+
+                "total_nodes": graph["total_nodes"],
+                "total_edges": graph["total_edges"],
+
+                "avg_nodes": graph["avg_nodes"],
+                "avg_edges": graph["avg_edges"],
+
+                "max_nodes": graph["max_nodes"],
+                "max_edges": graph["max_edges"],
+
+                "min_nodes": graph["min_nodes"],
+                "min_edges": graph["min_edges"]
+
+            }
+
+        }
+
+        if use_pruning:
+
+            report["target_detection"] = {
+
+                "total_target_nodes":
+                    graph["total_target_nodes"],
+
+                "target_detection_fail":
+                    graph["target_detection_fail"],
+
+                "target_detection_rate":
+                    graph["target_detection_rate"]
+
+            }
+
+            report["pruning"] = {
+
+                "total_pruned_nodes":
+                    graph["total_pruned_nodes"],
+
+                "total_pruned_edges":
+                    graph["total_pruned_edges"],
+
+                "avg_pruned_nodes":
+                    graph["avg_pruned_nodes"],
+
+                "avg_pruned_edges":
+                    graph["avg_pruned_edges"],
+
+                "node_reduction_ratio":
+                    graph["node_reduction_ratio"],
+
+                "edge_reduction_ratio":
+                    graph["edge_reduction_ratio"]
+
+            }
+
+        with open(
+            output_file,
+            "w"
+        ) as f:
+
+            json.dump(
+                report,
+                f,
+                indent=4
+            )
+
+        print(
+            f"CFG report saved to {output_file}"
+        )
+
     def update_target_statistics(
         self,
         target_nodes
