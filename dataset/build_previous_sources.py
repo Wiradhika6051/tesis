@@ -57,7 +57,7 @@ def fetch_previous_sources(
                 key = (
                     repo_url,
                     sha,
-                    filename
+                    filename.lstrip("/")
                 )
 
                 if key in lookup:
@@ -72,7 +72,17 @@ def fetch_previous_sources(
                         errors="ignore"
                     )
 
-                    lookup[key] = source
+                    lookup[key] = {
+                                        
+                        "repo": repo_url,
+                    
+                        "commit": sha,
+                    
+                        "filename": filename,
+                    
+                        "source": source
+                    
+                    }
 
                 except Exception:
 
