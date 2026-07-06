@@ -174,13 +174,14 @@ def fetch_previous_sources(
 
                 continue
 
-            for file in commit["files"]:
+            for filename, file in commit.get(
+                "files",
+                {}
+            ).items():
 
                 stats["files"] += 1
 
-                filename = file[
-                    "filename"
-                ].lstrip("/")
+                filename = filename.lstrip("/")
 
                 key = (
                     repo_url,
@@ -188,20 +189,17 @@ def fetch_previous_sources(
                     filename
                 )
 
-                #
-                # Already fetched
-                #
                 if key in lookup:
                     continue
-
+                
                 try:
-
+                
                     source = git_repo.git.show(
                         f"{parent.hexsha}:{filename}"
                     )
 
                     lookup[key] = {
-
+                    
                         "repo": repo_url,
 
                         "commit": sha,
@@ -217,13 +215,12 @@ def fetch_previous_sources(
                     stats["success"] += 1
 
                 except Exception:
-
+                
                     lookup[key] = None
 
                     stats["missing"] += 1
 
                     stats["file_fail"] += 1
-
                 since_checkpoint += 1
 
                 #
@@ -241,7 +238,6 @@ def fetch_previous_sources(
                     )
 
                     since_checkpoint = 0
-
         #
         # remove repository after processing
         #
@@ -295,7 +291,7 @@ if __name__=="__main__":
     dataset = []
     
     with open(
-        "plain_sql.jsonl",
+        "../data/plain_sql.jsonl",
         "r",
         encoding="utf-8"
     ) as f:
@@ -307,20 +303,17 @@ if __name__=="__main__":
             for repo_url, repo in data.items():
             
                 commits = []
-    
                 for commit in repo.values():
                 
                     commits.append({
                     
                         "sha": commit["sha"],
-    
-                        "files": list(
-                            commit.get(
-                                "files",
-                                {}
-                            ).values()
+
+                        "files": commit.get(
+                            "files",
+                            {}
                         )
-    
+
                     })
     
                 dataset.append({
@@ -335,8 +328,8 @@ if __name__=="__main__":
     
         dataset,
     
-        repo_root="repositories",
+        repo_root="../data/repositories",
     
-        output_file="previous_sources.pkl"
+        output_file="../data/previous_sources.pkl"
     
     )
