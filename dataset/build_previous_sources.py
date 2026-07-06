@@ -7,16 +7,12 @@ from git import Repo
 from tqdm import tqdm
 
 
-CHECKPOINT_INTERVAL = 500
-
-
 def clone_repo(
     repo_url,
     repo_root
 ):
 
     repo_name = repo_url.rstrip("/").split("/")[-1]
-
     local_path = os.path.join(
         repo_root,
         repo_name
@@ -103,8 +99,6 @@ def fetch_previous_sources(
 
     }
 
-    since_checkpoint = 0
-
     for repo_data in tqdm(
         dataset,
         desc="Repositories"
@@ -113,7 +107,42 @@ def fetch_previous_sources(
         repo_url = repo_data["repo"]
 
         repo_name = repo_url.rstrip("/").split("/")[-1]
-
+        #
+        # Skip repository if every file already exists
+        #
+        repo_complete = True
+        
+        for commit in repo_data["commits"]:
+        
+            sha = commit["sha"]
+        
+            for filename in commit.get(
+                "files",
+                {}
+            ):
+        
+                key = (
+                    repo_url,
+                    sha,
+                    filename.lstrip("/")
+                )
+        
+                if key not in lookup:
+                
+                    repo_complete = False
+        
+                    break
+                
+            if not repo_complete:
+                break
+            
+        if repo_complete:
+        
+            print(
+                f"Skipping {repo_name} (already processed)"
+            )
+        
+            continue
         #
         # clone
         #
@@ -221,23 +250,17 @@ def fetch_previous_sources(
                     stats["missing"] += 1
 
                     stats["file_fail"] += 1
-                since_checkpoint += 1
-
-                #
-                # checkpoint
-                #
-                if since_checkpoint >= CHECKPOINT_INTERVAL:
-
-                    save_checkpoint(
-                        lookup,
-                        output_file
-                    )
-
-                    print(
-                        f"\nCheckpoint saved ({len(lookup)} files)"
-                    )
-
-                    since_checkpoint = 0
+        #
+        # Save checkpoint after repository
+        #
+        save_checkpoint(
+            lookup,
+            output_file
+        )
+        
+        print(
+            f"Checkpoint saved after {repo_name}"
+        )
         #
         # remove repository after processing
         #
