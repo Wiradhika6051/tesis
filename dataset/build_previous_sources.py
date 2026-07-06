@@ -288,3 +288,55 @@ def fetch_previous_sources(
     print(
         f"Checkpoint  : {output_file}"
     )
+
+if __name__=="__main__":
+    import json
+    
+    dataset = []
+    
+    with open(
+        "plain_sql.jsonl",
+        "r",
+        encoding="utf-8"
+    ) as f:
+    
+        for line in f:
+        
+            data = json.loads(line)
+    
+            for repo_url, repo in data.items():
+            
+                commits = []
+    
+                for commit in repo.values():
+                
+                    commits.append({
+                    
+                        "sha": commit["sha"],
+    
+                        "files": list(
+                            commit.get(
+                                "files",
+                                {}
+                            ).values()
+                        )
+    
+                    })
+    
+                dataset.append({
+                
+                    "repo": repo_url,
+    
+                    "commits": commits
+    
+                })
+    
+    fetch_previous_sources(
+    
+        dataset,
+    
+        repo_root="repositories",
+    
+        output_file="previous_sources.pkl"
+    
+    )
