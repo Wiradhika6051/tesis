@@ -9,15 +9,15 @@ from checkpoint import (
 )
 
 
-DATASET = "../data/plain_sql.jsonl"
+DATASET = "../../data/plain_sql.jsonl"
 
-REPOSITORY_ROOT = "../data/repositories"
+REPOSITORY_ROOT = "../../data/repositories"
 
-CHECKPOINT_DIR = "../data/checkpoints"
+CHECKPOINT_DIR = "../../data/checkpoints"
 
-OUTPUT_FILE = "../data/previous_sources.pkl"
+OUTPUT_FILE = "../../data/previous_sources.pkl"
 
-REPORT_FILE = "../data/previous_sources_report.json"
+REPORT_FILE = "../../data/previous_sources_report.json"
 
 
 def load_dataset(
