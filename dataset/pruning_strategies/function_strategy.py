@@ -1,7 +1,6 @@
 import re
 import ast
 from tesis.dataset.pruning_strategies.base_strategy import DatasetStrategy
-from tesis.dataset.pruning_strategies.source_strategy import reconstruct_fixed_source
 
 FUNCTION_STATS = {
     "parse_fail": 0,
@@ -45,11 +44,6 @@ class FunctionStrategy(
             "changes",
             []
         ):
-
-            # fixed_source = reconstruct_fixed_source(
-            #     source,
-            #     [change]
-            # )
 
             for bad in change.get(
                 "badparts",
