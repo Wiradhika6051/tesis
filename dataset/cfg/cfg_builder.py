@@ -70,40 +70,7 @@ class CFGBuilder:
             previous = current
 
         return first, previous
-    
-    def old_process_block(
-        self,
-        statements
-    ):
-    
-        previous = None
-        first = None
-    
-        for stmt in statements:
         
-            current = self.process_stmt(
-                stmt
-            )
-    
-            if current is None:
-                continue
-            
-            if first is None:
-                first = current
-    
-            if previous is not None:
-            
-                self.edges.append(
-                    (
-                        previous,
-                        current
-                    )
-                )
-    
-            previous = current
-    
-        return first
-    
     def process_if(
         self,
         stmt
@@ -185,43 +152,6 @@ class CFGBuilder:
 
         return merge_node
     
-    def old_process_if(
-        self,
-        stmt
-    ):
-
-        if_id = self.add_node(
-            stmt
-        )
-
-        if stmt.body:
-
-            body_start = self.process_block(
-                stmt.body
-            )
-
-            self.edges.append(
-                (
-                    if_id,
-                    body_start
-                )
-            )
-
-        if stmt.orelse:
-
-            else_start = self.process_block(
-                stmt.orelse
-            )
-
-            self.edges.append(
-                (
-                    if_id,
-                    else_start
-                )
-            )
-
-        return if_id
-
     def process_while(
         self,
         stmt
@@ -295,38 +225,7 @@ class CFGBuilder:
         )
 
         return exit_node
-
-    def old_process_for(
-        self,
-        stmt
-    ):
-
-        for_id = self.add_node(
-            stmt
-        )
-
-        if stmt.body:
-
-            first_body = self.process_stmt(
-                stmt.body[0]
-            )
-
-            self.edges.append(
-                (
-                    for_id,
-                    first_body
-                )
-            )
-
-            self.edges.append(
-                (
-                    first_body,
-                    for_id
-                )
-            )
-
-        return for_id
-    
+   
     def process_stmt(
         self,
         stmt
@@ -354,40 +253,7 @@ class CFGBuilder:
             return self.process_continue(stmt)
 
         return self.add_node(stmt)
-
-    def old_process_stmt(
-        self,
-        stmt
-    ):
-
-        if isinstance(
-            stmt,
-            ast.If
-        ):
-            return self.process_if(
-                stmt
-            )
-
-        if isinstance(
-            stmt,
-            ast.For
-        ):
-            return self.process_for(
-                stmt
-            )
-
-        if isinstance(
-            stmt,
-            ast.While
-        ):
-            return self.process_while(
-                stmt
-            )
-
-        return self.add_node(
-            stmt
-        )
-    
+   
     def process_return(
         self,
         stmt
@@ -461,39 +327,7 @@ class CFGBuilder:
         self.nodes.append(node)
 
         return node.node_id
-
-    def old_build(
-        self,
-        source
-    ):
-    
-        self.nodes = []
-        self.edges = []
-        self.counter = 0
-    
-        try:
-        
-            tree = ast.parse(
-                source
-            )
-    
-        except Exception as e:
-        
-            print(
-                f"CFG parse failed: {e}"
-            )
-    
-            return None
-    
-        self.process_block(
-            tree.body
-        )
-    
-        return {
-            "nodes": self.nodes,
-            "edges": self.edges
-        }
-    
+   
     def build(
         self,
         source
@@ -672,22 +506,7 @@ class CFGBuilder:
                 avg_pruned_edges
                 / max(avg_edges, 1)
         }
-    
-    def old_get_graph_stats(self):
-
-        success = max(
-            self.quality_stats["parse_success"],
-            1
-        )
-
-        return {
-            **self.graph_stats,
-            "avg_nodes":
-                self.graph_stats["total_nodes"] / success,
-            "avg_edges":
-                self.graph_stats["total_edges"] / success
-        }
-    
+     
     def get_quality_stats(self):
         total = max(self.quality_stats["total_files"], 1)
 
