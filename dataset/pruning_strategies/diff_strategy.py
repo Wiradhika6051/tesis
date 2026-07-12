@@ -1,5 +1,6 @@
 from tesis.dataset.pruning_strategies.base_strategy import DatasetStrategy
 
+
 class DiffStrategy(
     DatasetStrategy
 ):
@@ -17,26 +18,44 @@ class DiffStrategy(
             []
         ):
 
+            #
+            # Vulnerable snippet
+            #
             for snippet in change.get(
                 "badparts",
                 []
             ):
 
                 samples.append({
-                    "code": snippet,
+
+                    "source": snippet,
+
+                    "snippet": snippet,
+
                     "label": 1,
+
                     "repo": repo
+
                 })
 
+            #
+            # Fixed snippet
+            #
             for snippet in change.get(
                 "goodparts",
                 []
             ):
 
                 samples.append({
-                    "code": snippet,
+
+                    "source": snippet,
+
+                    "snippet": snippet,
+
                     "label": 0,
+
                     "repo": repo
+
                 })
 
         return samples
