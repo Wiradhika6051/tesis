@@ -18,7 +18,13 @@ class FunctionPruner(
         )
 
         if not target_nodes:
-            return cfg
+            return {
+                **cfg,
+                "kept_lines": {
+                    n.lineno
+                    for n in cfg["nodes"]
+                }
+            }
 
         function_range = cfg.get(
             "function_ranges",
