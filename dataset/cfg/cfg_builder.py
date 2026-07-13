@@ -2,7 +2,7 @@ import ast
 import json
 from platform import node
 
-from dataset.cfg.cfg_node import CFGNode
+from tesis.dataset.cfg.cfg_node import CFGNode
 
 class CFGBuilder:
 
