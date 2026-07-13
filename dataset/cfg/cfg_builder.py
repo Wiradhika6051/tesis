@@ -1,7 +1,8 @@
 import ast
 import json
+from platform import node
 
-from tesis.dataset.cfg.cfg_node import CFGNode
+from dataset.cfg.cfg_node import CFGNode
 
 class CFGBuilder:
 
@@ -45,31 +46,56 @@ class CFGBuilder:
         statements
     ):
 
-        first = None
-        previous = None
-
+        first_entry = None
+        previous_exit = None
+        
         for stmt in statements:
-
-            current = self.process_stmt(stmt)
-
-            if current is None:
+        
+            entry, exit = self.process_stmt(stmt)
+        
+            if entry is None:
                 continue
+            
+            if first_entry is None:
+                first_entry = entry
+        
+            if previous_exit is not None:
+                self.edges.append(
+                    (
+                        previous_exit,
+                        entry
+                    )
+                )
+        
+            previous_exit = exit
+        
+        return first_entry, previous_exit
+    
+    def process_function(
+        self,
+        stmt
+    ):
 
-            if first is None:
-                first = current
+        function = self.add_node(stmt)
 
-            if previous is not None:
+        if stmt.body:
+
+            start, end = self.process_block(
+                stmt.body
+            )
+
+            if start is not None:
 
                 self.edges.append(
                     (
-                        previous,
-                        current
+                        function,
+                        start
                     )
                 )
 
-            previous = current
+            return function, end
 
-        return first, previous
+        return function, function
         
     def process_if(
         self,
@@ -150,7 +176,7 @@ class CFGBuilder:
                 )
             )
 
-        return merge_node
+        return if_node, merge_node
     
     def process_while(
         self,
@@ -181,7 +207,7 @@ class CFGBuilder:
                 )
             )
 
-        return while_id
+        return while_id, while_id
     
     def process_for(
         self,
@@ -224,7 +250,7 @@ class CFGBuilder:
             )
         )
 
-        return exit_node
+        return loop, exit_node
    
     def process_stmt(
         self,
@@ -251,29 +277,41 @@ class CFGBuilder:
 
         if isinstance(stmt, ast.Continue):
             return self.process_continue(stmt)
+        if isinstance(stmt, ast.FunctionDef) or isinstance(stmt, ast.AsyncFunctionDef):
+            return self.process_function(
+                stmt
+            )
 
-        return self.add_node(stmt)
+        node = self.add_node(stmt)
+
+        return node, node
    
     def process_return(
         self,
         stmt
     ):
 
-        return self.add_node(stmt)
+        node = self.add_node(stmt)
+
+        return node, node
 
     def process_break(
         self,
         stmt
     ):
 
-        return self.add_node(stmt)
+        node = self.add_node(stmt)
+
+        return node, node
     
     def process_continue(
         self,
         stmt
     ):
 
-        return self.add_node(stmt)
+        node = self.add_node(stmt)
+
+        return node, node
     
     def process_try(
         self,
@@ -308,7 +346,7 @@ class CFGBuilder:
                 )
             )
 
-        return try_node
+        return try_node, try_node
     
     def add_virtual_node(
         self,
@@ -729,3 +767,123 @@ class CFGBuilder:
         ] += (
             before_edges - after_edges
         )
+
+    def visualize(self,cfg):
+
+        print("=" * 60)
+        print("Nodes")
+        print("=" * 60)
+
+        for node in cfg["nodes"]:
+
+            print(
+                f"[{node.node_id}] "
+                f"{node.node_type:<15}"
+                f" line={node.lineno}"
+            )
+
+        print()
+
+        print("=" * 60)
+        print("Edges")
+        print("=" * 60)
+
+        for src, dst in cfg["edges"]:
+
+            print(f"{src} -> {dst}")
+
+    def to_dot(self,cfg):
+
+        lines = []
+
+        lines.append("digraph CFG {")
+
+        for node in cfg["nodes"]:
+
+            label = (
+                f"{node.node_id}\\n"
+                f"{node.node_type}\\n"
+                f"L{node.lineno}"
+            )
+
+            lines.append(
+                f'{node.node_id} [label="{label}"];'
+            )
+
+        for src, dst in cfg["edges"]:
+
+            lines.append(
+                f"{src} -> {dst};"
+            )
+
+        lines.append("}")
+
+        return "\n".join(lines)
+
+if __name__ == "__main__":
+
+    source_sequential = """
+def login(username):
+
+    query = "SELECT * FROM user WHERE name='" + username + "'"
+
+    cursor.execute(query)
+
+    return query
+"""
+    source_if = """
+def foo(x):
+
+    a = 1
+
+    if x:
+        b = 2
+    else:
+        c = 3
+
+    d = 4
+
+    return d
+"""
+    source_while = """
+def foo():
+
+    while cond:
+        a = 1
+
+    return a
+"""
+
+    source_for = """
+def foo():
+
+    for i in x:
+        a = 1
+        b = 2
+
+    return b
+"""
+
+    source = """
+def foo():
+
+    try:
+        a = 1
+    except:
+        b = 2
+
+    return 0
+"""
+
+    builder = CFGBuilder()
+
+    cfg = builder.build(source)
+
+    builder.visualize(cfg)
+
+    # save to graphvix
+    dot = builder.to_dot(cfg)
+
+    with open("cfg.dot", "w") as f:
+
+        f.write(dot)
