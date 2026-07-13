@@ -177,38 +177,42 @@ class CFGBuilder:
             )
 
         return if_node, merge_node
-    
+
     def process_while(
         self,
         stmt
     ):
-
-        while_id = self.add_node(
-            stmt
+        while_node = self.add_node(stmt)
+        exit_node = self.add_virtual_node(
+            "LOOP_EXIT"
         )
-
         if stmt.body:
-
-            first_body = self.process_stmt(
-                stmt.body[0]
+        
+            body_start, body_end = self.process_block(
+                stmt.body
             )
-
             self.edges.append(
                 (
-                    while_id,
-                    first_body
+                    while_node,
+                    body_start
                 )
             )
-
             self.edges.append(
                 (
-                    first_body,
-                    while_id
+                    body_end,
+                    while_node
                 )
             )
-
-        return while_id, while_id
-    
+        #
+        # Loop exit
+        #
+        self.edges.append(
+            (
+                while_node,
+                exit_node
+            )
+        )
+        return while_node, exit_node
     def process_for(
         self,
         stmt
