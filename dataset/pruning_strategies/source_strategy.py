@@ -38,7 +38,7 @@ class SourceStrategy(
                 "snippet": previous_source,
 
                 "label": 1,
-
+                "diff": file["diff"],
                 "repo": repo
             },
 
@@ -48,7 +48,7 @@ class SourceStrategy(
                 "snippet": current_source,
 
                 "label": 0,
-
+                "diff": file["diff"],
                 "repo": repo
             }
 

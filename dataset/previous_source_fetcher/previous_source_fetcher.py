@@ -47,7 +47,6 @@ def fetch_previous_sources(
         )
 
         try:
-
             git.clone()
 
             stats.increment(

@@ -53,7 +53,8 @@ class FunctionStrategy(
                     "source": previous_source,
                     "snippet": bad,
                     "label": 1,
-                    "repo": repo
+                    "repo": repo,
+                    "diff": file["diff"],
                 })
 
             for good in change.get(
@@ -64,7 +65,8 @@ class FunctionStrategy(
                     "source": current_source,
                     "snippet": good,
                     "label": 0,
-                    "repo": repo
+                    "repo": repo,
+                    "diff": file["diff"],
                 })
 
         return result

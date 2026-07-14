@@ -31,7 +31,7 @@ class DiffStrategy(
                     "source": snippet,
 
                     "snippet": snippet,
-
+                    "diff": file["diff"],
                     "label": 1,
 
                     "repo": repo
@@ -51,7 +51,7 @@ class DiffStrategy(
                     "source": snippet,
 
                     "snippet": snippet,
-
+                    "diff": file["diff"],
                     "label": 0,
 
                     "repo": repo

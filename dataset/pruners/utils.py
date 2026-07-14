@@ -15,6 +15,76 @@ def normalize_code(text):
 
 import re
 
+
+def extract_changed_lines(
+    diff,
+    label
+):
+    """
+    Extract changed line numbers from a unified diff.
+
+    label == 1 -> vulnerable (old file)
+    label == 0 -> fixed (new file)
+    """
+
+    changed = []
+
+    old_line = None
+    new_line = None
+
+    hunk_pattern = re.compile(
+        r"@@ -(\d+),?\d* \+(\d+),?\d* @@"
+    )
+
+    for line in diff.splitlines():
+
+        match = hunk_pattern.match(line)
+
+        #
+        # New hunk
+        #
+        if match:
+
+            old_line = int(
+                match.group(1)
+            )
+
+            new_line = int(
+                match.group(2)
+            )
+
+            continue
+
+        #
+        # Removed line
+        #
+        if line.startswith("-") and not line.startswith("---"):
+
+            if label == 1:
+                changed.append(old_line)
+
+            old_line += 1
+            continue
+
+        #
+        # Added line
+        #
+        if line.startswith("+") and not line.startswith("+++"):
+
+            if label == 0:
+                changed.append(new_line)
+
+            new_line += 1
+            continue
+
+        #
+        # Context line
+        #
+        old_line += 1
+        new_line += 1
+
+    return changed
+
 def find_snippet_line(
     source,
     snippet
@@ -59,8 +129,68 @@ def find_snippet_line(
 
     return None
 
-
 def find_target_nodes(
+    cfg,
+    diff,
+    label
+):
+
+    target_lines = extract_changed_lines(
+        diff,
+        label
+    )
+
+    if not target_lines:
+        return []
+
+    target_nodes = []
+
+    #
+    # Exact line match
+    #
+    for node in cfg["nodes"]:
+
+        if node.lineno in target_lines:
+
+            target_nodes.append(
+                node.node_id
+            )
+
+    #
+    # Fallback:
+    # closest node to each changed line
+    #
+    if not target_nodes:
+
+        for target_line in target_lines:
+
+            best_dist = float("inf")
+            best = None
+
+            for node in cfg["nodes"]:
+
+                if node.lineno < 0:
+                    continue
+
+                dist = abs(
+                    node.lineno -
+                    target_line
+                )
+
+                if dist < best_dist:
+
+                    best_dist = dist
+                    best = node.node_id
+
+            if best is not None:
+
+                target_nodes.append(best)
+
+    return list(
+        set(target_nodes)
+    )
+
+def old_find_target_nodes(
     cfg,
     source,
     snippet

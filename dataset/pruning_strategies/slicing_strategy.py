@@ -61,7 +61,8 @@ class SlicingStrategy(
                     result.append({
                         "code": snippet,
                         "label": 1,
-                        "repo": repo
+                        "repo": repo,
+                        "diff": file["diff"],
                     })
 
             for good in change.get(
