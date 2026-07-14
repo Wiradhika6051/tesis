@@ -33,31 +33,25 @@ def extract_changed_lines(
     new_line = None
 
     hunk_pattern = re.compile(
-        r"@@ -(\d+),?\d* \+(\d+),?\d* @@"
+        r"^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@"
     )
 
     for line in diff.splitlines():
 
         match = hunk_pattern.match(line)
 
-        #
-        # New hunk
-        #
         if match:
 
-            old_line = int(
-                match.group(1)
-            )
-
-            new_line = int(
-                match.group(2)
-            )
-
+            old_line = int(match.group(1))
+            new_line = int(match.group(2))
             continue
 
         #
-        # Removed line
+        # Not inside a hunk yet
         #
+        if old_line is None:
+            continue
+
         if line.startswith("-") and not line.startswith("---"):
 
             if label == 1:
@@ -66,9 +60,6 @@ def extract_changed_lines(
             old_line += 1
             continue
 
-        #
-        # Added line
-        #
         if line.startswith("+") and not line.startswith("+++"):
 
             if label == 0:
@@ -78,11 +69,10 @@ def extract_changed_lines(
             continue
 
         #
-        # Context line
+        # Context
         #
         old_line += 1
         new_line += 1
-
     return changed
 
 def find_snippet_line(
