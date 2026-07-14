@@ -321,37 +321,59 @@ class CFGBuilder:
         self,
         stmt
     ):
-
+    
         try_node = self.add_node(stmt)
-
+    
+        merge_node = self.add_virtual_node(
+            "MERGE"
+        )
+    
         if stmt.body:
-
-            start, _ = self.process_block(
+        
+            start, end = self.process_block(
                 stmt.body
             )
-
+    
             self.edges.append(
                 (
                     try_node,
                     start
                 )
             )
-
+    
+            if end is not None:
+            
+                self.edges.append(
+                    (
+                        end,
+                        merge_node
+                    )
+                )
+    
         for handler in stmt.handlers:
-
-            start, _ = self.process_block(
+        
+            start, end = self.process_block(
                 handler.body
             )
-
+    
             self.edges.append(
                 (
                     try_node,
                     start
                 )
             )
-
-        return try_node, try_node
     
+            if end is not None:
+            
+                self.edges.append(
+                    (
+                        end,
+                        merge_node
+                    )
+                )
+    
+        return try_node, merge_node
+
     def add_virtual_node(
         self,
         node_type
