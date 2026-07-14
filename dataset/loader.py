@@ -113,7 +113,8 @@ def load_samples(
 
                             strategy.extract(
                                 file,
-                                repo_url
+                                repo_url,
+                                commit["diff"]
                             )
 
                         )
