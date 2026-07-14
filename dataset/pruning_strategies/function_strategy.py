@@ -16,7 +16,8 @@ class FunctionStrategy(
     def extract(
         self,
         file,
-        repo
+        repo,
+        diff
     ):
 
         current_source = file.get(
@@ -54,7 +55,7 @@ class FunctionStrategy(
                     "snippet": bad,
                     "label": 1,
                     "repo": repo,
-                    "diff": file["diff"],
+                    "diff": diff,
                 })
 
             for good in change.get(
@@ -66,7 +67,7 @@ class FunctionStrategy(
                     "snippet": good,
                     "label": 0,
                     "repo": repo,
-                    "diff": file["diff"],
+                    "diff": diff,
                 })
 
         return result

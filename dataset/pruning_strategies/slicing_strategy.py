@@ -16,7 +16,8 @@ class SlicingStrategy(
     def extract(
         self,
         file,
-        repo
+        repo,
+        diff
     ):
 
         source = file.get(
@@ -62,7 +63,7 @@ class SlicingStrategy(
                         "code": snippet,
                         "label": 1,
                         "repo": repo,
-                        "diff": file["diff"],
+                        "diff": diff,
                     })
 
             for good in change.get(

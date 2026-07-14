@@ -4,5 +4,5 @@ from abc import abstractmethod
 class DatasetStrategy(ABC):
 
     @abstractmethod
-    def extract(self, file, repo):
+    def extract(self, file, repo, diff):
         pass

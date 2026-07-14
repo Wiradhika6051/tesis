@@ -8,7 +8,8 @@ class DiffStrategy(
     def extract(
         self,
         file,
-        repo
+        repo,
+        diff
     ):
 
         samples = []
@@ -31,7 +32,7 @@ class DiffStrategy(
                     "source": snippet,
 
                     "snippet": snippet,
-                    "diff": file["diff"],
+                    "diff": diff,
                     "label": 1,
 
                     "repo": repo
@@ -51,7 +52,7 @@ class DiffStrategy(
                     "source": snippet,
 
                     "snippet": snippet,
-                    "diff": file["diff"],
+                    "diff": diff,
                     "label": 0,
 
                     "repo": repo
