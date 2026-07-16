@@ -8,7 +8,8 @@ class SourceStrategy(
     def extract(
         self,
         file,
-        repo
+        repo,
+        diff
     ):
 
         current_source = file.get(
@@ -38,7 +39,7 @@ class SourceStrategy(
                 "snippet": previous_source,
 
                 "label": 1,
-                "diff": file["diff"],
+                "diff": diff,
                 "repo": repo
             },
 
@@ -48,7 +49,7 @@ class SourceStrategy(
                 "snippet": current_source,
 
                 "label": 0,
-                "diff": file["diff"],
+                "diff": diff,
                 "repo": repo
             }
 
