@@ -1,11 +1,14 @@
 import io
 import tokenize
+from tesis.dataset.vocab import tokenize_code
+
 
 def tokenize_python(code):
 
     tokens = []
 
     try:
+
         for tok in tokenize.generate_tokens(
             io.StringIO(code).readline
         ):
@@ -21,27 +24,44 @@ def tokenize_python(code):
             ):
                 continue
 
-            tokens.append(tok.string)
+            tokens.append({
+                "token": tok.string,
+                "line": tok.start[0]
+            })
 
     except Exception:
-        pass
+        print("Tokenizer error:", e)
+        return []
 
     return tokens
 
+
+
+
 def encode_code(
     code,
+    kept_lines,
     vocab
 ):
 
-    tokens = tokenize_python(code)
+    encoded = []
 
-    return [
-        vocab.get(
-            token,
-            vocab["<UNK>"]
+    for token, line in tokenize_code(
+        code,
+        with_lines=True
+    ):
+
+        if line not in kept_lines:
+            continue
+
+        encoded.append(
+            vocab.get(
+                token,
+                vocab["<UNK>"]
+            )
         )
-        for token in tokens
-    ]
+
+    return encoded
 
 MAX_LEN = 4096
 def pad_sequence(seq):

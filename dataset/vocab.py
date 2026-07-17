@@ -1,6 +1,6 @@
 from collections import Counter
-import ast
-import re
+import io
+import tokenize
 
 
 SPECIAL_TOKENS = [
@@ -10,13 +10,57 @@ SPECIAL_TOKENS = [
 
 
 def tokenize_code(
-    code
+    code,
+    with_lines=False
 ):
+    """
+    Tokenize Python source.
 
-    return re.findall(
-        r"[A-Za-z_][A-Za-z0-9_]*|\d+|[^\s]",
-        code
-    )
+    Parameters
+    ----------
+    with_lines : bool
+        False -> ["if", "x", "=", ...]
+        True  -> [("if", 1), ("x", 1), ("=", 1), ...]
+    """
+
+    tokens = []
+
+    try:
+
+        for tok in tokenize.generate_tokens(
+            io.StringIO(code).readline
+        ):
+
+            tok_type = tokenize.tok_name[tok.type]
+
+            if tok_type in (
+                "NL",
+                "NEWLINE",
+                "INDENT",
+                "DEDENT",
+                "ENDMARKER"
+            ):
+                continue
+
+            if with_lines:
+
+                tokens.append(
+                    (
+                        tok.string,
+                        tok.start[0]
+                    )
+                )
+
+            else:
+
+                tokens.append(
+                    tok.string
+                )
+
+    except Exception:
+        pass
+
+    return tokens
 
 
 def build_token_vocab(
@@ -24,8 +68,7 @@ def build_token_vocab(
     min_freq=1
 ):
     """
-    Build vocab for source code tokens.
-    Used by GRU branch.
+    Build vocabulary for source-code tokens.
     """
 
     counter = Counter()
@@ -41,9 +84,7 @@ def build_token_vocab(
         )
 
         counter.update(
-            tokenize_code(
-                source
-            )
+            tokenize_code(source)
         )
 
     vocab = {
@@ -55,13 +96,12 @@ def build_token_vocab(
 
     for token, count in counter.items():
 
-        if count >= min_freq:
+        if (
+            count >= min_freq
+            and token not in vocab
+        ):
 
-            if token not in vocab:
-
-                vocab[token] = len(
-                    vocab
-                )
+            vocab[token] = len(vocab)
 
     return vocab
 
