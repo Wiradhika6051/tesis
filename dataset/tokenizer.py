@@ -29,7 +29,7 @@ def tokenize_python(code):
                 "line": tok.start[0]
             })
 
-    except Exception:
+    except Exception as e:
         print("Tokenizer error:", e)
         return []
 
