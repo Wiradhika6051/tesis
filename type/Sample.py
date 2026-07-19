@@ -7,6 +7,7 @@ class Sample:
     # ========= Dataset =========
 
     repo: str
+    parent_commit: str
     commit_hash: str
     file_path: str
 
@@ -39,4 +40,8 @@ class Sample:
 
     statistics: Dict[str, Any] = field(default_factory=dict)
 
-    
+
+    # Reserved for later preprocessing
+    seed_lines: List[int] = field(default_factory=list)
+
+    revision: str = ""
