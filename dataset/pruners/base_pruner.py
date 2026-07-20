@@ -8,6 +8,6 @@ class BasePruner(ABC):
     def prune(
         self,
         cfg,
-        snippet
+        seed_nodes
     ):
         pass
