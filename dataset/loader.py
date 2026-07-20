@@ -2,10 +2,12 @@ import json
 import pickle
 import os
 
+from loader import build_samples
+from type.GitChange import GitChange
+
 
 def load_samples(
     jsonl_path,
-    strategy,
     checkpoint_dir=None
 ):
 
@@ -108,15 +110,33 @@ def load_samples(
                             if previous is not None
                             else None
                         )
-
+                    
+                        previous_source = (
+                            previous["source"]
+                            if previous is not None
+                            else None
+                        )
+                        
+                        current_source = file.get("source")
+                        
+                        #
+                        # Skip if either revision is missing.
+                        #
+                        if previous_source is None or current_source is None:
+                            continue
+                        
+                        change = GitChange(
+                            repo=repo_url,
+                            parent_commit="", 
+                            commit_hash=commit["sha"],
+                            file_path=filename,
+                            previous_source=previous_source,
+                            current_source=current_source,
+                            diff=commit["diff"]
+                        )
+                        
                         samples.extend(
-
-                            strategy.extract(
-                                file,
-                                repo_url,
-                                commit["diff"]
-                            )
-
+                            build_samples(change)
                         )
 
     print("=" * 50)
