@@ -3,19 +3,14 @@ from collections import deque
 from tesis.dataset.pruners.base_pruner import BasePruner
 from tesis.dataset.pruners.utils import prune_cfg
 
-class ForwardSlicePruner(
-    BasePruner
-):
+
+class ForwardSlicePruner(BasePruner):
 
     def prune(
         self,
         cfg,
-        snippet
+        seed_nodes
     ):
-
-        targets = cfg[
-            "target_nodes"
-        ]
 
         graph = {}
 
@@ -24,37 +19,24 @@ class ForwardSlicePruner(
             graph.setdefault(
                 src,
                 []
-            ).append(
-                dst
-            )
+            ).append(dst)
 
-        keep = set(
-            targets
-        )
+        keep = set(seed_nodes)
 
-        queue = deque(
-            targets
-        )
+        queue = deque(seed_nodes)
 
         while queue:
 
             node = queue.popleft()
 
-            for child in graph.get(
-                node,
-                []
-            ):
+            for child in graph.get(node, []):
 
                 if child in keep:
                     continue
 
-                keep.add(
-                    child
-                )
+                keep.add(child)
 
-                queue.append(
-                    child
-                )
+                queue.append(child)
 
         return prune_cfg(
             cfg,
