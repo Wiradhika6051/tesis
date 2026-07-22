@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any
+from type.NodeFeature import NodeFeature
 
 @dataclass
 class Sample:
@@ -34,7 +35,7 @@ class Sample:
 
     tokens: List[str] = field(default_factory=list)
     edges: List[Any] = field(default_factory=list)
-    node_features: Optional[Any] = None
+    node_features: List[NodeFeature] | None = None
 
     # ========= Statistics =========
 
