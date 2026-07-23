@@ -9,18 +9,22 @@ SPECIAL_TOKENS = [
 ]
 
 
-def tokenize_code(
-    code,
-    with_lines=False
-):
+def iter_cfg_nodes(samples):
     """
-    Tokenize Python source.
+    Iterate over all nodes in all pruned CFGs.
+    """
 
-    Parameters
-    ----------
-    with_lines : bool
-        False -> ["if", "x", "=", ...]
-        True  -> [("if", 1), ("x", 1), ("=", 1), ...]
+    for sample in samples:
+
+        if sample.pruned_cfg is None:
+            continue
+
+        yield from sample.pruned_cfg["nodes"]
+
+
+def tokenize_code(code):
+    """
+    Tokenize source code into lexical tokens.
     """
 
     tokens = []
@@ -42,20 +46,7 @@ def tokenize_code(
             ):
                 continue
 
-            if with_lines:
-
-                tokens.append(
-                    (
-                        tok.string,
-                        tok.start[0]
-                    )
-                )
-
-            else:
-
-                tokens.append(
-                    tok.string
-                )
+            tokens.append(tok.string)
 
     except Exception:
         pass
@@ -73,18 +64,10 @@ def build_token_vocab(
 
     counter = Counter()
 
-    for sample in samples:
-
-        source = sample.get(
-            "source",
-            sample.get(
-                "code",
-                ""
-            )
-        )
+    for node in iter_cfg_nodes(samples):
 
         counter.update(
-            tokenize_code(source)
+            tokenize_code(node.text)
         )
 
     vocab = {
@@ -96,19 +79,19 @@ def build_token_vocab(
 
     for token, count in counter.items():
 
-        if (
-            count >= min_freq
-            and token not in vocab
-        ):
+        if count >= min_freq:
 
-            vocab[token] = len(vocab)
+            vocab.setdefault(
+                token,
+                len(vocab)
+            )
 
     return vocab
 
-def build_cfg_vocab():
+
+def build_cfg_vocab(samples):
     """
-    Build vocabulary for CFG nodes.
-    Used by GCN branch.
+    Build vocabulary for CFG node types.
     """
 
     vocab = {
@@ -116,46 +99,11 @@ def build_cfg_vocab():
         "<UNK>": 1
     }
 
-    cfg_node_types = [
+    for node in iter_cfg_nodes(samples):
 
-        "Assign",
-        "AugAssign",
-
-        "Call",
-
-        "If",
-        "For",
-        "While",
-
-        "Return",
-
-        "Try",
-        "ExceptHandler",
-
-        "With",
-
-        "FunctionDef",
-        "AsyncFunctionDef",
-
-        "ClassDef",
-
-        "Expr",
-
-        "Break",
-        "Continue",
-
-        "Raise",
-
-        "Import",
-        "ImportFrom",
-
-        "Pass"
-    ]
-
-    for node_type in cfg_node_types:
-
-        vocab[node_type] = len(
-            vocab
+        vocab.setdefault(
+            node.node_type,
+            len(vocab)
         )
 
     return vocab
