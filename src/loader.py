@@ -1,11 +1,11 @@
 from typing import List
-from type.Sample import Sample
-from type.GitChange import GitChange
+from src.type.Sample import Sample
+from src.type.GitChange import GitChange
 import json
 import pickle
 import os
 
-from type.GitChange import GitChange
+from src.type.GitChange import GitChange
 
 
 def load_samples(
