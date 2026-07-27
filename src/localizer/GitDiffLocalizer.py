@@ -1,6 +1,6 @@
 import re
 
-from src.localizer import DiffLocalizer
+from src.localizer.DiffLocalizer import DiffLocalizer
 from src.type.Sample import Sample
 
 
