@@ -10,7 +10,7 @@ class GitDiffLocalizer(DiffLocalizer):
         r'^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@'
     )
 
-    def extract(self, sample: Sample):
+    def localize(self, sample: Sample):
 
         seed_lines = []
 
