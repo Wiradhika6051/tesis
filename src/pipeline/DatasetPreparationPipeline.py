@@ -44,14 +44,14 @@ class DatasetPreparationPipeline:
             #
             # Map lines to CFG nodes
             #
-            sample.seed_nodes = self.cfg_localizer.localize(
+            sample = self.cfg_localizer.localize(
                 sample
             )
 
             #
             # Prune CFG
             #
-            sample.pruned_cfg = self.pruner.prune(
+            sample = self.pruner.prune(
                 sample
             )
 
