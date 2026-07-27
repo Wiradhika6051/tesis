@@ -403,7 +403,7 @@ class CFGBuilder:
         self.quality_stats["total_files"] += 1
 
         try:
-
+            print(sample)
             tree = ast.parse(sample.source)
 
         except SyntaxError as e:
