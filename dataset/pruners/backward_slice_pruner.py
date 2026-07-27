@@ -3,13 +3,16 @@ from collections import deque
 from tesis.dataset.pruners.base_pruner import BasePruner
 from tesis.dataset.pruners.utils import prune_cfg
 
+
 class BackwardSlicePruner(BasePruner):
 
     def prune(
         self,
-        cfg,
-        seed_nodes
+        sample
     ):
+
+        cfg = sample.cfg
+        seed_nodes = sample.seed_nodes
 
         reverse_graph = {}
 
@@ -37,4 +40,9 @@ class BackwardSlicePruner(BasePruner):
 
                 queue.append(parent)
 
-        return prune_cfg(cfg, keep)
+        sample.pruned_cfg = prune_cfg(
+            cfg,
+            keep
+        )
+
+        return sample

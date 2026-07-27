@@ -7,7 +7,6 @@ class BasePruner(ABC):
     @abstractmethod
     def prune(
         self,
-        cfg,
-        seed_nodes
+        sample
     ):
         pass

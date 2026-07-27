@@ -1,9 +1,10 @@
 import re
 
+from localizer import DiffLocalizer
 from tesis.dataset.sample import Sample
 
 
-class GitDiffLocalizer:
+class GitDiffLocalizer(DiffLocalizer):
 
     HUNK_PATTERN = re.compile(
         r'^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@'

@@ -6,16 +6,17 @@ class IdentityPruner(BasePruner):
 
     def prune(
         self,
-        cfg,
-        start_nodes
+        sample
     ):
 
         keep = {
             node.node_id
-            for node in cfg["nodes"]
+            for node in sample.cfg["nodes"]
         }
 
-        return prune_cfg(
-            cfg,
+        sample.pruned_cfg = prune_cfg(
+            sample.cfg,
             keep
         )
+
+        return sample

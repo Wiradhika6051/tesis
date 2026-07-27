@@ -1,3 +1,6 @@
+from localizer import CFGLocalizer
+
+
 class LineCFGLocalizer(CFGLocalizer):
 
     def localize(

@@ -8,9 +8,11 @@ class ForwardSlicePruner(BasePruner):
 
     def prune(
         self,
-        cfg,
-        seed_nodes
+        sample
     ):
+
+        cfg = sample.cfg
+        seed_nodes = sample.seed_nodes
 
         graph = {}
 
@@ -38,7 +40,9 @@ class ForwardSlicePruner(BasePruner):
 
                 queue.append(child)
 
-        return prune_cfg(
+        sample.pruned_cfg = prune_cfg(
             cfg,
             keep
         )
+
+        return sample

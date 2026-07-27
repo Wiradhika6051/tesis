@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import List
 
+from type import Sample
+
 
 class CFGLocalizer(ABC):
 
@@ -8,6 +10,6 @@ class CFGLocalizer(ABC):
     def localize(
         self,
         cfg,
-        seed_lines: List[int]
+        sample: Sample
     ) -> List[int]:
         pass

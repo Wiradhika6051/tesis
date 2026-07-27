@@ -11,17 +11,19 @@ class NeighborhoodPruner(BasePruner):
 
     def prune(
         self,
-        cfg,
-        start_nodes
+        sample
     ):
+
+        cfg = sample.cfg
+        seed_nodes = sample.seed_nodes
 
         #
         # No localization result.
         # Keep the entire graph.
         #
-        if not start_nodes:
+        if not seed_nodes:
 
-            return prune_cfg(
+            sample.pruned_cfg = prune_cfg(
                 cfg,
                 {
                     node.node_id
@@ -29,7 +31,9 @@ class NeighborhoodPruner(BasePruner):
                 }
             )
 
-        keep = set(start_nodes)
+            return sample
+
+        keep = set(seed_nodes)
 
         graph = {}
 
@@ -40,7 +44,7 @@ class NeighborhoodPruner(BasePruner):
 
         queue = deque(
             (node, 0)
-            for node in start_nodes
+            for node in seed_nodes
         )
 
         while queue:
@@ -64,7 +68,9 @@ class NeighborhoodPruner(BasePruner):
                     )
                 )
 
-        return prune_cfg(
+        sample.pruned_cfg = prune_cfg(
             cfg,
             keep
         )
+
+        return sample
