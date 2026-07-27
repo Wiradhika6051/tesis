@@ -1,4 +1,4 @@
-from tesis.preprocessing.vocabulary import tokenize_code
+from src.vocabulary import tokenize_code
 
 
 class Encoder:
