@@ -5,7 +5,6 @@ import json
 import pickle
 import os
 
-from loader import build_samples
 from type.GitChange import GitChange
 
 
