@@ -1,7 +1,7 @@
 import ast
 import json
 from platform import node
-
+from src.type.Sample import Sample
 from src.cfg.cfg_node import CFGNode
 
 class CFGBuilder:
@@ -394,7 +394,7 @@ class CFGBuilder:
    
     def build(
         self,
-        source
+        sample: Sample
     ):
 
         self.nodes = []
@@ -404,7 +404,7 @@ class CFGBuilder:
 
         try:
 
-            tree = ast.parse(source)
+            tree = ast.parse(sample.source)
 
         except SyntaxError as e:
             print(f"CFG parse failed: {e}")
