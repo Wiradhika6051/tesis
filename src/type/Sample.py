@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any
-from type.NodeFeature import NodeFeature
+from src.type.NodeFeature import NodeFeature
 
 @dataclass
 class Sample:
