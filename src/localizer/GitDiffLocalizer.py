@@ -1,7 +1,7 @@
 import re
 
-from localizer import DiffLocalizer
-from tesis.dataset.sample import Sample
+from src.localizer import DiffLocalizer
+from src.type.Sample import Sample
 
 
 class GitDiffLocalizer(DiffLocalizer):
