@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List
 
-from tesis.dataset.sample import Sample
+from src.type.Sample import Sample
 
 
 class DiffLocalizer(ABC):
