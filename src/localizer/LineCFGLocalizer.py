@@ -1,4 +1,4 @@
-from localizer import CFGLocalizer
+from src.localizer.CFGLocalizer import CFGLocalizer
 
 
 class LineCFGLocalizer(CFGLocalizer):
