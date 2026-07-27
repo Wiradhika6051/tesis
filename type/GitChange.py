@@ -9,8 +9,8 @@ class GitChange:
 
     file_path: str
 
-    previous_source: str = ""
-    current_source: str = ""
-
     # Unified diff (git diff -U...)
     diff: str
+
+    previous_source: str = ""
+    current_source: str = ""
