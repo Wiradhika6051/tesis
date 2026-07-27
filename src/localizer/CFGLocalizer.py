@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List
 
-from type import Sample
+from src.type import Sample
 
 
 class CFGLocalizer(ABC):
