@@ -108,18 +108,18 @@ def load_samples(
                         )
 
                         file["previousSource"] = (
-                            previous["source"]
+                            previous["sourceWithComments"]
                             if previous is not None
                             else None
                         )
                     
                         previous_source = (
-                            previous["source"]
+                            previous["sourceWithComments"]
                             if previous is not None
                             else None
                         )
                         
-                        current_source = file.get("source")
+                        current_source = file.get("sourceWithComments")
                         
                         #
                         # Skip if either revision is missing.
