@@ -1,12 +1,13 @@
+from src.Encoder import Encoder
+
 class FeaturePreparationPipeline:
 
     def __init__(
         self,
-        encoder,
         token_vocab_builder,
         cfg_vocab_builder
     ):
-        self.encoder = encoder
+        self.encoder = None
         self.token_vocab_builder = token_vocab_builder
         self.cfg_vocab_builder = cfg_vocab_builder
 
@@ -29,8 +30,10 @@ class FeaturePreparationPipeline:
         #
         # Update encoder with the vocabularies.
         #
-        self.encoder.token_vocab = token_vocab
-        self.encoder.cfg_vocab = cfg_vocab
+        self.encoder = Encoder(
+            token_vocab,
+            cfg_vocab
+        )
 
         #
         # Encode every sample.
