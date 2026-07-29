@@ -401,13 +401,13 @@ class CFGBuilder:
         self.edges = []
         self.counter = 0
         self.quality_stats["total_files"] += 1
-
+        
         try:
-            print(sample)
             tree = ast.parse(sample.source)
 
         except SyntaxError as e:
             print(f"CFG parse failed: {e}")
+            print(f"Source code:\n{sample.source}")
             self.quality_stats["parse_fail"] += 1
             return None
         self.quality_stats["parse_success"] += 1
