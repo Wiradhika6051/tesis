@@ -106,6 +106,7 @@ def load_samples(
                         previous = previous_lookup.get(
                             key
                         )
+                        print(previous.keys())
 
                         file["previousSource"] = (
                             previous["sourceWithComments"]
