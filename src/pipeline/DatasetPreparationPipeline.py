@@ -33,6 +33,8 @@ class DatasetPreparationPipeline:
             sample.cfg = self.cfg_builder.build(
                 sample
             )
+            if not sample.cfg:
+                continue
 
             #
             # Localize changed lines
