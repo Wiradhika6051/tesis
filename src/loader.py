@@ -119,7 +119,7 @@ def load_samples(
                             else None
                         )
                         
-                        current_source = file.get("source")
+                        current_source = file.get("sourceWithComments")
                         
                         #
                         # Skip if either revision is missing.
