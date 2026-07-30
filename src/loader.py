@@ -106,21 +106,20 @@ def load_samples(
                         previous = previous_lookup.get(
                             key
                         )
-                        print(previous.keys())
 
                         file["previousSource"] = (
-                            previous["sourceWithComments"]
+                            previous["source"]
                             if previous is not None
                             else None
                         )
                     
                         previous_source = (
-                            previous["sourceWithComments"]
+                            previous["source"]
                             if previous is not None
                             else None
                         )
                         
-                        current_source = file.get("sourceWithComments")
+                        current_source = file.get("source")
                         
                         #
                         # Skip if either revision is missing.
