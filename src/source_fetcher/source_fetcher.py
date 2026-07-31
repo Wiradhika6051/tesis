@@ -127,13 +127,18 @@ def fetch_previous_sources(
 
                     continue
 
-                source = git.get_previous_source(
+                vulnerable_source = git.get_source(
                     parent_sha,
+                    filename
+                )
+
+                fixed_source = git.get_source(
+                    sha,
                     filename
                 )
                 
 
-                if source is None:
+                if vulnerable_source is None or fixed_source is None:
 
                     repo_lookup[key] = None
 
@@ -148,7 +153,7 @@ def fetch_previous_sources(
                     continue
 
                 repo_lookup[key] = {
-
+                
                     "repo": repo_url,
 
                     "commit": sha,
@@ -157,7 +162,9 @@ def fetch_previous_sources(
 
                     "filename": filename,
 
-                    "source": source
+                    "vulnerable_source": vulnerable_source,
+
+                    "fixed_source": fixed_source
 
                 }
 
