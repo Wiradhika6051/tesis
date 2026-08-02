@@ -1,10 +1,9 @@
 from typing import List
-from src.type.Sample import Sample
-from src.type.GitChange import GitChange
 import json
 import pickle
 import os
 
+from src.type.Sample import Sample
 from src.type.GitChange import GitChange
 
 
@@ -27,9 +26,7 @@ def load_samples(
 
         for line in f:
 
-            data = json.loads(
-                line
-            )
+            data = json.loads(line)
 
             for repo_url, repo in data.items():
 
@@ -38,7 +35,7 @@ def load_samples(
                 #
                 # Load repository checkpoint
                 #
-                previous_lookup = {}
+                lookup = {}
 
                 if checkpoint_dir is not None:
 
@@ -71,9 +68,7 @@ def load_samples(
                         "rb"
                     ) as pf:
 
-                        previous_lookup = pickle.load(
-                            pf
-                        )
+                        lookup = pickle.load(pf)
 
                 used_repositories += 1
 
@@ -82,20 +77,12 @@ def load_samples(
                 #
                 for commit in repo.values():
 
-                    files = commit.get(
+                    for filename in commit.get(
                         "files",
                         {}
-                    )
-
-                    for filename, file in files.items():
+                    ):
 
                         filename = filename.lstrip("/")
-
-                        #
-                        # Some preprocessing may already
-                        # have inserted filename.
-                        #
-                        file["filename"] = filename
 
                         key = (
                             repo_url,
@@ -103,48 +90,42 @@ def load_samples(
                             filename
                         )
 
-                        previous = previous_lookup.get(
-                            key
+                        record = lookup.get(key)
+
+                        if record is None:
+                            continue
+
+                        if (
+                            record["vulnerable_source"] is None
+                            or
+                            record["fixed_source"] is None
+                        ):
+                            continue
+
+                        change = GitChange(
+
+                            repo=repo_url,
+
+                            parent_commit=record["parent"],
+
+                            commit_hash=record["commit"],
+
+                            file_path=filename,
+
+                            previous_source=record["vulnerable_source"],
+
+                            current_source=record["fixed_source"],
+
+                            diff=commit["diff"]
+
                         )
 
-                        file["previousSource"] = (
-                            previous["source"]
-                            if previous is not None
-                            else None
-                        )
-                    
-                        previous_source = (
-                            previous["source"]
-                            if previous is not None
-                            else None
-                        )
-                        
-                        current_source = file.get("sourceWithComments")
-                        
-                        #
-                        # Skip if either revision is missing.
-                        #
-                        if previous_source is None or current_source is None:
-                            continue
-                        
-                        change = GitChange(
-                            repo=repo_url,
-                            parent_commit="", 
-                            commit_hash=commit["sha"],
-                            file_path=filename,
-                            previous_source=previous_source,
-                            current_source=current_source,
-                            diff=commit["diff"]
-                        )
-                        
                         samples.extend(
                             build_samples(change)
                         )
 
     print("=" * 50)
-
     print("Dataset Loading Report")
-
     print("=" * 50)
 
     print(
@@ -165,33 +146,48 @@ def load_samples(
 
     return samples
 
-def build_samples(change: GitChange) -> List[Sample]:
-    """
-    Build two training samples from a vulnerability-fixing commit.
 
-    Returns:
-        Sample(label=1): Parent (vulnerable) revision
-        Sample(label=0): Current (fixed) revision
-    """
+def build_samples(
+    change: GitChange
+) -> List[Sample]:
 
     vulnerable = Sample(
+
         repo=change.repo,
+
         parent_commit=change.parent_commit,
+
         commit_hash=change.parent_commit,
+
         file_path=change.file_path,
+
         source=change.previous_source,
+
         diff=change.diff,
+
         label=1,
+
     )
 
     fixed = Sample(
+
         repo=change.repo,
+
         parent_commit=change.parent_commit,
+
         commit_hash=change.commit_hash,
+
         file_path=change.file_path,
+
         source=change.current_source,
+
         diff=change.diff,
+
         label=0,
+
     )
 
-    return [vulnerable, fixed]
+    return [
+        vulnerable,
+        fixed
+    ]
