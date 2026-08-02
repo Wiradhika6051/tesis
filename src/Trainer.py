@@ -2,9 +2,7 @@ import os
 
 from tqdm import tqdm
 
-from src.evaluator import Evaluator
-
-from src.utils.checkpoint import (
+from src.checkpoint import (
     save_checkpoint,
     load_checkpoint
 )
@@ -36,12 +34,6 @@ class Trainer:
         self.start_epoch = 0
         self.best_val_loss = float("inf")
         self.patience_counter = 0
-
-        self.evaluator = Evaluator(
-            model=model,
-            criterion=criterion,
-            device=device
-        )
 
     def fit(
         self,
