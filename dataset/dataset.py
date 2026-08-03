@@ -2,6 +2,7 @@
 
 import torch
 from torch.utils.data import Dataset
+from torch_geometric.data import Data
 
 
 class VulnerabilityDataset(Dataset):
@@ -38,21 +39,36 @@ class PhpNetDataset(Dataset):
     def __len__(self):
         return len(self.samples)
 
-    def __getitem__(
-        self,
-        idx
-    ):
-
+    def __getitem__(self, idx):
+    
         sample = self.samples[idx]
-
+    
+        graph = Data(
+        
+            x=torch.tensor(
+                sample.node_types,
+                dtype=torch.long
+            ),
+    
+            edge_index=torch.tensor(
+                sample.edges,
+                dtype=torch.long
+            ).t().contiguous()
+    
+        )
+    
         return (
-            sample.graph,
+        
+            graph,
+    
             torch.tensor(
                 sample.tokens,
                 dtype=torch.long
             ),
+    
             torch.tensor(
                 sample.label,
                 dtype=torch.long
             )
+    
         )
