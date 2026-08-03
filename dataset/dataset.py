@@ -29,24 +29,30 @@ class VulnerabilityDataset(Dataset):
 
 class PhpNetDataset(Dataset):
 
-    def __init__(self, samples):
+    def __init__(
+        self,
+        samples
+    ):
         self.samples = samples
 
     def __len__(self):
         return len(self.samples)
 
-    def __getitem__(self, idx):
+    def __getitem__(
+        self,
+        idx
+    ):
 
-        item = self.samples[idx]
+        sample = self.samples[idx]
 
         return (
-            item["graph"],
+            sample.graph,
             torch.tensor(
-                item["tokens"],
+                sample.tokens,
                 dtype=torch.long
             ),
             torch.tensor(
-                item["label"],
+                sample.label,
                 dtype=torch.long
             )
         )
