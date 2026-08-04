@@ -34,20 +34,18 @@ class BackwardSlicePruner(BasePruner):
         while queue:
             node = queue.popleft()
 
-        for parent in reverse_graph.get(node, []):
-        
-            #
-            # Stay inside the function.
-            #
-            if parent not in function_nodes:
-                continue
+            for parent in reverse_graph.get(node, []):
+                #
+                # Stay inside the function.
+                #
+                if parent not in function_nodes:
+                    continue
+                
+                if parent in keep:
+                    continue
             
-            if parent in keep:
-                continue
-            
-            keep.add(parent)
-
-            queue.append(parent)
+                keep.add(parent)
+                queue.append(parent)
 
         sample.pruned_cfg = prune_cfg(
             cfg,
