@@ -1,3 +1,7 @@
+import torch
+
+from torch_geometric.data import Data
+
 from src.vocabulary import tokenize_code
 
 
@@ -8,6 +12,7 @@ class Encoder:
         token_vocab,
         cfg_vocab
     ):
+
         self.token_vocab = token_vocab
         self.cfg_vocab = cfg_vocab
 
@@ -16,17 +21,17 @@ class Encoder:
         sample
     ):
 
-        token_ids = []
-        node_type_ids = []
+        node_tokens = []
+
+        node_types = []
 
         for node in sample.pruned_cfg["nodes"]:
 
-            #
-            # Encode source-code tokens.
-            #
-            tokens = tokenize_code(node.text)
+            tokens = tokenize_code(
+                node.text
+            )
 
-            encoded_tokens = [
+            encoded = [
 
                 self.token_vocab.get(
                     token,
@@ -34,26 +39,50 @@ class Encoder:
                 )
 
                 for token in tokens
+
             ]
 
-            token_ids.append(
-                encoded_tokens
+            node_tokens.append(
+                encoded
             )
 
-            #
-            # Encode CFG node type.
-            #
-            node_type_ids.append(
+            node_types.append(
 
                 self.cfg_vocab.get(
+
                     node.node_type,
+
                     self.cfg_vocab["<UNK>"]
+
                 )
 
             )
 
-        sample.tokens = token_ids
-        sample.node_types = node_type_ids
-        sample.edges = sample.pruned_cfg["edges"]
+        graph = Data(
+
+            edge_index=torch.tensor(
+
+                sample.pruned_cfg["edges"],
+
+                dtype=torch.long
+
+            ).t().contiguous()
+
+        )
+
+        #
+        # Custom attributes.
+        #
+        graph.node_tokens = node_tokens
+
+        graph.node_types = torch.tensor(
+
+            node_types,
+
+            dtype=torch.long
+
+        )
+
+        sample.graph = graph
 
         return sample

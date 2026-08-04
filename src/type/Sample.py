@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any
 from src.type.NodeFeature import NodeFeature
+from torch_geometric.data import Data
 
 @dataclass
 class Sample:
@@ -32,9 +33,6 @@ class Sample:
     pruned_cfg: Optional[Any] = None
 
     # ========= Model Input =========
-
-    tokens: List[str] = field(default_factory=list)
-    edges: List[Any] = field(default_factory=list)
     node_features: List[NodeFeature] | None = None
 
     # ========= Statistics =========
@@ -46,3 +44,7 @@ class Sample:
     seed_lines: List[int] = field(default_factory=list)
 
     revision: str = ""
+
+    # ========= Model Input =========
+
+    graph: Optional[Data] = None

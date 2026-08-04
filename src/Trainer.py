@@ -146,13 +146,9 @@ class Trainer:
             desc=f"Epoch {epoch+1}/{epochs}"
         )
 
-        for graph, tokens, labels in progress:
+        for graph, labels in progress:
 
             graph = graph.to(
-                self.device
-            )
-
-            tokens = tokens.to(
                 self.device
             )
 
@@ -160,18 +156,7 @@ class Trainer:
                 self.device
             )
 
-            cfg_emb = self.model.encode_graph(
-                graph
-            )
-
-            tok_emb = self.model.encode_tokens(
-                tokens
-            )
-
-            logits = self.model(
-                cfg_emb,
-                tok_emb
-            )
+            logits = self.model(graph)
 
             loss = self.criterion(
                 logits,

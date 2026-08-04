@@ -4,7 +4,6 @@ import torch.nn.functional as F
 
 from torch_geometric.nn import (
     GCNConv,
-    EdgePooling,
     global_max_pool
 )
 
@@ -13,7 +12,8 @@ class PhpNetGraph(nn.Module):
 
     def __init__(
         self,
-        token_vocab_size
+        token_vocab_size,
+        cfg_vocab_size
     ):
 
         super().__init__()
@@ -21,13 +21,21 @@ class PhpNetGraph(nn.Module):
         #
         # Token embedding
         #
-        self.embedding = nn.Embedding(
-            token_vocab_size,
-            100
+        self.token_embedding = nn.Embedding(
+            num_embeddings=token_vocab_size,
+            embedding_dim=100
         )
 
         #
-        # Encode every CFG node independently.
+        # CFG node type embedding
+        #
+        self.cfg_embedding = nn.Embedding(
+            num_embeddings=cfg_vocab_size,
+            embedding_dim=32
+        )
+
+        #
+        # Encode each CFG node from its tokens.
         #
         self.gru = nn.GRU(
             input_size=100,
@@ -38,14 +46,10 @@ class PhpNetGraph(nn.Module):
         )
 
         #
-        # GCN
+        # Graph Encoder
         #
         self.conv1 = GCNConv(
-            128,
-            128
-        )
-
-        self.pool1 = EdgePooling(
+            160,
             128
         )
 
@@ -54,21 +58,13 @@ class PhpNetGraph(nn.Module):
             256
         )
 
-        self.pool2 = EdgePooling(
-            256
-        )
-
         self.conv3 = GCNConv(
             256,
             256
         )
 
-        self.pool3 = EdgePooling(
-            256
-        )
-
         #
-        # Classification
+        # Graph classifier
         #
         self.classifier = nn.Sequential(
 
@@ -90,64 +86,82 @@ class PhpNetGraph(nn.Module):
 
         )
 
-    def encode_nodes(
+    def build_node_features(
         self,
-        node_tokens
+        graph
     ):
 
         #
-        # node_tokens
+        # graph.node_tokens
         #
+        # Shape:
         # (num_nodes,
         #  max_tokens_per_node)
         #
 
-        x = self.embedding(
-            node_tokens
+        token_x = self.token_embedding(
+            graph.node_tokens
         )
 
         _, hidden = self.gru(
-            x
+            token_x
         )
 
         #
-        # Forward + backward
+        # BiGRU output
         #
-        node_embedding = torch.cat(
-
+        token_feature = torch.cat(
             (
                 hidden[-2],
                 hidden[-1]
             ),
-
             dim=1
-
         )
 
-        return node_embedding
+        #
+        # graph.node_types
+        #
+        cfg_feature = self.cfg_embedding(
+            graph.node_types
+        )
+
+        #
+        # Final node feature
+        #
+        x = torch.cat(
+            (
+                token_feature,
+                cfg_feature
+            ),
+            dim=1
+        )
+
+        return x
 
     def forward(
         self,
         graph
     ):
 
-        x = self.encode_nodes(
-            graph.x.long()
+        #
+        # Build node representations
+        #
+        x = self.build_node_features(
+            graph
         )
 
+        #
+        # Graph structure
+        #
         edge_index = graph.edge_index
-
         batch = graph.batch
 
+        #
+        # GCN
+        #
         x = self.conv1(
             x,
             edge_index
-        )
-
-        x, edge_index, batch, _ = self.pool1(
-            x,
-            edge_index,
-            batch=batch
         )
 
         x = F.relu(x)
@@ -157,12 +171,6 @@ class PhpNetGraph(nn.Module):
             edge_index
         )
 
-        x, edge_index, batch, _ = self.pool2(
-            x,
-            edge_index,
-            batch=batch
-        )
-
         x = F.relu(x)
 
         x = self.conv3(
@@ -170,19 +178,21 @@ class PhpNetGraph(nn.Module):
             edge_index
         )
 
-        x, edge_index, batch, _ = self.pool3(
-            x,
-            edge_index,
-            batch=batch
-        )
-
         x = F.relu(x)
 
+        #
+        # Graph embedding
+        #
         x = global_max_pool(
             x,
             batch
         )
 
-        return self.classifier(
+        #
+        # Classification
+        #
+        logits = self.classifier(
             x
         )
+
+        return logits
