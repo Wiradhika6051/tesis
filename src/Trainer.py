@@ -147,25 +147,31 @@ class Trainer:
         )
 
         for graph, labels in progress:
-
-            graph = graph.to(
-                self.device
-            )
-
-            labels = labels.to(
-                self.device
-            )
-
+        
+            print("1")
+        
+            graph = graph.to(self.device)
+        
+            print("2")
+        
+            labels = labels.to(self.device)
+        
+            print("3")
+        
             logits = self.model(graph)
-
+        
+            print("4")
+        
             loss = self.criterion(
                 logits,
                 labels
             )
-
-            self.optimizer.zero_grad()
-
+        
+            print("5")
+        
             loss.backward()
+        
+            print("6")
 
             self.optimizer.step()
 
