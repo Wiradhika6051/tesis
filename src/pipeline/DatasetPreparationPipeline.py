@@ -8,11 +8,13 @@ class DatasetPreparationPipeline:
         cfg_builder,
         diff_localizer,
         cfg_localizer,
+        function_localizer,
         pruner
     ):
         self.cfg_builder = cfg_builder
         self.diff_localizer = diff_localizer
         self.cfg_localizer = cfg_localizer
+        self.function_localizer = function_localizer
         self.pruner = pruner
 
     def prepare(
@@ -47,6 +49,10 @@ class DatasetPreparationPipeline:
             # Map lines to CFG nodes
             #
             sample = self.cfg_localizer.localize(
+                sample
+            )
+
+            sample = self.function_localizer.localize(
                 sample
             )
 

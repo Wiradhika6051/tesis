@@ -48,3 +48,5 @@ class Sample:
     # ========= Model Input =========
 
     graph: Optional[Data] = None
+
+    function_nodes: list[int] = field(default_factory=list)
