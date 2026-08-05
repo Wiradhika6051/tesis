@@ -146,6 +146,11 @@ class PhpNetGraph(nn.Module):
         #
         # Build node representations
         #
+        print(graph.node_tokens.shape)
+
+        print(graph.node_types.shape)
+
+        print(graph.edge_index.shape)
         x = self.build_node_features(
             graph
         )
