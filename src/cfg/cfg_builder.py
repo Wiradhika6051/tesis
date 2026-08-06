@@ -30,9 +30,7 @@ class CFGBuilder:
             node_type=type(
                 ast_node
             ).__name__,
-            text=ast.dump(
-                ast_node
-            )
+            text = ast.get_source_segment(source, ast_node)
         )
 
         self.counter += 1
