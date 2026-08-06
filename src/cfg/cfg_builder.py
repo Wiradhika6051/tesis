@@ -1,6 +1,7 @@
 import ast
 import json
 from platform import node
+from random import sample
 from src.type.Sample import Sample
 from src.cfg.cfg_node import CFGNode
 
@@ -30,7 +31,7 @@ class CFGBuilder:
             node_type=type(
                 ast_node
             ).__name__,
-            text = ast.get_source_segment(source, ast_node)
+            text=self.get_node_source(ast_node)
         )
 
         self.counter += 1
@@ -38,6 +39,24 @@ class CFGBuilder:
         self.nodes.append(node)
 
         return node.node_id
+
+    def get_node_source(self, ast_node):
+
+        if isinstance(ast_node, ast.FunctionDef):
+            return f"def {ast_node.name}"
+
+        if isinstance(ast_node, ast.AsyncFunctionDef):
+            return f"async def {ast_node.name}"
+
+        if isinstance(ast_node, ast.ClassDef):
+            return f"class {ast_node.name}"
+
+        text = ast.get_source_segment(
+            self.source,
+            ast_node
+        )
+
+        return text if text else type(ast_node).__name__
     
     def process_block(
         self,
@@ -394,7 +413,7 @@ class CFGBuilder:
         self,
         sample: Sample
     ):
-
+        self.source = sample.source
         self.nodes = []
         self.edges = []
         self.counter = 0
