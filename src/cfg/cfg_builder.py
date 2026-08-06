@@ -58,6 +58,21 @@ class CFGBuilder:
 
         return text if text else type(ast_node).__name__
     
+    def process_class(self, stmt):
+
+        class_node = self.add_node(stmt)
+
+        if stmt.body:
+
+            start, end = self.process_block(stmt.body)
+
+            if start is not None:
+                self.edges.append((class_node, start))
+
+            return class_node, end
+
+        return class_node, class_node
+
     def process_block(
         self,
         statements
@@ -302,6 +317,8 @@ class CFGBuilder:
             return self.process_function(
                 stmt
             )
+        if isinstance(stmt, ast.ClassDef):
+            return self.process_class(ast.stmt)
 
         node = self.add_node(stmt)
 
