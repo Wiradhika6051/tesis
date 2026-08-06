@@ -318,7 +318,7 @@ class CFGBuilder:
                 stmt
             )
         if isinstance(stmt, ast.ClassDef):
-            return self.process_class(ast.stmt)
+            return self.process_class(stmt)
 
         node = self.add_node(stmt)
 
