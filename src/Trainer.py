@@ -159,7 +159,8 @@ class Trainer:
             print("3")
         
             logits = self.model(graph)
-        
+            print("logits:", logits.shape)
+            print("labels:", labels.shape)
             print("4")
         
             loss = self.criterion(

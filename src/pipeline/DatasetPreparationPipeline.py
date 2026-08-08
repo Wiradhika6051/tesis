@@ -1,3 +1,5 @@
+from random import sample
+
 from tqdm import tqdm
 
 
@@ -55,13 +57,21 @@ class DatasetPreparationPipeline:
             sample = self.function_localizer.localize(
                 sample
             )
-
+            if not sample.seed_nodes:
+                continue
             #
             # Prune CFG
             #
             sample = self.pruner.prune(
                 sample
             )
+
+            # skip empty graph
+            if not sample.pruned_cfg:
+                continue
+
+            if not sample.pruned_cfg["nodes"]:
+                continue
 
             prepared_samples.append(
                 sample

@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from asyncio import graph
 from torch_geometric.nn import (
     GCNConv,
     global_max_pool
@@ -184,7 +185,12 @@ class PhpNetGraph(nn.Module):
         )
 
         x = F.relu(x)
-
+        print("node_tokens:", graph.node_tokens.shape)
+        print("node_types:", graph.node_types.shape)
+        print("edge_index:", graph.edge_index.shape)
+        print("batch:", graph.batch.shape)
+        print("num graphs:", graph.num_graphs)
+        print("batch max:", graph.batch.max().item())
         #
         # Graph embedding
         #
