@@ -23,15 +23,30 @@ class CFGBuilder:
 
         node = CFGNode(
             node_id=self.counter,
+
             lineno=getattr(
                 ast_node,
                 "lineno",
                 -1
             ),
+
+            end_lineno=getattr(
+                ast_node,
+                "end_lineno",
+                getattr(
+                    ast_node,
+                    "lineno",
+                    -1
+                )
+            ),
+
             node_type=type(
                 ast_node
             ).__name__,
-            text=self.get_node_source(ast_node)
+
+            text=self.get_node_source(
+                ast_node
+            )
         )
 
         self.counter += 1
@@ -40,24 +55,182 @@ class CFGBuilder:
 
         return node.node_id
 
-    def get_node_source(self, ast_node):
+    def get_node_source(
+        self,
+        ast_node
+    ):
 
-        if isinstance(ast_node, ast.FunctionDef):
+        #
+        # Function / class declarations
+        #
+        if isinstance(
+            ast_node,
+            ast.FunctionDef
+        ):
             return f"def {ast_node.name}"
 
-        if isinstance(ast_node, ast.AsyncFunctionDef):
+        if isinstance(
+            ast_node,
+            ast.AsyncFunctionDef
+        ):
             return f"async def {ast_node.name}"
 
-        if isinstance(ast_node, ast.ClassDef):
+        if isinstance(
+            ast_node,
+            ast.ClassDef
+        ):
             return f"class {ast_node.name}"
 
+        #
+        # Conditional
+        #
+        if isinstance(
+            ast_node,
+            ast.If
+        ):
+
+            condition = self.get_expression_source(
+                ast_node.test
+            )
+
+            return f"if {condition}"
+
+        #
+        # For loop
+        #
+        if isinstance(
+            ast_node,
+            ast.For
+        ):
+
+            target = self.get_expression_source(
+                ast_node.target
+            )
+
+            iterator = self.get_expression_source(
+                ast_node.iter
+            )
+
+            return (
+                f"for {target} in {iterator}"
+            )
+
+        #
+        # Async for
+        #
+        if isinstance(
+            ast_node,
+            ast.AsyncFor
+        ):
+
+            target = self.get_expression_source(
+                ast_node.target
+            )
+
+            iterator = self.get_expression_source(
+                ast_node.iter
+            )
+
+            return (
+                f"async for {target} in {iterator}"
+            )
+
+        #
+        # While
+        #
+        if isinstance(
+            ast_node,
+            ast.While
+        ):
+
+            condition = self.get_expression_source(
+                ast_node.test
+            )
+
+            return f"while {condition}"
+
+        #
+        # Try
+        #
+        if isinstance(
+            ast_node,
+            ast.Try
+        ):
+
+            return "try"
+
+        #
+        # With
+        #
+        if isinstance(
+            ast_node,
+            ast.With
+        ):
+
+            return "with"
+
+        if isinstance(
+            ast_node,
+            ast.AsyncWith
+        ):
+
+            return "async with"
+
+        #
+        # Simple control-flow statements
+        #
+        if isinstance(
+            ast_node,
+            ast.Return
+        ):
+
+            return "return"
+
+        if isinstance(
+            ast_node,
+            ast.Raise
+        ):
+
+            return "raise"
+
+        if isinstance(
+            ast_node,
+            ast.Break
+        ):
+
+            return "break"
+
+        if isinstance(
+            ast_node,
+            ast.Continue
+        ):
+
+            return "continue"
+
+        #
+        # Normal statements.
+        #
         text = ast.get_source_segment(
             self.source,
             ast_node
         )
 
-        return text if text else type(ast_node).__name__
-    
+        if not text:
+            return type(ast_node).__name__
+        
+        text = text.strip()
+        
+        MAX_NODE_SOURCE_CHARS = 2048
+        
+        if len(text) > MAX_NODE_SOURCE_CHARS:
+        
+            text = (
+                text[:MAX_NODE_SOURCE_CHARS]
+                + " ..."
+            )
+        
+        return text
+
     def process_class(self, stmt):
 
         class_node = self.add_node(stmt)
@@ -415,14 +588,21 @@ class CFGBuilder:
 
         node = CFGNode(
             node_id=self.counter,
+
             lineno=-1,
+
+            end_lineno=-1,
+
             node_type=node_type,
+
             text=node_type
         )
 
         self.counter += 1
 
-        self.nodes.append(node)
+        self.nodes.append(
+            node
+        )
 
         return node.node_id
    
@@ -879,6 +1059,40 @@ class CFGBuilder:
         lines.append("}")
 
         return "\n".join(lines)
+
+    def get_expression_source(
+        self,
+        expression,
+        max_chars=512
+    ):
+
+        text = ast.get_source_segment(
+            self.source,
+            expression
+        )
+
+        if not text:
+
+            try:
+                text = ast.unparse(
+                    expression
+                )
+
+            except Exception:
+                return type(
+                    expression
+                ).__name__
+
+        text = text.strip()
+
+        if len(text) > max_chars:
+
+            text = (
+                text[:max_chars]
+                + " ..."
+            )
+
+        return text
 
 if __name__ == "__main__":
 
