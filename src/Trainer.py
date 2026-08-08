@@ -6,6 +6,7 @@ from src.checkpoint import (
     save_checkpoint,
     load_checkpoint
 )
+from src.Evaluator import Evaluator
 
 
 class Trainer:
@@ -18,7 +19,6 @@ class Trainer:
         device,
         checkpoint_path,
         best_model_path,
-        evaluator,
         patience=10
     ):
 
@@ -31,8 +31,11 @@ class Trainer:
         self.best_model_path = best_model_path
 
         self.patience = patience
-        self.evaluator = evaluator
-
+        self.evaluator = Evaluator(
+            model=self.model,
+            criterion=self.criterion,
+            device=self.device
+        )
         self.start_epoch = 0
         self.best_val_loss = float("inf")
         self.patience_counter = 0
