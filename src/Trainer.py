@@ -64,9 +64,11 @@ class Trainer:
                 train_loader
             )
 
-            val_loss = self.evaluator.evaluate(
+            result = self.evaluator.evaluate(
                 val_loader
             )
+            
+            val_loss = result["loss"]
 
             print(
                 f"Epoch {epoch + 1} "

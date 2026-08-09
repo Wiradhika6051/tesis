@@ -1,4 +1,5 @@
 import torch
+
 from tqdm import tqdm
 
 
@@ -24,9 +25,7 @@ class Evaluator:
         self.model.eval()
 
         total_loss = 0.0
-
         total_samples = 0
-        correct = 0
 
         all_predictions = []
         all_labels = []
@@ -71,20 +70,21 @@ class Evaluator:
             )
 
             #
-            # Statistics
+            # Batch statistics
             #
             batch_size = labels.size(0)
 
             total_loss += (
-                loss.item() * batch_size
+                loss.item()
+                *
+                batch_size
             )
 
             total_samples += batch_size
 
-            correct += (
-                predictions == labels
-            ).sum().item()
-
+            #
+            # Store predictions and labels
+            #
             all_predictions.append(
                 predictions.cpu()
             )
@@ -98,23 +98,49 @@ class Evaluator:
             )
 
         #
-        # Avoid division by zero
+        # Empty validation set
         #
         if total_samples == 0:
 
-            return float("inf")
+            return {
+                "loss": float("inf"),
+                "accuracy": 0.0,
+                "predictions": torch.empty(
+                    0,
+                    dtype=torch.long
+                ),
+                "labels": torch.empty(
+                    0,
+                    dtype=torch.long
+                )
+            }
 
+        #
+        # Average validation loss
+        #
         average_loss = (
             total_loss
             /
             total_samples
         )
 
-        accuracy = (
-            correct
-            /
-            total_samples
+        #
+        # Combine batches
+        #
+        predictions = torch.cat(
+            all_predictions
         )
+
+        labels = torch.cat(
+            all_labels
+        )
+
+        #
+        # Accuracy
+        #
+        accuracy = (
+            predictions == labels
+        ).float().mean().item()
 
         #
         # Restore training mode
@@ -127,4 +153,17 @@ class Evaluator:
             f"Accuracy={accuracy:.4f}"
         )
 
-        return average_loss
+        return {
+
+            "loss":
+                average_loss,
+
+            "accuracy":
+                accuracy,
+
+            "predictions":
+                predictions,
+
+            "labels":
+                labels
+        }
