@@ -67,7 +67,7 @@ class Trainer:
             result = self.evaluator.evaluate(
                 val_loader
             )
-            
+
             val_loss = result["loss"]
 
             print(
@@ -154,33 +154,15 @@ class Trainer:
         )
 
         for graph, labels in progress:
-        
-            print("1")
-        
             graph = graph.to(self.device)
-        
-            print("2")
-        
             labels = labels.to(self.device)
-        
-            print("3")
-        
             logits = self.model(graph)
-            print("logits:", logits.shape)
-            print("labels:", labels.shape)
-            print("4")
         
             loss = self.criterion(
                 logits,
                 labels
             )
-        
-            print("5")
-        
             loss.backward()
-        
-            print("6")
-
             self.optimizer.step()
 
             total_loss += loss.item()
