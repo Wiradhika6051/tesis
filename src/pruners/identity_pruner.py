@@ -9,11 +9,16 @@ class IdentityPruner(BasePruner):
         sample
     ):
 
-        keep = {
-            node.node_id
-            for node in sample.cfg["nodes"]
-        }
+        #
+        # Keep the entire localized function.
+        #
+        keep = set(
+            sample.function_nodes
+        )
 
+        #
+        # Build the pruned CFG.
+        #
         sample.pruned_cfg = prune_cfg(
             sample.cfg,
             keep
