@@ -256,6 +256,7 @@ def prune_cfg(
         "edges": new_edges,
         "kept_lines": keep_lines
     }
+
 def prune_source_by_lines(
     source,
     keep_lines
