@@ -1,7 +1,5 @@
 import ast
 import json
-from platform import node
-from random import sample
 from src.type.Sample import Sample
 from src.cfg.cfg_node import CFGNode
 
