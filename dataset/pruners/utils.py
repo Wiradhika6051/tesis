@@ -1,4 +1,5 @@
 import re
+import copy
 CFG_STATS = {
     "target_found": 0,
     "target_missing": 0,
@@ -185,38 +186,55 @@ def prune_cfg(
     keep_nodes
 ):
 
+    #
+    # Keep selected nodes.
+    #
     nodes = [
 
-        n
+        copy.copy(node)
 
-        for n in cfg["nodes"]
+        for node in cfg["nodes"]
 
-        if n.node_id in keep_nodes
+        if node.node_id in keep_nodes
     ]
 
+    #
+    # Keep selected edges.
+    #
     edges = [
 
-        e
+        edge
 
-        for e in cfg["edges"]
+        for edge in cfg["edges"]
 
         if (
-            e[0] in keep_nodes
+            edge[0] in keep_nodes
             and
-            e[1] in keep_nodes
+            edge[1] in keep_nodes
         )
     ]
 
+    #
+    # Record source lines.
+    #
     keep_lines = {
         node.lineno
         for node in nodes
     }
+
+    #
+    # Empty graph.
+    #
     if len(nodes) == 0:
 
         CFG_STATS[
             "empty_after_prune"
         ] += 1
 
+    #
+    # Map original node IDs
+    # to new node IDs.
+    #
     old_to_new = {}
 
     for new_id, node in enumerate(nodes):
@@ -225,19 +243,26 @@ def prune_cfg(
             node.node_id
         ] = new_id
 
+    #
+    # Remap edges.
+    #
     new_edges = []
 
     for src, dst in edges:
-
         new_edges.append(
             (
                 old_to_new[src],
                 old_to_new[dst]
             )
         )
+
+    #
+    # Assign new IDs to copied nodes.
+    #
     for new_id, node in enumerate(nodes):
 
         node.node_id = new_id
+
     return {
         **cfg,
         "nodes": nodes,
