@@ -1,5 +1,5 @@
-from tesis.dataset.pruners.base_pruner import BasePruner
-from tesis.dataset.pruners.utils import prune_cfg
+from src.pruners.base_pruner import BasePruner
+from src.pruners.utils import prune_cfg
 
 
 class IdentityPruner(BasePruner):

@@ -1,12 +1,16 @@
 from collections import deque
 
-from tesis.dataset.pruners.base_pruner import BasePruner
-from tesis.dataset.pruners.utils import prune_cfg
+from src.pruners.base_pruner import BasePruner
+from src.pruners.utils import prune_cfg
 
 
 class NeighborhoodPruner(BasePruner):
 
-    def __init__(self, hops=2):
+    def __init__(
+        self,
+        hops=2
+    ):
+
         self.hops = hops
 
     def prune(
@@ -18,35 +22,75 @@ class NeighborhoodPruner(BasePruner):
         seed_nodes = sample.seed_nodes
 
         #
-        # No localization result.
-        # Keep the entire graph.
+        # Restrict traversal to the target function.
+        #
+        function_nodes = set(
+            sample.function_nodes
+        )
+
+        #
+        # No seeds.
         #
         if not seed_nodes:
 
+            keep = function_nodes
+
             sample.pruned_cfg = prune_cfg(
                 cfg,
-                {
-                    node.node_id
-                    for node in cfg["nodes"]
-                }
+                keep
             )
 
             return sample
 
-        keep = set(seed_nodes)
-
+        #
+        # Build undirected graph.
+        #
         graph = {}
 
         for src, dst in cfg["edges"]:
 
-            graph.setdefault(src, []).append(dst)
-            graph.setdefault(dst, []).append(src)
+            if (
+                src not in function_nodes
+                or
+                dst not in function_nodes
+            ):
+                continue
+
+            graph.setdefault(
+                src,
+                []
+            ).append(dst)
+
+            graph.setdefault(
+                dst,
+                []
+            ).append(src)
+
+        #
+        # Only use seeds that belong
+        # to the target function.
+        #
+        seed_nodes = [
+            node
+            for node in seed_nodes
+            if node in function_nodes
+        ]
+
+        keep = set(
+            seed_nodes
+        )
 
         queue = deque(
-            (node, 0)
+            (
+                node,
+                0
+            )
             for node in seed_nodes
         )
 
+        #
+        # BFS neighborhood.
+        #
         while queue:
 
             node, depth = queue.popleft()
@@ -54,12 +98,17 @@ class NeighborhoodPruner(BasePruner):
             if depth >= self.hops:
                 continue
 
-            for neighbor in graph.get(node, []):
+            for neighbor in graph.get(
+                node,
+                []
+            ):
 
                 if neighbor in keep:
                     continue
 
-                keep.add(neighbor)
+                keep.add(
+                    neighbor
+                )
 
                 queue.append(
                     (

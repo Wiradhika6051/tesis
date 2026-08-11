@@ -1,5 +1,7 @@
 import re
 import copy
+
+from dataset.cfg.cfg_node import CFGNode
 CFG_STATS = {
     "target_found": 0,
     "target_missing": 0,
@@ -186,55 +188,33 @@ def prune_cfg(
     keep_nodes
 ):
 
-    #
-    # Keep selected nodes.
-    #
     nodes = [
 
-        copy.copy(node)
+        n
 
-        for node in cfg["nodes"]
+        for n in cfg["nodes"]
 
-        if node.node_id in keep_nodes
+        if n.node_id in keep_nodes
     ]
 
-    #
-    # Keep selected edges.
-    #
     edges = [
 
-        edge
+        e
 
-        for edge in cfg["edges"]
+        for e in cfg["edges"]
 
         if (
-            edge[0] in keep_nodes
+            e[0] in keep_nodes
             and
-            edge[1] in keep_nodes
+            e[1] in keep_nodes
         )
     ]
 
-    #
-    # Record source lines.
-    #
     keep_lines = {
         node.lineno
         for node in nodes
     }
 
-    #
-    # Empty graph.
-    #
-    if len(nodes) == 0:
-
-        CFG_STATS[
-            "empty_after_prune"
-        ] += 1
-
-    #
-    # Map original node IDs
-    # to new node IDs.
-    #
     old_to_new = {}
 
     for new_id, node in enumerate(nodes):
@@ -243,12 +223,26 @@ def prune_cfg(
             node.node_id
         ] = new_id
 
-    #
-    # Remap edges.
-    #
+    new_nodes = []
+
+    for new_id, node in enumerate(nodes):
+
+        new_node = CFGNode(
+            node_id=new_id,
+            lineno=node.lineno,
+            end_lineno=node.end_lineno,
+            node_type=node.node_type,
+            text=node.text
+        )
+
+        new_nodes.append(
+            new_node
+        )
+
     new_edges = []
 
     for src, dst in edges:
+
         new_edges.append(
             (
                 old_to_new[src],
@@ -256,21 +250,12 @@ def prune_cfg(
             )
         )
 
-    #
-    # Assign new IDs to copied nodes.
-    #
-    for new_id, node in enumerate(nodes):
-
-        node.node_id = new_id
-
     return {
         **cfg,
-        "nodes": nodes,
+        "nodes": new_nodes,
         "edges": new_edges,
         "kept_lines": keep_lines
     }
-
-
 def prune_source_by_lines(
     source,
     keep_lines
