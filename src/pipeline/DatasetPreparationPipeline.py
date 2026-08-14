@@ -1,7 +1,7 @@
 from random import sample
 
 from tqdm import tqdm
-
+from src.analysis.slice_analysis import analyze_slice
 
 class DatasetPreparationPipeline:
 
@@ -59,6 +59,25 @@ class DatasetPreparationPipeline:
             )
             if not sample.seed_nodes:
                 continue
+
+            # Analyze slice BEFORE pruning.
+            #
+            slice_analysis = analyze_slice(
+                sample
+            )
+            
+            if slice_analysis is not None:
+            
+                sample.slice_analysis = (
+                    slice_analysis
+                )
+            
+            #
+            # Prune CFG
+            #
+            sample = self.pruner.prune(
+                sample
+            )
             #
             # Prune CFG
             #
