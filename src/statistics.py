@@ -2,6 +2,142 @@ from statistics import mean, median
 
 from src.type.Sample import Sample
 
+from collections import deque
+
+def get_slice_nodes(
+    cfg,
+    seed_nodes,
+    function_nodes,
+    forward=True
+):
+
+    allowed = set(
+        function_nodes
+    )
+
+    graph = {}
+
+    for src, dst in cfg["edges"]:
+
+        if forward:
+
+            graph.setdefault(
+                src,
+                []
+            ).append(dst)
+
+        else:
+
+            graph.setdefault(
+                dst,
+                []
+            ).append(src)
+
+    keep = set(
+        seed_nodes
+    )
+
+    queue = deque(
+        seed_nodes
+    )
+
+    while queue:
+
+        node = queue.popleft()
+
+        for neighbor in graph.get(
+            node,
+            []
+        ):
+
+            if neighbor not in allowed:
+                continue
+
+            if neighbor in keep:
+                continue
+
+            keep.add(
+                neighbor
+            )
+
+            queue.append(
+                neighbor
+            )
+
+    return keep
+
+def get_forward_nodes(
+    cfg,
+    seed_nodes
+):
+
+    graph = {}
+
+    for src, dst in cfg["edges"]:
+
+        graph.setdefault(
+            src,
+            []
+        ).append(dst)
+
+    keep = set(seed_nodes)
+
+    queue = deque(seed_nodes)
+
+    while queue:
+
+        node = queue.popleft()
+
+        for child in graph.get(
+            node,
+            []
+        ):
+
+            if child in keep:
+                continue
+
+            keep.add(child)
+
+            queue.append(child)
+
+    return keep
+
+def get_backward_nodes(
+    cfg,
+    seed_nodes
+):
+
+    reverse_graph = {}
+
+    for src, dst in cfg["edges"]:
+
+        reverse_graph.setdefault(
+            dst,
+            []
+        ).append(src)
+
+    keep = set(seed_nodes)
+
+    queue = deque(seed_nodes)
+
+    while queue:
+
+        node = queue.popleft()
+
+        for parent in reverse_graph.get(
+            node,
+            []
+        ):
+
+            if parent in keep:
+                continue
+
+            keep.add(parent)
+
+            queue.append(parent)
+
+    return keep
+
 
 def analyze_pruning(
     original_samples: list[Sample],
