@@ -1,5 +1,3 @@
-from random import sample
-
 from tqdm import tqdm
 from src.analysis.pruning_dianogtics import PruningDiagnostics
 from src.analysis.slice_analysis import analyze_slice
@@ -26,6 +24,7 @@ class DatasetPreparationPipeline:
     ):
 
         prepared_samples = []
+
         diagnostics = PruningDiagnostics()
 
         for sample in tqdm(
@@ -34,105 +33,141 @@ class DatasetPreparationPipeline:
         ):
 
             #
-            # Build CFG
+            # 1. Build CFG
             #
             sample.cfg = self.cfg_builder.build(
                 sample
             )
+
             if not sample.cfg:
                 continue
 
             #
-            # Localize changed lines
+            # 2. Localize changed lines
             #
-            sample.seed_lines = self.diff_localizer.localize(
-                sample
+            sample.seed_lines = (
+                self.diff_localizer.localize(
+                    sample
+                )
             )
 
             #
-            # Map lines to CFG nodes
+            # 3. Localize changed lines
+            #    to CFG nodes.
             #
             sample = self.cfg_localizer.localize(
                 sample
             )
 
+            #
+            # 4. Localize target function.
+            #
             sample = self.function_localizer.localize(
                 sample
             )
-            seed_nodes = set(
-                sample.seed_nodes
-            )
 
-            function_nodes = set(
-                sample.function_nodes
-            )
-
+            #
+            # No seed nodes means
+            # there is nothing to prune around.
+            #
             if not sample.seed_nodes:
                 continue
 
-            # Analyze slice BEFORE pruning.
+            #
+            # 5. Analyze slicing BEFORE pruning.
             #
             slice_analysis = analyze_slice(
                 sample
             )
 
-            # inside your sample loop
-            
+            if slice_analysis is not None:
+
+                sample.slice_analysis = (
+                    slice_analysis
+                )
+
+            #
+            # 6. Prune CFG.
+            #
+            sample = self.pruner.prune(
+                sample
+            )
+
+            #
+            # 7. Make sure pruning produced
+            #    a valid CFG.
+            #
+            if sample.pruned_cfg is None:
+                print(
+                    "WARNING: Pruner returned None"
+                )
+
+                print(
+                    "Pruner:",
+                    type(self.pruner).__name__
+                )
+
+                print(
+                    "Repo:",
+                    sample.repo
+                )
+
+                print(
+                    "File:",
+                    sample.file_path
+                )
+
+                continue
+
+            #
+            # 8. Skip empty pruned graphs.
+            #
+            if not sample.pruned_cfg["nodes"]:
+                continue
+
+            #
+            # 9. Collect pruning diagnostics.
+            #
             diagnostics.add_sample(
-            
+
                 label=sample.label,
-            
+
                 function_nodes=
                     sample.function_nodes,
-            
+
                 seed_nodes=
                     sample.seed_nodes,
-            
-                retained_nodes={
-                
-                    node.node_id
-            
-                    for node
-                    in sample.pruned_cfg["nodes"]
-            
-                },
-            
+
+                backward_nodes=
+                    slice_analysis[
+                        "backward_nodes"
+                    ]
+                    if slice_analysis
+                    else 0,
+
+                forward_nodes=
+                    slice_analysis[
+                        "forward_nodes"
+                    ]
+                    if slice_analysis
+                    else 0,
+
                 sample_id=(
                     f"{sample.repo}:"
                     f"{sample.file_path}"
                 )
             )
-            
-            if slice_analysis is not None:
-            
-                sample.slice_analysis = (
-                    slice_analysis
-                )
-            
-            #
-            # Prune CFG
-            #
-            sample = self.pruner.prune(
-                sample
-            )
-            #
-            # Prune CFG
-            #
-            sample = self.pruner.prune(
-                sample
-            )
 
-            # skip empty graph
-            if not sample.pruned_cfg:
-                continue
-
-            if not sample.pruned_cfg["nodes"]:
-                continue
-
+            #
+            # 10. Keep prepared sample.
+            #
             prepared_samples.append(
                 sample
             )
-        # after processing everything
-                    
+
+        #
+        # 11. Print diagnostics.
+        #
         diagnostics.summary()
+
         return prepared_samples
