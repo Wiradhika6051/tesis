@@ -128,8 +128,11 @@ class DatasetPreparationPipeline:
             #
             # 9. Collect pruning diagnostics.
             #
+            #
+            # Collect pruning diagnostics.
+            #
             diagnostics.add_sample(
-
+            
                 label=sample.label,
 
                 function_nodes=
@@ -138,19 +141,11 @@ class DatasetPreparationPipeline:
                 seed_nodes=
                     sample.seed_nodes,
 
-                backward_nodes=
-                    slice_analysis[
-                        "backward_nodes"
-                    ]
-                    if slice_analysis
-                    else 0,
+                retained_nodes={
+                    node.node_id
+                    for node in sample.pruned_cfg["nodes"]
 
-                forward_nodes=
-                    slice_analysis[
-                        "forward_nodes"
-                    ]
-                    if slice_analysis
-                    else 0,
+                },
 
                 sample_id=(
                     f"{sample.repo}:"
