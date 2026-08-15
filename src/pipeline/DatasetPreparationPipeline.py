@@ -1,6 +1,7 @@
 from random import sample
 
 from tqdm import tqdm
+from src.analysis.pruning_dianogtics import PruningDiagnostics
 from src.analysis.slice_analysis import analyze_slice
 
 class DatasetPreparationPipeline:
@@ -25,6 +26,7 @@ class DatasetPreparationPipeline:
     ):
 
         prepared_samples = []
+        diagnostics = PruningDiagnostics()
 
         for sample in tqdm(
             samples,
@@ -65,53 +67,53 @@ class DatasetPreparationPipeline:
                 sample.function_nodes
             )
 
-            outside = (
-                seed_nodes
-                -
-                function_nodes
-            )
+            # outside = (
+            #     seed_nodes
+            #     -
+            #     function_nodes
+            # )
 
-            if outside:
+            # if outside:
             
-                print()
-                print("=" * 60)
-                print("LOCALIZATION MISMATCH")
-                print("=" * 60)
+            #     print()
+            #     print("=" * 60)
+            #     print("LOCALIZATION MISMATCH")
+            #     print("=" * 60)
 
-                print(
-                    "Repo:",
-                    sample.repo
-                )
+            #     print(
+            #         "Repo:",
+            #         sample.repo
+            #     )
 
-                print(
-                    "File:",
-                    sample.file_path
-                )
+            #     print(
+            #         "File:",
+            #         sample.file_path
+            #     )
 
-                print(
-                    "Label:",
-                    sample.label
-                )
+            #     print(
+            #         "Label:",
+            #         sample.label
+            #     )
 
-                print(
-                    "Seed lines:",
-                    sample.seed_lines
-                )
+            #     print(
+            #         "Seed lines:",
+            #         sample.seed_lines
+            #     )
 
-                print(
-                    "Seed nodes:",
-                    seed_nodes
-                )
+            #     print(
+            #         "Seed nodes:",
+            #         seed_nodes
+            #     )
 
-                print(
-                    "Function nodes:",
-                    function_nodes
-                )
+            #     print(
+            #         "Function nodes:",
+            #         function_nodes
+            #     )
 
-                print(
-                    "Seeds outside function:",
-                    outside
-                )
+            #     print(
+            #         "Seeds outside function:",
+            #         outside
+            #     )
             if not sample.seed_nodes:
                 continue
 
@@ -119,6 +121,17 @@ class DatasetPreparationPipeline:
             #
             slice_analysis = analyze_slice(
                 sample
+            )
+
+            # inside your sample loop
+            
+            diagnostics.add_sample(
+                label=slice_analysis["label"],
+                function_nodes=function_nodes,
+                seed_nodes=seed_nodes,
+                backward_nodes=slice_analysis["backward_nodes"],
+                forward_nodes=slice_analysis["forward_nodes"],
+                sample_id=f"{slice_analysis['repo']}:{slice_analysis['file']}",
             )
             
             if slice_analysis is not None:
@@ -150,5 +163,7 @@ class DatasetPreparationPipeline:
             prepared_samples.append(
                 sample
             )
-
+        # after processing everything
+                    
+        diagnostics.summary()
         return prepared_samples
