@@ -1,3 +1,6 @@
+import statistics
+
+
 class PruningDiagnostics:
 
     def __init__(self):
