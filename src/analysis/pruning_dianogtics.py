@@ -1,8 +1,5 @@
-from collections import Counter, defaultdict
-import statistics
-
-
 class PruningDiagnostics:
+
     def __init__(self):
         self.samples = []
 
@@ -15,44 +12,76 @@ class PruningDiagnostics:
         forward_nodes,
         sample_id=None,
     ):
+
         function_nodes = set(function_nodes)
         seed_nodes = set(seed_nodes)
-        backward_nodes = set(backward_nodes)
-        forward_nodes = set(forward_nodes)
 
-        valid_seeds = seed_nodes & function_nodes
-        outside_seeds = seed_nodes - function_nodes
+        valid_seeds = (
+            seed_nodes &
+            function_nodes
+        )
 
-        # Nodes retained by the complete slice
-        slice_nodes = backward_nodes | forward_nodes | valid_seeds
+        outside_seeds = (
+            seed_nodes -
+            function_nodes
+        )
 
-        # Retention relative to the localized function
-        if function_nodes:
-            retention = len(slice_nodes) / len(function_nodes)
+        function_count = len(
+            function_nodes
+        )
+
+        backward_count = backward_nodes
+        forward_count = forward_nodes
+
+        if function_count > 0:
+            backward_retention = (
+                backward_count /
+                function_count
+            )
+
+            forward_retention = (
+                forward_count /
+                function_count
+            )
         else:
-            retention = 0.0
-
-        # Check whether seeds survive into the slice
-        missing_seeds = valid_seeds - slice_nodes
+            backward_retention = 0.0
+            forward_retention = 0.0
 
         self.samples.append({
+
             "sample_id": sample_id,
+
             "label": label,
 
-            "function_nodes": len(function_nodes),
-            "seed_nodes": len(seed_nodes),
-            "valid_seeds": len(valid_seeds),
-            "outside_seeds": len(outside_seeds),
+            "function_nodes":
+                function_count,
 
-            "backward_nodes": len(backward_nodes),
-            "forward_nodes": len(forward_nodes),
-            "slice_nodes": len(slice_nodes),
+            "seed_nodes":
+                len(seed_nodes),
 
-            "retention": retention,
+            "valid_seeds":
+                len(valid_seeds),
 
-            "missing_seeds": len(missing_seeds),
-            "has_localization_mismatch": len(outside_seeds) > 0,
-            "has_valid_seed": len(valid_seeds) > 0,
+            "outside_seeds":
+                len(outside_seeds),
+
+            "backward_nodes":
+                backward_count,
+
+            "forward_nodes":
+                forward_count,
+
+            "backward_retention":
+                backward_retention,
+
+            "forward_retention":
+                forward_retention,
+
+            "has_localization_mismatch":
+                len(outside_seeds) > 0,
+
+            "has_valid_seed":
+                len(valid_seeds) > 0,
         })
 
     def summary(self):
