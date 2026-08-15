@@ -57,6 +57,61 @@ class DatasetPreparationPipeline:
             sample = self.function_localizer.localize(
                 sample
             )
+            seed_nodes = set(
+                sample.seed_nodes
+            )
+
+            function_nodes = set(
+                sample.function_nodes
+            )
+
+            outside = (
+                seed_nodes
+                -
+                function_nodes
+            )
+
+            if outside:
+            
+                print()
+                print("=" * 60)
+                print("LOCALIZATION MISMATCH")
+                print("=" * 60)
+
+                print(
+                    "Repo:",
+                    sample.repo
+                )
+
+                print(
+                    "File:",
+                    sample.file_path
+                )
+
+                print(
+                    "Label:",
+                    sample.label
+                )
+
+                print(
+                    "Seed lines:",
+                    sample.seed_lines
+                )
+
+                print(
+                    "Seed nodes:",
+                    seed_nodes
+                )
+
+                print(
+                    "Function nodes:",
+                    function_nodes
+                )
+
+                print(
+                    "Seeds outside function:",
+                    outside
+                )
             if not sample.seed_nodes:
                 continue
 

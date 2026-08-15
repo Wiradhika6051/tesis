@@ -36,10 +36,18 @@ class ForwardSlicePruner(BasePruner):
         #
         # Start from vulnerability seed nodes.
         #
-        keep = set(seed_nodes)
-
+        valid_seeds = (
+            set(seed_nodes)
+            &
+            set(function_nodes)
+        )
+        
+        keep = set(
+            valid_seeds
+        )
+        
         queue = deque(
-            seed_nodes
+            valid_seeds
         )
 
         #

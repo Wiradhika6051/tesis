@@ -27,9 +27,19 @@ class BackwardSlicePruner(BasePruner):
             sample.function_nodes
         )
 
-        keep = set(seed_nodes)
-
-        queue = deque(seed_nodes)
+        valid_seeds = (
+            set(seed_nodes)
+            &
+            set(function_nodes)
+        )
+        
+        keep = set(
+            valid_seeds
+        )
+        
+        queue = deque(
+            valid_seeds
+        )
 
         while queue:
             node = queue.popleft()

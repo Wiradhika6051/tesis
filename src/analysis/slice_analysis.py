@@ -7,15 +7,19 @@ def get_slice_nodes(
     function_nodes,
     forward
 ):
-    """
-    Calculate the nodes retained by a
-    forward or backward slice.
-
-    This does NOT modify the sample.
-    """
 
     allowed = set(
         function_nodes
+    )
+
+    #
+    # Only seeds belonging to the
+    # localized function are valid.
+    #
+    valid_seeds = (
+        set(seed_nodes)
+        &
+        allowed
     )
 
     graph = {}
@@ -36,12 +40,15 @@ def get_slice_nodes(
                 []
             ).append(src)
 
+    #
+    # Start only from valid seeds.
+    #
     keep = set(
-        seed_nodes
+        valid_seeds
     )
 
     queue = deque(
-        seed_nodes
+        valid_seeds
     )
 
     while queue:
@@ -68,15 +75,9 @@ def get_slice_nodes(
             )
 
     return keep
-
-
 def analyze_slice(
     sample
 ):
-    """
-    Analyze forward and backward slices
-    before pruning.
-    """
 
     cfg = sample.cfg
 
@@ -94,6 +95,18 @@ def analyze_slice(
     if not function_nodes:
         return None
 
+    #
+    # IMPORTANT DIAGNOSTIC
+    #
+    seeds_outside_function = (
+        seed_nodes
+        -
+        function_nodes
+    )
+
+    #
+    # Calculate slices
+    #
     backward_nodes = get_slice_nodes(
         cfg,
         seed_nodes,
@@ -112,7 +125,8 @@ def analyze_slice(
         function_nodes
     )
 
-    return {
+    result = {
+
         "repo":
             sample.repo,
 
@@ -124,6 +138,9 @@ def analyze_slice(
 
         "seed_nodes":
             len(seed_nodes),
+
+        "seeds_outside_function":
+            len(seeds_outside_function),
 
         "function_nodes":
             function_size,
@@ -144,3 +161,64 @@ def analyze_slice(
             /
             function_size
     }
+
+    #
+    # Print suspicious samples.
+    #
+    if (
+        len(backward_nodes)
+        >
+        function_size
+    ):
+
+        print()
+        print("=" * 60)
+        print("SUSPICIOUS SLICE")
+        print("=" * 60)
+
+        print(
+            "Repo:",
+            sample.repo
+        )
+
+        print(
+            "File:",
+            sample.file_path
+        )
+
+        print(
+            "Label:",
+            sample.label
+        )
+
+        print(
+            "Seed nodes:",
+            seed_nodes
+        )
+
+        print(
+            "Function nodes:",
+            function_nodes
+        )
+
+        print(
+            "Seeds outside function:",
+            seeds_outside_function
+        )
+
+        print(
+            "Function size:",
+            function_size
+        )
+
+        print(
+            "Backward size:",
+            len(backward_nodes)
+        )
+
+        print(
+            "Forward size:",
+            len(forward_nodes)
+        )
+
+    return result
