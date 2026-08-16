@@ -10,27 +10,38 @@ from tqdm import tqdm
 # ============================================================
 # Dataset / Graph Statistics
 # ============================================================
-
 def analyze_graph_statistics(
     dataset
 ):
-    """
-    Analyze basic graph statistics grouped by label.
-    """
 
     print("\n" + "=" * 70)
     print("GRAPH STATISTICS DIAGNOSTICS")
     print("=" * 70)
 
     if not dataset:
+
         print("Dataset is empty.")
+
         return
 
     grouped = defaultdict(list)
 
+    missing_graphs = []
+
     for sample in dataset:
 
         graph = sample.graph
+
+        #
+        # Graph was not generated.
+        #
+        if graph is None:
+
+            missing_graphs.append(
+                sample
+            )
+
+            continue
 
         num_nodes = graph.num_nodes
 
@@ -45,12 +56,9 @@ def analyze_graph_statistics(
             for tokens in graph.node_tokens
         )
 
-        node_lengths = [
-            len(tokens)
-            for tokens in graph.node_tokens
-        ]
-
-        grouped[sample.label].append({
+        grouped[
+            sample.label
+        ].append({
 
             "nodes":
                 num_nodes,
@@ -59,22 +67,63 @@ def analyze_graph_statistics(
                 num_edges,
 
             "tokens":
-                total_tokens,
-
-            "node_lengths":
-                node_lengths
+                total_tokens
         })
 
+    #
+    # Report missing graphs.
+    #
+    print(
+        f"Total samples      : "
+        f"{len(dataset)}"
+    )
+
+    print(
+        f"Valid graphs       : "
+        f"{len(dataset) - len(missing_graphs)}"
+    )
+
+    print(
+        f"Missing graphs     : "
+        f"{len(missing_graphs)}"
+    )
+
+    if missing_graphs:
+
+        print(
+            "\n## Samples Without Graph"
+        )
+
+        for sample in missing_graphs[:10]:
+
+            print(
+                f"Label={sample.label} | "
+                f"{sample.repo} | "
+                f"{sample.file_path}"
+            )
+
+    #
+    # Statistics by label.
+    #
     for label in sorted(grouped):
 
         group = grouped[label]
 
-        print("\n" + "-" * 50)
-        print(f"Label {label}")
-        print("-" * 50)
+        print(
+            "\n" + "-" * 50
+        )
 
         print(
-            f"Samples        : {len(group)}"
+            f"Label {label}"
+        )
+
+        print(
+            "-" * 50
+        )
+
+        print(
+            f"Samples        : "
+            f"{len(group)}"
         )
 
         print(
@@ -112,7 +161,6 @@ def analyze_graph_statistics(
             f"{max(x['edges'] for x in group)}"
         )
 
-
 # ============================================================
 # Node Token Length Statistics
 # ============================================================
@@ -132,6 +180,8 @@ def analyze_node_token_lengths(
 
     for sample in dataset:
 
+        if sample.graph is None:
+            continue
         for tokens in sample.graph.node_tokens:
 
             grouped[sample.label].append(
