@@ -13,7 +13,7 @@ class GitDiffLocalizer(DiffLocalizer):
     )
 
     def localize(self, sample: Sample):
-        diff = self.get_file_diff(sample.diff, sample.file)
+        diff = self.get_file_diff(sample.diff, sample.file_path)
         seed_lines = []
 
         old_line = None
