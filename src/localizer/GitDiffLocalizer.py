@@ -1,5 +1,7 @@
 import re
 
+from pyparsing import line
+
 from src.localizer.DiffLocalizer import DiffLocalizer
 from src.type.Sample import Sample
 
@@ -11,13 +13,13 @@ class GitDiffLocalizer(DiffLocalizer):
     )
 
     def localize(self, sample: Sample):
-
+        diff = self.get_file_diff(sample.diff, sample.file)
         seed_lines = []
 
         old_line = None
         new_line = None
 
-        for line in sample.diff.splitlines():
+        for line in diff.splitlines():
 
             #
             # New hunk
@@ -62,7 +64,27 @@ class GitDiffLocalizer(DiffLocalizer):
             #
             # Context line
             #
+            if line.startswith("\\"):
+                continue
+            
             old_line += 1
             new_line += 1
 
         return seed_lines
+
+    def get_file_diff(self,diff, target_file):
+        current_file = None
+        lines = []
+
+        for line in diff.splitlines():
+
+            if line.startswith("diff --git "):
+                match = re.match(r"diff --git a/(.*?) b/(.*)", line)
+
+                if match:
+                    current_file = match.group(2)
+
+            if current_file == target_file:
+                lines.append(line)
+
+        return "\n".join(lines)
