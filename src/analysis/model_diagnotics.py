@@ -678,3 +678,493 @@ def overfit_small_dataset(
         "success":
             False
     }
+
+import statistics
+from collections import Counter
+
+
+def _get_graph(sample):
+    """
+    Try to obtain the graph representation used by the model.
+
+    Returns:
+        graph object or None
+    """
+
+    return getattr(sample, "graph", None)
+
+
+def analyze_graph_availability(dataset):
+    """
+    Check whether samples actually contain the graph representation
+    expected by the model.
+    """
+
+    print("\n" + "=" * 70)
+    print("GRAPH AVAILABILITY DIAGNOSTICS")
+    print("=" * 70)
+
+    total = len(dataset)
+
+    valid = []
+    missing = []
+
+    for sample in dataset:
+
+        graph = _get_graph(sample)
+
+        if graph is None:
+            missing.append(sample)
+
+        else:
+            valid.append(sample)
+
+    print(f"Total samples : {total}")
+    print(
+        f"Valid graphs  : "
+        f"{len(valid)} "
+        f"({len(valid) / total:.2%})"
+    )
+
+    print(
+        f"Missing graphs: "
+        f"{len(missing)} "
+        f"({len(missing) / total:.2%})"
+    )
+
+    # ---------------------------------------------------------
+    # Missing graphs by label
+    # ---------------------------------------------------------
+
+    print("\n## Missing Graphs By Label")
+
+    missing_labels = Counter(
+        sample.label
+        for sample in missing
+    )
+
+    for label, count in sorted(
+        missing_labels.items()
+    ):
+
+        print(
+            f"Label {label}: "
+            f"{count}"
+        )
+
+    # ---------------------------------------------------------
+    # Valid graphs by label
+    # ---------------------------------------------------------
+
+    print("\n## Valid Graphs By Label")
+
+    valid_labels = Counter(
+        sample.label
+        for sample in valid
+    )
+
+    for label, count in sorted(
+        valid_labels.items()
+    ):
+
+        print(
+            f"Label {label}: "
+            f"{count}"
+        )
+
+    return valid, missing
+
+
+def analyze_graph_statistics(dataset):
+    """
+    Analyze basic statistics of the actual PyG graph
+    attached to each sample.
+    """
+
+    print("\n" + "=" * 70)
+    print("GRAPH STATISTICS")
+    print("=" * 70)
+
+    valid = [
+        sample
+        for sample in dataset
+        if _get_graph(sample) is not None
+    ]
+
+    if not valid:
+
+        print("No valid graphs found.")
+
+        return
+
+    print(
+        f"Samples analyzed : "
+        f"{len(valid)}"
+    )
+
+    # ---------------------------------------------------------
+    # Overall
+    # ---------------------------------------------------------
+
+    node_counts = []
+    edge_counts = []
+
+    for sample in valid:
+
+        graph = sample.graph
+
+        node_counts.append(
+            graph.num_nodes
+        )
+
+        edge_counts.append(
+            graph.edge_index.shape[1]
+            if graph.edge_index is not None
+            else 0
+        )
+
+    print("\n## Overall")
+
+    print(
+        f"Average Nodes : "
+        f"{statistics.mean(node_counts):.2f}"
+    )
+
+    print(
+        f"Min Nodes     : "
+        f"{min(node_counts)}"
+    )
+
+    print(
+        f"Max Nodes     : "
+        f"{max(node_counts)}"
+    )
+
+    print(
+        f"Average Edges : "
+        f"{statistics.mean(edge_counts):.2f}"
+    )
+
+    print(
+        f"Min Edges     : "
+        f"{min(edge_counts)}"
+    )
+
+    print(
+        f"Max Edges     : "
+        f"{max(edge_counts)}"
+    )
+
+    # ---------------------------------------------------------
+    # By label
+    # ---------------------------------------------------------
+
+    labels = sorted(
+        set(sample.label for sample in valid)
+    )
+
+    print("\n## By Label")
+
+    for label in labels:
+
+        group = [
+            sample
+            for sample in valid
+            if sample.label == label
+        ]
+
+        nodes = [
+            sample.graph.num_nodes
+            for sample in group
+        ]
+
+        edges = [
+            (
+                sample.graph.edge_index.shape[1]
+                if sample.graph.edge_index is not None
+                else 0
+            )
+            for sample in group
+        ]
+
+        print(f"\nLabel {label}")
+
+        print(
+            f"Samples       : "
+            f"{len(group)}"
+        )
+
+        print(
+            f"Average Nodes : "
+            f"{statistics.mean(nodes):.2f}"
+        )
+
+        print(
+            f"Average Edges : "
+            f"{statistics.mean(edges):.2f}"
+        )
+
+        print(
+            f"Min Nodes     : "
+            f"{min(nodes)}"
+        )
+
+        print(
+            f"Max Nodes     : "
+            f"{max(nodes)}"
+        )
+
+
+def analyze_node_features(dataset):
+    """
+    Inspect the node feature tensor given to the model.
+    """
+
+    print("\n" + "=" * 70)
+    print("NODE FEATURE DIAGNOSTICS")
+    print("=" * 70)
+
+    valid = [
+        sample
+        for sample in dataset
+        if _get_graph(sample) is not None
+        and getattr(sample.graph, "x", None) is not None
+    ]
+
+    if not valid:
+
+        print("No graphs with node features found.")
+
+        return
+
+    print(
+        f"Graphs analyzed : "
+        f"{len(valid)}"
+    )
+
+    feature_dimensions = Counter()
+
+    feature_counts = []
+
+    for sample in valid:
+
+        x = sample.graph.x
+
+        feature_dimensions[
+            tuple(x.shape)
+        ] += 1
+
+        feature_counts.append(
+            x.shape[0]
+        )
+
+    print("\n## Feature Shapes")
+
+    for shape, count in feature_dimensions.most_common():
+
+        print(
+            f"{shape} : "
+            f"{count}"
+        )
+
+    print("\n## Feature Statistics")
+
+    print(
+        f"Average feature rows : "
+        f"{statistics.mean(feature_counts):.2f}"
+    )
+
+    # ---------------------------------------------------------
+    # Check whether features are constant
+    # ---------------------------------------------------------
+
+    constant_graphs = 0
+
+    for sample in valid:
+
+        x = sample.graph.x
+
+        if x.numel() == 0:
+            constant_graphs += 1
+            continue
+
+        if x.ndim >= 2:
+
+            if x.shape[0] > 1:
+
+                if x.float().std().item() == 0:
+
+                    constant_graphs += 1
+
+    print(
+        f"Graphs with constant "
+        f"features : {constant_graphs}"
+    )
+
+
+def analyze_graph_node_types(dataset):
+    """
+    Analyze node type distribution if node types
+    are available on the graph.
+    """
+
+    print("\n" + "=" * 70)
+    print("GRAPH NODE TYPE DIAGNOSTICS")
+    print("=" * 70)
+
+    valid = [
+        sample
+        for sample in dataset
+        if _get_graph(sample) is not None
+        and hasattr(sample.graph, "node_types")
+    ]
+
+    if not valid:
+
+        print(
+            "No graphs containing "
+            "`node_types` found."
+        )
+
+        return
+
+    overall = Counter()
+    by_label = {}
+
+    for sample in valid:
+
+        node_types = sample.graph.node_types
+
+        label = sample.label
+
+        if label not in by_label:
+            by_label[label] = Counter()
+
+        for node_type in node_types:
+
+            if hasattr(node_type, "item"):
+
+                node_type = node_type.item()
+
+            overall[node_type] += 1
+            by_label[label][node_type] += 1
+
+    print("\n## Overall")
+
+    for node_type, count in overall.most_common():
+
+        print(
+            f"{node_type}: "
+            f"{count}"
+        )
+
+    print("\n## By Label")
+
+    for label in sorted(by_label):
+
+        print(
+            f"\nLabel {label}"
+        )
+
+        for node_type, count in (
+            by_label[label].most_common()
+        ):
+
+            print(
+                f"{node_type}: "
+                f"{count}"
+            )
+
+def analyze_class_graph_statistics(
+    dataset
+):
+
+    print("\n" + "=" * 70)
+    print("CLASS-WISE GRAPH STATISTICS")
+    print("=" * 70)
+
+    groups = {}
+
+    for sample in dataset:
+
+        if sample.graph is None:
+            continue
+
+        label = sample.label
+
+        groups.setdefault(
+            label,
+            []
+        ).append(sample)
+
+    for label in sorted(groups):
+
+        samples = groups[label]
+
+        node_counts = [
+            sample.graph.num_nodes
+            for sample in samples
+        ]
+
+        edge_counts = [
+
+            sample.graph.edge_index.shape[1]
+
+            for sample in samples
+
+        ]
+
+        token_counts = [
+
+            sample.graph.node_tokens
+                .ne(0)
+                .sum()
+                .item()
+
+            for sample in samples
+
+        ]
+
+        print(
+            f"\nLabel {label}"
+        )
+
+        print(
+            f"Samples          : "
+            f"{len(samples)}"
+        )
+
+        print(
+            f"Avg nodes        : "
+            f"{statistics.mean(node_counts):.2f}"
+        )
+
+        print(
+            f"Avg edges        : "
+            f"{statistics.mean(edge_counts):.2f}"
+        )
+
+        print(
+            f"Avg token IDs    : "
+            f"{statistics.mean(token_counts):.2f}"
+        )
+
+        print(
+            f"Min nodes        : "
+            f"{min(node_counts)}"
+        )
+
+        print(
+            f"Max nodes        : "
+            f"{max(node_counts)}"
+        )
+
+        print(
+            f"Min edges        : "
+            f"{min(edge_counts)}"
+        )
+
+        print(
+            f"Max edges        : "
+            f"{max(edge_counts)}"
+        )
