@@ -101,9 +101,37 @@ def load_samples(
                             record["fixed_source"] is None
                         ):
                             continue
+                        file_diff = extract_file_diff(
+                            commit["diff"],
+                            filename
+                        )
 
+                        if file_diff is None:
+                        
+                            print(
+                                f"WARNING: Could not find diff "
+                                f"for {filename}"
+                            )
+
+                            continue
+
+                        print(
+                            f"\nRepo : {repo_url}"
+                        )
+                        
+                        print(
+                            f"File : {filename}"
+                        )
+                        
+                        print(
+                            "Diff files:",
+                            sum(
+                                line.startswith("diff --git ")
+                                for line in file_diff.splitlines()
+                            )
+                        )
                         change = GitChange(
-
+                        
                             repo=repo_url,
 
                             parent_commit=record["parent"],
@@ -116,7 +144,7 @@ def load_samples(
 
                             current_source=record["fixed_source"],
 
-                            diff=commit["diff"]
+                            diff=file_diff
 
                         )
 
@@ -191,3 +219,58 @@ def build_samples(
         vulnerable,
         fixed
     ]
+
+def extract_file_diff(
+    commit_diff,
+    filename
+):
+    """
+    Extract the unified diff for one file
+    from a commit-level diff.
+    """
+
+    filename = filename.lstrip("/")
+
+    target_header = (
+        f"diff --git a/{filename} "
+        f"b/{filename}"
+    )
+
+    lines = commit_diff.splitlines(
+        keepends=True
+    )
+
+    collecting = False
+    file_lines = []
+
+    for line in lines:
+
+        #
+        # Start of a file diff.
+        #
+        if line.startswith("diff --git "):
+
+            if collecting:
+                break
+
+            if line.rstrip("\n") == target_header:
+                collecting = True
+
+                file_lines.append(
+                    line
+                )
+
+            continue
+
+        if collecting:
+
+            file_lines.append(
+                line
+            )
+
+    if not file_lines:
+        return None
+
+    return "".join(
+        file_lines
+    )
