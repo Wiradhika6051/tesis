@@ -86,6 +86,25 @@ class DatasetPreparationPipeline:
                     slice_analysis
                 )
 
+            print("Comparing slices...")
+            from src.analysis.slice_comparison import (
+                compare_slices,
+                print_slice_comparison_summary,
+                print_worst_slice_differences
+            )
+
+            results = compare_slices(
+                samples
+            )
+
+            print_slice_comparison_summary(
+                results
+            )
+
+            print_worst_slice_differences(
+                results,
+                limit=20
+            )
             #
             # 6. Prune CFG.
             #
