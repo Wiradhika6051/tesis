@@ -14,6 +14,9 @@ from src.analysis.slice_comparison import (
     print_worst_slice_differences
 )
 
+from src.analysis.seed_localization_diagnostics import (
+    SeedLocalizationDiagnostics
+)
 
 class DatasetPreparationPipeline:
 
@@ -32,22 +35,17 @@ class DatasetPreparationPipeline:
         self.function_localizer = function_localizer
         self.pruner = pruner
 
-    def prepare(
-        self,
-        samples
-    ):
+    def prepare(self, samples):
 
         prepared_samples = []
 
-        diagnostics = (
-            PruningDiagnostics()
+        diagnostics = PruningDiagnostics()
+
+        seed_diagnostics = (
+            SeedLocalizationDiagnostics()
         )
 
-        #
-        # Samples that successfully reach
-        # the pre-pruning stage.
-        #
-        comparison_samples = []
+        localized_samples = []
 
         for sample in tqdm(
             samples,
@@ -57,10 +55,8 @@ class DatasetPreparationPipeline:
             #
             # 1. Build CFG
             #
-            sample.cfg = (
-                self.cfg_builder.build(
-                    sample
-                )
+            sample.cfg = self.cfg_builder.build(
+                sample
             )
 
             if not sample.cfg:
@@ -79,180 +75,111 @@ class DatasetPreparationPipeline:
             # 3. Localize changed lines
             #    to CFG nodes.
             #
-            sample = (
-                self.cfg_localizer.localize(
-                    sample
-                )
+            sample = self.cfg_localizer.localize(
+                sample
             )
 
             #
             # 4. Localize target function.
             #
-            sample = (
-                self.function_localizer.localize(
-                    sample
-                )
+            sample = self.function_localizer.localize(
+                sample
             )
 
             #
-            # No seed nodes means
-            # there is nothing to
-            # analyze or prune around.
+            # Keep it for seed diagnostics.
+            #
+            localized_samples.append(
+                sample
+            )
+
+            #
+            # Continue normal pipeline.
             #
             if not sample.seed_nodes:
                 continue
 
             #
-            # --------------------------------------------------
-            # PRE-PRUNING ANALYSIS
-            # --------------------------------------------------
+            # 5. Analyze slicing BEFORE pruning.
             #
-
             slice_analysis = analyze_slice(
                 sample
             )
 
             if slice_analysis is not None:
-
                 sample.slice_analysis = (
                     slice_analysis
                 )
 
             #
-            # Save this sample for the
-            # backward vs forward analysis.
+            # 6. Prune CFG.
             #
-            comparison_samples.append(
-                sample
-            )
-
-            #
-            # --------------------------------------------------
-            # PRUNE CFG
-            # --------------------------------------------------
-            #
-
             sample = self.pruner.prune(
                 sample
             )
 
-            #
-            # Make sure pruning produced
-            # a valid CFG.
-            #
             if sample.pruned_cfg is None:
-
-                print(
-                    "WARNING: Pruner returned None"
-                )
-
-                print(
-                    "Pruner:",
-                    type(
-                        self.pruner
-                    ).__name__
-                )
-
-                print(
-                    "Repo:",
-                    sample.repo
-                )
-
-                print(
-                    "File:",
-                    sample.file_path
-                )
-
                 continue
 
-            #
-            # Skip empty pruned graphs.
-            #
             if not sample.pruned_cfg["nodes"]:
                 continue
 
-            #
-            # --------------------------------------------------
-            # PRUNING DIAGNOSTICS
-            # --------------------------------------------------
-            #
-
             diagnostics.add_sample(
-
                 label=sample.label,
 
-                function_nodes=(
-                    sample.function_nodes
-                ),
+                function_nodes=
+                    sample.function_nodes,
 
-                seed_nodes=(
-                    sample.seed_nodes
-                ),
+                seed_nodes=
+                    sample.seed_nodes,
 
                 retained_nodes={
-
                     node.node_id
-
-                    for node
-                    in sample.pruned_cfg["nodes"]
-
+                    for node in sample.pruned_cfg["nodes"]
                 },
 
                 sample_id=(
-
                     f"{sample.repo}:"
                     f"{sample.file_path}"
-
                 )
             )
 
-            #
-            # Keep prepared sample.
-            #
             prepared_samples.append(
                 sample
             )
 
-        #
-        # ------------------------------------------------------
-        # BACKWARD vs FORWARD ANALYSIS
-        # ------------------------------------------------------
-        #
-
-        print(
-            "\n" + "=" * 70
-        )
-
-        print(
-            "Running backward vs forward "
-            "slice comparison..."
-        )
-
-        print(
-            f"Samples available for "
-            f"comparison: "
-            f"{len(comparison_samples)}"
-        )
+        print("Comparing slices...")
 
         results = compare_slices(
-            comparison_samples
+            localized_samples
         )
-
+        
         print_slice_comparison_summary(
             results
         )
-
+        
         print_worst_slice_differences(
             results,
             limit=20
         )
 
         #
-        # ------------------------------------------------------
-        # PRUNING DIAGNOSTICS
-        # ------------------------------------------------------
+        # --------------------------------------------------
+        # Seed diagnostics.
+        # --------------------------------------------------
         #
 
+        seed_diagnostics.analyze(
+            localized_samples
+        )
+
+        seed_diagnostics.print_worst_samples(
+            limit=20
+        )
+
+        #
+        # Normal pruning diagnostics.
+        #
         diagnostics.summary()
 
         return prepared_samples
