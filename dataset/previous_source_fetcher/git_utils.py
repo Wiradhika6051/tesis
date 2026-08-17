@@ -167,3 +167,23 @@ class GitRepository:
         self.parent_cache.clear()
 
         self.file_cache.clear()
+
+    def get_source(self, commit_sha: str, file_path: str) -> str | None:
+        """
+        Return the contents of file_path as it existed in commit_sha.
+        """
+        try:
+            return subprocess.check_output(
+                [
+                    "git",
+                    "-C",
+                    self.repo_path,
+                    "show",
+                    f"{commit_sha}:{file_path}"
+                ],
+                text=True,
+                encoding="utf-8",
+                errors="replace"
+            )
+        except subprocess.CalledProcessError:
+            return None
