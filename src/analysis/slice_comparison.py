@@ -530,3 +530,276 @@ def print_worst_slice_differences(
             f"Total difference: "
             f"{difference}"
         )
+
+def print_slice_difference_details(
+    results,
+    limit=10
+):
+    """
+    Print detailed CFG information for samples
+    where backward and forward slices differ most.
+
+    For each selected sample, show:
+
+        - Seed nodes
+        - Common nodes
+        - Backward-only nodes
+        - Forward-only nodes
+
+    Each node includes:
+
+        node ID
+        line number
+        node type
+        source code
+    """
+
+    if not results:
+
+        print(
+            "No slice comparison results."
+        )
+
+        return
+
+    #
+    # Rank samples by total difference.
+    #
+    ranked = sorted(
+
+        results,
+
+        key=lambda r: (
+            len(r["backward_only"]) +
+            len(r["forward_only"])
+        ),
+
+        reverse=True
+    )
+
+    print(
+        "\n" + "=" * 80
+    )
+
+    print(
+        "DETAILED BACKWARD / FORWARD SLICE DIFFERENCES"
+    )
+
+    print(
+        "=" * 80
+    )
+
+    for index, result in enumerate(
+        ranked[:limit],
+        start=1
+    ):
+
+        sample = result["sample"]
+
+        node_map = {
+
+            node.node_id: node
+
+            for node in sample.cfg["nodes"]
+
+        }
+
+        print(
+            "\n" + "-" * 80
+        )
+
+        print(
+            f"Sample #{index}"
+        )
+
+        print(
+            "-" * 80
+        )
+
+        print(
+            f"Repo       : {sample.repo}"
+        )
+
+        print(
+            f"File       : {sample.file_path}"
+        )
+
+        print(
+            f"Label      : {sample.label}"
+        )
+
+        print(
+            f"Seeds      : "
+            f"{len(result['seed_nodes'])}"
+        )
+
+        print(
+            f"Backward   : "
+            f"{len(result['backward'])}"
+        )
+
+        print(
+            f"Forward    : "
+            f"{len(result['forward'])}"
+        )
+
+        print(
+            f"Common     : "
+            f"{len(result['common'])}"
+        )
+
+        print(
+            f"Backward-only : "
+            f"{len(result['backward_only'])}"
+        )
+
+        print(
+            f"Forward-only  : "
+            f"{len(result['forward_only'])}"
+        )
+
+        #
+        # --------------------------------------------------
+        # Seeds
+        # --------------------------------------------------
+        #
+
+        _print_nodes(
+            title="SEED NODES",
+            node_ids=result["seed_nodes"],
+            node_map=node_map
+        )
+
+        #
+        # --------------------------------------------------
+        # Common
+        # --------------------------------------------------
+        #
+
+        _print_nodes(
+            title="COMMON NODES",
+            node_ids=result["common"],
+            node_map=node_map
+        )
+
+        #
+        # --------------------------------------------------
+        # Backward-only
+        # --------------------------------------------------
+        #
+
+        _print_nodes(
+            title="BACKWARD-ONLY NODES",
+            node_ids=result["backward_only"],
+            node_map=node_map
+        )
+
+        #
+        # --------------------------------------------------
+        # Forward-only
+        # --------------------------------------------------
+        #
+
+        _print_nodes(
+            title="FORWARD-ONLY NODES",
+            node_ids=result["forward_only"],
+            node_map=node_map
+        )
+
+
+def _print_nodes(
+    title,
+    node_ids,
+    node_map
+):
+    """
+    Print node information for a set of CFG nodes.
+    """
+
+    print(
+        f"\n### {title}"
+    )
+
+    if not node_ids:
+
+        print(
+            "None"
+        )
+
+        return
+
+    #
+    # Sort primarily by source line.
+    #
+    nodes = []
+
+    for node_id in node_ids:
+
+        node = node_map.get(
+            node_id
+        )
+
+        if node is not None:
+
+            nodes.append(
+                node
+            )
+
+    nodes.sort(
+        key=lambda node: (
+            getattr(
+                node,
+                "lineno",
+                -1
+            ),
+            node.node_id
+        )
+    )
+
+    for node in nodes:
+
+        line = getattr(
+            node,
+            "lineno",
+            -1
+        )
+
+        node_type = getattr(
+            node,
+            "node_type",
+            "UNKNOWN"
+        )
+
+        text = getattr(
+            node,
+            "text",
+            ""
+        )
+
+        #
+        # Prevent huge nodes from flooding
+        # the notebook output.
+        #
+        text = text.strip()
+
+        if len(text) > 300:
+
+            text = (
+                text[:300]
+                + "..."
+            )
+
+        #
+        # Keep multiline source readable.
+        #
+        text = text.replace(
+            "\n",
+            "\\n"
+        )
+
+        print(
+            f"Node {node.node_id:>4} | "
+            f"Line {line:>4} | "
+            f"{node_type:<20} | "
+            f"{text}"
+        )
