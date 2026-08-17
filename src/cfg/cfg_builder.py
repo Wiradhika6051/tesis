@@ -618,8 +618,8 @@ class CFGBuilder:
             tree = ast.parse(sample.source)
 
         except SyntaxError as e:
-            print(f"CFG parse failed: {e}")
-            print(f"Source code:\n{sample.source}")
+            # print(f"CFG parse failed: {e}")
+            # print(f"Source code:\n{sample.source}")
             self.quality_stats["parse_fail"] += 1
             return None
         self.quality_stats["parse_success"] += 1
