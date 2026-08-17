@@ -1,6 +1,19 @@
 from tqdm import tqdm
-from src.analysis.pruning_dianogtics import PruningDiagnostics
-from src.analysis.slice_analysis import analyze_slice
+
+from src.analysis.pruning_dianogtics import (
+    PruningDiagnostics
+)
+
+from src.analysis.slice_analysis import (
+    analyze_slice
+)
+
+from src.analysis.slice_comparison import (
+    compare_slices,
+    print_slice_comparison_summary,
+    print_worst_slice_differences
+)
+
 
 class DatasetPreparationPipeline:
 
@@ -12,6 +25,7 @@ class DatasetPreparationPipeline:
         function_localizer,
         pruner
     ):
+
         self.cfg_builder = cfg_builder
         self.diff_localizer = diff_localizer
         self.cfg_localizer = cfg_localizer
@@ -25,7 +39,15 @@ class DatasetPreparationPipeline:
 
         prepared_samples = []
 
-        diagnostics = PruningDiagnostics()
+        diagnostics = (
+            PruningDiagnostics()
+        )
+
+        #
+        # Samples that successfully reach
+        # the pre-pruning stage.
+        #
+        comparison_samples = []
 
         for sample in tqdm(
             samples,
@@ -35,8 +57,10 @@ class DatasetPreparationPipeline:
             #
             # 1. Build CFG
             #
-            sample.cfg = self.cfg_builder.build(
-                sample
+            sample.cfg = (
+                self.cfg_builder.build(
+                    sample
+                )
             )
 
             if not sample.cfg:
@@ -55,27 +79,35 @@ class DatasetPreparationPipeline:
             # 3. Localize changed lines
             #    to CFG nodes.
             #
-            sample = self.cfg_localizer.localize(
-                sample
+            sample = (
+                self.cfg_localizer.localize(
+                    sample
+                )
             )
 
             #
             # 4. Localize target function.
             #
-            sample = self.function_localizer.localize(
-                sample
+            sample = (
+                self.function_localizer.localize(
+                    sample
+                )
             )
 
             #
             # No seed nodes means
-            # there is nothing to prune around.
+            # there is nothing to
+            # analyze or prune around.
             #
             if not sample.seed_nodes:
                 continue
 
             #
-            # 5. Analyze slicing BEFORE pruning.
+            # --------------------------------------------------
+            # PRE-PRUNING ANALYSIS
+            # --------------------------------------------------
             #
+
             slice_analysis = analyze_slice(
                 sample
             )
@@ -86,44 +118,39 @@ class DatasetPreparationPipeline:
                     slice_analysis
                 )
 
-            print("Comparing slices...")
-            from src.analysis.slice_comparison import (
-                compare_slices,
-                print_slice_comparison_summary,
-                print_worst_slice_differences
-            )
-
-            results = compare_slices(
-                samples
-            )
-
-            print_slice_comparison_summary(
-                results
-            )
-
-            print_worst_slice_differences(
-                results,
-                limit=20
-            )
             #
-            # 6. Prune CFG.
+            # Save this sample for the
+            # backward vs forward analysis.
             #
+            comparison_samples.append(
+                sample
+            )
+
+            #
+            # --------------------------------------------------
+            # PRUNE CFG
+            # --------------------------------------------------
+            #
+
             sample = self.pruner.prune(
                 sample
             )
 
             #
-            # 7. Make sure pruning produced
-            #    a valid CFG.
+            # Make sure pruning produced
+            # a valid CFG.
             #
             if sample.pruned_cfg is None:
+
                 print(
                     "WARNING: Pruner returned None"
                 )
 
                 print(
                     "Pruner:",
-                    type(self.pruner).__name__
+                    type(
+                        self.pruner
+                    ).__name__
                 )
 
                 print(
@@ -139,49 +166,93 @@ class DatasetPreparationPipeline:
                 continue
 
             #
-            # 8. Skip empty pruned graphs.
+            # Skip empty pruned graphs.
             #
             if not sample.pruned_cfg["nodes"]:
                 continue
 
             #
-            # 9. Collect pruning diagnostics.
+            # --------------------------------------------------
+            # PRUNING DIAGNOSTICS
+            # --------------------------------------------------
             #
-            #
-            # Collect pruning diagnostics.
-            #
+
             diagnostics.add_sample(
-            
+
                 label=sample.label,
 
-                function_nodes=
-                    sample.function_nodes,
+                function_nodes=(
+                    sample.function_nodes
+                ),
 
-                seed_nodes=
-                    sample.seed_nodes,
+                seed_nodes=(
+                    sample.seed_nodes
+                ),
 
                 retained_nodes={
+
                     node.node_id
-                    for node in sample.pruned_cfg["nodes"]
+
+                    for node
+                    in sample.pruned_cfg["nodes"]
 
                 },
 
                 sample_id=(
+
                     f"{sample.repo}:"
                     f"{sample.file_path}"
+
                 )
             )
 
             #
-            # 10. Keep prepared sample.
+            # Keep prepared sample.
             #
             prepared_samples.append(
                 sample
             )
 
         #
-        # 11. Print diagnostics.
+        # ------------------------------------------------------
+        # BACKWARD vs FORWARD ANALYSIS
+        # ------------------------------------------------------
         #
+
+        print(
+            "\n" + "=" * 70
+        )
+
+        print(
+            "Running backward vs forward "
+            "slice comparison..."
+        )
+
+        print(
+            f"Samples available for "
+            f"comparison: "
+            f"{len(comparison_samples)}"
+        )
+
+        results = compare_slices(
+            comparison_samples
+        )
+
+        print_slice_comparison_summary(
+            results
+        )
+
+        print_worst_slice_differences(
+            results,
+            limit=20
+        )
+
+        #
+        # ------------------------------------------------------
+        # PRUNING DIAGNOSTICS
+        # ------------------------------------------------------
+        #
+
         diagnostics.summary()
 
         return prepared_samples
