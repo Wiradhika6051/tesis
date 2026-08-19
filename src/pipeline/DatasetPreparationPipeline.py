@@ -83,7 +83,78 @@ class DatasetPreparationPipeline:
                     print(
                         f"Line {line} is NOT represented in CFG"
                     )
+            DEBUG_REPO = (
+                "https://github.com/"
+                "martianbandit/"
+                "E_com_clt_pers_ima_grok_campagn"
+            )
 
+            DEBUG_FILE = "check_tables.py"
+
+            if (
+                sample.repo == DEBUG_REPO
+                and sample.file_path == DEBUG_FILE
+            ):
+
+                print("=" * 80)
+                print("LOCALIZATION PIPELINE CHECK")
+                print("=" * 80)
+
+                print("Label:")
+                print(sample.label)
+
+                print("\nSeed lines:")
+                print(sample.seed_lines)
+
+                print("\nSeed nodes:")
+                print(sample.seed_nodes)
+
+                print("\nFunction nodes:")
+                print(sample.function_nodes)
+
+                print("\nCFG nodes matching seed lines:")
+
+                for node in sample.cfg["nodes"]:
+                
+                    if node.lineno in sample.seed_lines:
+                    
+                        print(
+                            "NODE",
+                            node.node_id,
+                            "LINE",
+                            node.lineno,
+                            "TYPE",
+                            node.node_type,
+                            "TEXT",
+                            repr(node.text[:150])
+                        )
+
+                print("\nCFG line range:")
+
+                cfg_lines = sorted(
+                    node.lineno
+                    for node in sample.cfg["nodes"]
+                    if node.lineno >= 0
+                )
+
+                print(
+                    min(cfg_lines),
+                    "->",
+                    max(cfg_lines)
+                )
+
+                print("\nSeed line presence:")
+
+                for line in sample.seed_lines:
+                
+                    print(
+                        line,
+                        "FOUND"
+                        if line in cfg_lines
+                        else "MISSING"
+                    )
+
+                print("=" * 80)
             #
             # 2. Localize changed lines
             #
@@ -92,7 +163,14 @@ class DatasetPreparationPipeline:
                     sample
                 )
             )
+            if (
+                sample.repo == DEBUG_REPO
+                and sample.file_path == DEBUG_FILE
+            ):
 
+                print("AFTER DIFF LOCALIZER")
+                print("Label:", sample.label)
+                print("Seed lines:", sample.seed_lines)
             #
             # 3. Localize changed lines
             #    to CFG nodes.
@@ -100,6 +178,14 @@ class DatasetPreparationPipeline:
             sample = self.cfg_localizer.localize(
                 sample
             )
+            if (
+                sample.repo == DEBUG_REPO
+                and sample.file_path == DEBUG_FILE
+            ):
+
+                print("AFTER CFG LOCALIZER")
+                print("Seed lines:", sample.seed_lines)
+                print("Seed nodes:", sample.seed_nodes)
             print("=" * 70)
             print("LOCALIZATION DEBUG")
             print("=" * 70)
@@ -137,7 +223,15 @@ class DatasetPreparationPipeline:
             sample = self.function_localizer.localize(
                 sample
             )
-
+            if (
+                sample.repo == DEBUG_REPO
+                and sample.file_path == DEBUG_FILE
+            ):
+            
+                print("AFTER FUNCTION LOCALIZER")
+                print("Seed lines:", sample.seed_lines)
+                print("Seed nodes:", sample.seed_nodes)
+                print("Function nodes:", sample.function_nodes)
             #
             # Keep it for seed diagnostics.
             #
