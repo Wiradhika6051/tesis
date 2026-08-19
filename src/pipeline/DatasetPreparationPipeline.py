@@ -58,22 +58,24 @@ class DatasetPreparationPipeline:
             sample.cfg = self.cfg_builder.build(
                 sample
             )
+            if not sample.cfg:
+                continue
             print("\nCFG LINE COVERAGE")
-            
+
             cfg_lines = sorted(
                 node.lineno
                 for node in sample.cfg["nodes"]
                 if node.lineno >= 0
             )
-            
+
             print("CFG lines:")
             print(cfg_lines)
-            
+
             print("\nSeed lines:")
             print(sample.seed_lines)
-            
+
             print("\nMissing seed lines:")
-            
+
             for line in sample.seed_lines:
             
                 if line not in cfg_lines:
@@ -81,8 +83,6 @@ class DatasetPreparationPipeline:
                     print(
                         f"Line {line} is NOT represented in CFG"
                     )
-            if not sample.cfg:
-                continue
 
             #
             # 2. Localize changed lines
