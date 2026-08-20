@@ -490,6 +490,11 @@ class CFGBuilder:
             )
         if isinstance(stmt, ast.ClassDef):
             return self.process_class(stmt)
+        if isinstance(stmt, ast.With):
+            return self.process_with(stmt)
+
+        if isinstance(stmt, ast.AsyncWith):
+            return self.process_with(stmt)
 
         node = self.add_node(stmt)
 
@@ -1092,6 +1097,47 @@ class CFGBuilder:
 
         return text
 
+    def process_with(
+        self,
+        stmt
+    ):
+    
+        with_node = self.add_node(
+            stmt
+        )
+    
+        #
+        # Process body.
+        #
+        if stmt.body:
+        
+            body_start, body_end = (
+                self.process_block(
+                    stmt.body
+                )
+            )
+    
+            if body_start is not None:
+            
+                self.edges.append(
+                    (
+                        with_node,
+                        body_start
+                    )
+                )
+    
+            if body_end is not None:
+            
+                return (
+                    with_node,
+                    body_end
+                )
+    
+        return (
+            with_node,
+            with_node
+        )
+    
 if __name__ == "__main__":
 
     source_sequential = """
