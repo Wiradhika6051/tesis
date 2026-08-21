@@ -1,451 +1,705 @@
 from collections import Counter, defaultdict
 
-from src.analysis.slice_analysis import get_slice_nodes
 
-
-def analyze_directional_slice_composition(
-    sample
-):
+def get_node_map(cfg):
     """
-    Analyze the composition of:
+    Convert CFG nodes into:
 
-    - forward-only nodes
-    - backward-only nodes
-    - overlap nodes
-
-    for a single sample.
+        {
+            node_id: node
+        }
     """
-
-    cfg = sample.cfg
 
     if cfg is None:
-        return None
+        return {}
 
-    if not sample.seed_nodes:
-        return None
-
-    if not sample.function_nodes:
-        return None
-
-    seed_nodes = set(
-        sample.seed_nodes
+    nodes = cfg.get(
+        "nodes",
+        []
     )
 
-    function_nodes = set(
-        sample.function_nodes
-    )
-
-    #
-    # Calculate slices.
-    #
-    forward_nodes = get_slice_nodes(
-        cfg,
-        seed_nodes,
-        function_nodes,
-        forward=True
-    )
-
-    backward_nodes = get_slice_nodes(
-        cfg,
-        seed_nodes,
-        function_nodes,
-        forward=False
-    )
-
-    #
-    # Normalize just in case the function
-    # returns a list.
-    #
-    forward_nodes = set(
-        forward_nodes
-    )
-
-    backward_nodes = set(
-        backward_nodes
-    )
-
-    #
-    # Calculate directional groups.
-    #
-    forward_only = (
-        forward_nodes
-        -
-        backward_nodes
-    )
-
-    backward_only = (
-        backward_nodes
-        -
-        forward_nodes
-    )
-
-    overlap = (
-        forward_nodes
-        &
-        backward_nodes
-    )
-
-    #
-    # Build node lookup.
-    #
-    node_lookup = {
-
+    return {
         node.node_id: node
-
-        for node in cfg["nodes"]
-
+        for node in nodes
     }
 
-    #
-    # Count node types.
-    #
-    def count_node_types(
-        node_ids
+
+def get_node_type(node):
+
+    if node is None:
+        return "UNKNOWN"
+
+    return getattr(
+        node,
+        "node_type",
+        "UNKNOWN"
+    )
+
+
+def get_node_tokens(node):
+
+    if node is None:
+        return []
+
+    text = getattr(
+        node,
+        "text",
+        ""
+    )
+
+    if text is None:
+        return []
+
+    return text.split()
+
+
+def get_slice_node_ids(slice_result):
+    """
+    Accept either:
+
+    set(...)
+    list(...)
+    or a dictionary containing nodes.
+    """
+
+    if slice_result is None:
+        return set()
+
+    if isinstance(
+        slice_result,
+        dict
     ):
 
-        counter = Counter()
+        nodes = slice_result.get(
+            "nodes",
+            []
+        )
 
-        for node_id in node_ids:
+    else:
 
-            node = node_lookup.get(
-                node_id
+        nodes = slice_result
+
+    result = set()
+
+    for node in nodes:
+
+        if isinstance(
+            node,
+            int
+        ):
+
+            result.add(
+                node
             )
 
-            if node is None:
-                continue
+        else:
 
-            counter[
-                node.node_type
-            ] += 1
-
-        return counter
-
-    result = {
-
-        "repo":
-            sample.repo,
-
-        "file":
-            sample.file_path,
-
-        "label":
-            sample.label,
-
-        "seed_count":
-            len(seed_nodes),
-
-        "forward_count":
-            len(forward_nodes),
-
-        "backward_count":
-            len(backward_nodes),
-
-        "forward_only_count":
-            len(forward_only),
-
-        "backward_only_count":
-            len(backward_only),
-
-        "overlap_count":
-            len(overlap),
-
-        "forward_only_types":
-            count_node_types(
-                forward_only
-            ),
-
-        "backward_only_types":
-            count_node_types(
-                backward_only
-            ),
-
-        "overlap_types":
-            count_node_types(
-                overlap
+            node_id = getattr(
+                node,
+                "node_id",
+                None
             )
 
-    }
+            if node_id is not None:
+
+                result.add(
+                    node_id
+                )
 
     return result
 
-def summarize_directional_slice_composition(
-    samples
+
+def analyze_directional_slice_difference(
+    samples,
+    top_samples=20
 ):
 
-    print()
-    print("=" * 80)
-    print("DIRECTIONAL SLICE COMPOSITION ANALYSIS")
-    print("=" * 80)
-
-    results = []
-
-    #
-    # Global counters.
-    #
     overall = {
 
-        "forward_only":
-            Counter(),
+        "samples": 0,
 
-        "backward_only":
-            Counter(),
+        "forward_nodes": 0,
+        "backward_nodes": 0,
 
-        "overlap":
-            Counter()
+        "overlap_nodes": 0,
+
+        "forward_only_nodes": 0,
+        "backward_only_nodes": 0,
+
+        "forward_only_types": Counter(),
+        "backward_only_types": Counter(),
+        "overlap_types": Counter(),
+
+        "forward_only_tokens": 0,
+        "backward_only_tokens": 0,
 
     }
 
-    #
-    # Counters by label.
-    #
     by_label = defaultdict(
+
         lambda: {
 
-            "forward_only":
-                Counter(),
+            "samples": 0,
 
-            "backward_only":
-                Counter(),
+            "forward_nodes": 0,
+            "backward_nodes": 0,
 
-            "overlap":
-                Counter()
+            "overlap_nodes": 0,
+
+            "forward_only_nodes": 0,
+            "backward_only_nodes": 0,
+
+            "forward_only_types": Counter(),
+            "backward_only_types": Counter(),
+            "overlap_types": Counter(),
+
+            "forward_only_tokens": 0,
+            "backward_only_tokens": 0,
 
         }
+
     )
 
-    #
-    # Sample statistics.
-    #
-    sample_stats = defaultdict(
-        Counter
-    )
+    sample_results = []
 
     for sample in samples:
 
-        result = (
-            analyze_directional_slice_composition(
-                sample
-            )
+        #
+        # Retrieve slice analysis.
+        #
+        analysis = getattr(
+            sample,
+            "slice_analysis",
+            None
         )
 
-        if result is None:
+        if analysis is None:
             continue
 
-        results.append(
-            result
+        forward_ids = set(
+            analysis["forward_node_ids"]
         )
 
-        label = result["label"]
+        backward_ids = set(
+            analysis["backward_node_ids"]
+        )
+        #
+        # CFG node lookup.
+        #
+        node_map = get_node_map(
+            sample.cfg
+        )
 
         #
-        # Aggregate node types.
+        # Compare.
         #
-        for group in [
+        overlap = (
+            forward_ids
+            &
+            backward_ids
+        )
 
-            "forward_only",
-            "backward_only",
-            "overlap"
+        forward_only = (
+            forward_ids
+            -
+            backward_ids
+        )
 
-        ]:
+        backward_only = (
+            backward_ids
+            -
+            forward_ids
+        )
 
-            type_key = (
-                f"{group}_types"
+        label = sample.label
+
+        overall["samples"] += 1
+
+        overall["forward_nodes"] += (
+            len(forward_ids)
+        )
+
+        overall["backward_nodes"] += (
+            len(backward_ids)
+        )
+
+        overall["overlap_nodes"] += (
+            len(overlap)
+        )
+
+        overall["forward_only_nodes"] += (
+            len(forward_only)
+        )
+
+        overall["backward_only_nodes"] += (
+            len(backward_only)
+        )
+
+        by_label[label]["samples"] += 1
+
+        by_label[label]["forward_nodes"] += (
+            len(forward_ids)
+        )
+
+        by_label[label]["backward_nodes"] += (
+            len(backward_ids)
+        )
+
+        by_label[label]["overlap_nodes"] += (
+            len(overlap)
+        )
+
+        by_label[label]["forward_only_nodes"] += (
+            len(forward_only)
+        )
+
+        by_label[label]["backward_only_nodes"] += (
+            len(backward_only)
+        )
+
+        #
+        # Analyze forward-only nodes.
+        #
+        for node_id in forward_only:
+
+            node = node_map.get(
+                node_id
             )
 
-            overall[group].update(
-                result[type_key]
+            node_type = get_node_type(
+                node
             )
 
-            by_label[label][group].update(
-                result[type_key]
+            tokens = get_node_tokens(
+                node
             )
 
+            overall[
+                "forward_only_types"
+            ][node_type] += 1
+
+            overall[
+                "forward_only_tokens"
+            ] += len(tokens)
+
+            by_label[label][
+                "forward_only_types"
+            ][node_type] += 1
+
+            by_label[label][
+                "forward_only_tokens"
+            ] += len(tokens)
+
         #
-        # Aggregate sample counts.
+        # Analyze backward-only nodes.
         #
-        sample_stats["overall"][
-            "samples"
-        ] += 1
+        for node_id in backward_only:
 
-        sample_stats["overall"][
-            "forward_only_nodes"
-        ] += result[
-            "forward_only_count"
-        ]
+            node = node_map.get(
+                node_id
+            )
 
-        sample_stats["overall"][
-            "backward_only_nodes"
-        ] += result[
-            "backward_only_count"
-        ]
+            node_type = get_node_type(
+                node
+            )
 
-        sample_stats["overall"][
-            "overlap_nodes"
-        ] += result[
-            "overlap_count"
-        ]
+            tokens = get_node_tokens(
+                node
+            )
 
-        sample_stats[label][
-            "samples"
-        ] += 1
+            overall[
+                "backward_only_types"
+            ][node_type] += 1
 
-        sample_stats[label][
-            "forward_only_nodes"
-        ] += result[
-            "forward_only_count"
-        ]
+            overall[
+                "backward_only_tokens"
+            ] += len(tokens)
 
-        sample_stats[label][
-            "backward_only_nodes"
-        ] += result[
-            "backward_only_count"
-        ]
+            by_label[label][
+                "backward_only_types"
+            ][node_type] += 1
 
-        sample_stats[label][
-            "overlap_nodes"
-        ] += result[
-            "overlap_count"
-        ]
+            by_label[label][
+                "backward_only_tokens"
+            ] += len(tokens)
+
+        #
+        # Analyze overlap.
+        #
+        for node_id in overlap:
+
+            node = node_map.get(
+                node_id
+            )
+
+            node_type = get_node_type(
+                node
+            )
+
+            overall[
+                "overlap_types"
+            ][node_type] += 1
+
+            by_label[label][
+                "overlap_types"
+            ][node_type] += 1
+
+        #
+        # Store sample-level result.
+        #
+        difference = abs(
+            len(forward_only)
+            -
+            len(backward_only)
+        )
+
+        sample_results.append({
+
+            "sample": sample,
+
+            "label": label,
+
+            "forward": len(
+                forward_ids
+            ),
+
+            "backward": len(
+                backward_ids
+            ),
+
+            "overlap": len(
+                overlap
+            ),
+
+            "forward_only": len(
+                forward_only
+            ),
+
+            "backward_only": len(
+                backward_only
+            ),
+
+            "difference": difference,
+
+        })
 
     #
-    # Print sample statistics.
+    # Print results.
     #
+    print(
+        "=" * 80
+    )
+
+    print(
+        "DIRECTIONAL SLICE DIFFERENCE ANALYSIS"
+    )
+
+    print(
+        "=" * 80
+    )
+
     print()
-    print("SAMPLE-LEVEL STATISTICS")
 
-    for key, stats in sample_stats.items():
+    samples_count = overall[
+        "samples"
+    ]
 
-        samples_count = stats["samples"]
-
-        if samples_count == 0:
-            continue
-
-        print()
-        print(
-            f"Group: {key}"
-        )
+    if samples_count == 0:
 
         print(
-            "Samples:",
-            samples_count
+            "No valid slice analysis found."
         )
 
-        print(
-            "Average forward-only nodes:",
-            (
-                stats["forward_only_nodes"]
-                /
-                samples_count
-            )
-        )
+        return overall
 
-        print(
-            "Average backward-only nodes:",
-            (
-                stats["backward_only_nodes"]
-                /
-                samples_count
-            )
-        )
+    print(
+        f"Samples analyzed : {samples_count}"
+    )
 
-        print(
-            "Average overlap nodes:",
-            (
-                stats["overlap_nodes"]
-                /
-                samples_count
-            )
-        )
-
-    #
-    # Print overall node type distribution.
-    #
     print()
-    print("=" * 80)
-    print("OVERALL NODE TYPE DISTRIBUTION")
-    print("=" * 80)
 
-    for group in [
+    print(
+        "OVERALL"
+    )
 
-        "forward_only",
-        "backward_only",
-        "overlap"
+    print(
+        "-" * 60
+    )
 
-    ]:
+    print(
+        f"Average Forward Nodes  : "
+        f"{overall['forward_nodes'] / samples_count:.2f}"
+    )
 
-        print()
+    print(
+        f"Average Backward Nodes : "
+        f"{overall['backward_nodes'] / samples_count:.2f}"
+    )
+
+    print(
+        f"Average Overlap Nodes  : "
+        f"{overall['overlap_nodes'] / samples_count:.2f}"
+    )
+
+    print(
+        f"Average Forward-Only   : "
+        f"{overall['forward_only_nodes'] / samples_count:.2f}"
+    )
+
+    print(
+        f"Average Backward-Only  : "
+        f"{overall['backward_only_nodes'] / samples_count:.2f}"
+    )
+
+    print()
+
+    print(
+        "FORWARD-ONLY NODE TYPES"
+    )
+
+    print(
+        "-" * 60
+    )
+
+    for node_type, count in (
+        overall[
+            "forward_only_types"
+        ].most_common()
+    ):
+
         print(
-            group
-            .upper()
-            .replace("_", " ")
+            f"{node_type:<25} "
+            f"{count}"
         )
 
-        print("-" * 50)
+    print()
 
-        for node_type, count in (
-            overall[group]
-            .most_common()
-        ):
+    print(
+        "BACKWARD-ONLY NODE TYPES"
+    )
 
-            print(
-                f"{node_type:<25} {count}"
-            )
+    print(
+        "-" * 60
+    )
 
-    #
-    # Print distributions by label.
-    #
+    for node_type, count in (
+        overall[
+            "backward_only_types"
+        ].most_common()
+    ):
+
+        print(
+            f"{node_type:<25} "
+            f"{count}"
+        )
+
+    print()
+
+    print(
+        "OVERLAP NODE TYPES"
+    )
+
+    print(
+        "-" * 60
+    )
+
+    for node_type, count in (
+        overall[
+            "overlap_types"
+        ].most_common()
+    ):
+
+        print(
+            f"{node_type:<25} "
+            f"{count}"
+        )
+
+    print()
+
+    print(
+        "=" * 80
+    )
+
+    print(
+        "BY LABEL"
+    )
+
+    print(
+        "=" * 80
+    )
+
     for label in sorted(
         by_label.keys()
     ):
 
+        stats = by_label[
+            label
+        ]
+
+        count = stats[
+            "samples"
+        ]
+
         print()
-        print("=" * 80)
 
         print(
-            f"LABEL {label}"
+            f"Label {label}"
         )
 
-        print("=" * 80)
+        print(
+            "-" * 60
+        )
 
-        for group in [
+        print(
+            f"Samples             : {count}"
+        )
 
-            "forward_only",
-            "backward_only",
-            "overlap"
+        print(
+            f"Avg Forward Nodes   : "
+            f"{stats['forward_nodes'] / count:.2f}"
+        )
 
-        ]:
+        print(
+            f"Avg Backward Nodes  : "
+            f"{stats['backward_nodes'] / count:.2f}"
+        )
 
-            print()
+        print(
+            f"Avg Overlap         : "
+            f"{stats['overlap_nodes'] / count:.2f}"
+        )
+
+        print(
+            f"Avg Forward-Only    : "
+            f"{stats['forward_only_nodes'] / count:.2f}"
+        )
+
+        print(
+            f"Avg Backward-Only   : "
+            f"{stats['backward_only_nodes'] / count:.2f}"
+        )
+
+        print()
+
+        print(
+            "Top Forward-Only Types"
+        )
+
+        for node_type, value in (
+            stats[
+                "forward_only_types"
+            ].most_common(10)
+        ):
+
             print(
-                group
-                .upper()
-                .replace("_", " ")
+                f"  {node_type:<25} "
+                f"{value}"
             )
 
-            print("-" * 50)
+        print()
 
-            for node_type, count in (
-                by_label[label][group]
-                .most_common()
-            ):
+        print(
+            "Top Backward-Only Types"
+        )
 
-                print(
-                    f"{node_type:<25} {count}"
-                )
+        for node_type, value in (
+            stats[
+                "backward_only_types"
+            ].most_common(10)
+        ):
+
+            print(
+                f"  {node_type:<25} "
+                f"{value}"
+            )
+
+    #
+    # Extreme samples.
+    #
+    sample_results.sort(
+
+        key=lambda x:
+            x["difference"],
+
+        reverse=True
+
+    )
+
+    print()
+
+    print(
+        "=" * 80
+    )
+
+    print(
+        "LARGEST DIRECTIONAL DIFFERENCES"
+    )
+
+    print(
+        "=" * 80
+    )
+
+    for result in sample_results[
+        :top_samples
+    ]:
+
+        sample = result[
+            "sample"
+        ]
+
+        print()
+
+        print(
+            f"Label: {result['label']}"
+        )
+
+        print(
+            f"Repo: {sample.repo}"
+        )
+
+        print(
+            f"File: {sample.file_path}"
+        )
+
+        print(
+            f"Forward Nodes: "
+            f"{result['forward']}"
+        )
+
+        print(
+            f"Backward Nodes: "
+            f"{result['backward']}"
+        )
+
+        print(
+            f"Overlap: "
+            f"{result['overlap']}"
+        )
+
+        print(
+            f"Forward Only: "
+            f"{result['forward_only']}"
+        )
+
+        print(
+            f"Backward Only: "
+            f"{result['backward_only']}"
+        )
+
+        print(
+            f"Difference: "
+            f"{result['difference']}"
+        )
 
     return {
 
-        "results":
-            results,
+        "overall": overall,
 
-        "overall":
-            overall,
+        "by_label": dict(
+            by_label
+        ),
 
-        "by_label":
-            by_label,
-
-        "sample_stats":
-            sample_stats
+        "samples": sample_results
 
     }
 
@@ -650,3 +904,173 @@ def inspect_directional_slice(
         )
 
         print()
+
+from collections import Counter, defaultdict
+
+from src.analysis.slice_analysis import get_slice_nodes
+
+
+def analyze_directional_slice_composition(
+    sample
+):
+    """
+    Analyze the composition of:
+
+    - forward-only nodes
+    - backward-only nodes
+    - overlap nodes
+
+    for a single sample.
+    """
+
+    cfg = sample.cfg
+
+    if cfg is None:
+        return None
+
+    if not sample.seed_nodes:
+        return None
+
+    if not sample.function_nodes:
+        return None
+
+    seed_nodes = set(
+        sample.seed_nodes
+    )
+
+    function_nodes = set(
+        sample.function_nodes
+    )
+
+    #
+    # Calculate slices.
+    #
+    forward_nodes = get_slice_nodes(
+        cfg,
+        seed_nodes,
+        function_nodes,
+        forward=True
+    )
+
+    backward_nodes = get_slice_nodes(
+        cfg,
+        seed_nodes,
+        function_nodes,
+        forward=False
+    )
+
+    #
+    # Normalize just in case the function
+    # returns a list.
+    #
+    forward_nodes = set(
+        forward_nodes
+    )
+
+    backward_nodes = set(
+        backward_nodes
+    )
+
+    #
+    # Calculate directional groups.
+    #
+    forward_only = (
+        forward_nodes
+        -
+        backward_nodes
+    )
+
+    backward_only = (
+        backward_nodes
+        -
+        forward_nodes
+    )
+
+    overlap = (
+        forward_nodes
+        &
+        backward_nodes
+    )
+
+    #
+    # Build node lookup.
+    #
+    node_lookup = {
+
+        node.node_id: node
+
+        for node in cfg["nodes"]
+
+    }
+
+    #
+    # Count node types.
+    #
+    def count_node_types(
+        node_ids
+    ):
+
+        counter = Counter()
+
+        for node_id in node_ids:
+
+            node = node_lookup.get(
+                node_id
+            )
+
+            if node is None:
+                continue
+
+            counter[
+                node.node_type
+            ] += 1
+
+        return counter
+
+    result = {
+
+        "repo":
+            sample.repo,
+
+        "file":
+            sample.file_path,
+
+        "label":
+            sample.label,
+
+        "seed_count":
+            len(seed_nodes),
+
+        "forward_count":
+            len(forward_nodes),
+
+        "backward_count":
+            len(backward_nodes),
+
+        "forward_only_count":
+            len(forward_only),
+
+        "backward_only_count":
+            len(backward_only),
+
+        "overlap_count":
+            len(overlap),
+
+        "forward_only_types":
+            count_node_types(
+                forward_only
+            ),
+
+        "backward_only_types":
+            count_node_types(
+                backward_only
+            ),
+
+        "overlap_types":
+            count_node_types(
+                overlap
+            )
+
+    }
+
+    return result
