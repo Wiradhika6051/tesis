@@ -1,5 +1,5 @@
 from collections import Counter, defaultdict
-
+from src.analysis.slice_analysis import get_slice_nodes
 
 def analyze_directional_slice_composition(
     samples
