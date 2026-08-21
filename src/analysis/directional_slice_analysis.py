@@ -1074,3 +1074,285 @@ def analyze_directional_slice_composition(
     }
 
     return result
+
+
+def summarize_directional_slice_composition(
+    samples
+):
+
+    print()
+    print("=" * 80)
+    print("DIRECTIONAL SLICE COMPOSITION ANALYSIS")
+    print("=" * 80)
+
+    results = []
+
+    #
+    # Global counters.
+    #
+    overall = {
+
+        "forward_only":
+            Counter(),
+
+        "backward_only":
+            Counter(),
+
+        "overlap":
+            Counter()
+
+    }
+
+    #
+    # Counters by label.
+    #
+    by_label = defaultdict(
+        lambda: {
+
+            "forward_only":
+                Counter(),
+
+            "backward_only":
+                Counter(),
+
+            "overlap":
+                Counter()
+
+        }
+    )
+
+    #
+    # Sample statistics.
+    #
+    sample_stats = defaultdict(
+        Counter
+    )
+
+    for sample in samples:
+
+        result = (
+            analyze_directional_slice_composition(
+                sample
+            )
+        )
+
+        if result is None:
+            continue
+
+        results.append(
+            result
+        )
+
+        label = result["label"]
+
+        #
+        # Aggregate node types.
+        #
+        for group in [
+
+            "forward_only",
+            "backward_only",
+            "overlap"
+
+        ]:
+
+            type_key = (
+                f"{group}_types"
+            )
+
+            overall[group].update(
+                result[type_key]
+            )
+
+            by_label[label][group].update(
+                result[type_key]
+            )
+
+        #
+        # Aggregate sample counts.
+        #
+        sample_stats["overall"][
+            "samples"
+        ] += 1
+
+        sample_stats["overall"][
+            "forward_only_nodes"
+        ] += result[
+            "forward_only_count"
+        ]
+
+        sample_stats["overall"][
+            "backward_only_nodes"
+        ] += result[
+            "backward_only_count"
+        ]
+
+        sample_stats["overall"][
+            "overlap_nodes"
+        ] += result[
+            "overlap_count"
+        ]
+
+        sample_stats[label][
+            "samples"
+        ] += 1
+
+        sample_stats[label][
+            "forward_only_nodes"
+        ] += result[
+            "forward_only_count"
+        ]
+
+        sample_stats[label][
+            "backward_only_nodes"
+        ] += result[
+            "backward_only_count"
+        ]
+
+        sample_stats[label][
+            "overlap_nodes"
+        ] += result[
+            "overlap_count"
+        ]
+
+    #
+    # Print sample statistics.
+    #
+    print()
+    print("SAMPLE-LEVEL STATISTICS")
+
+    for key, stats in sample_stats.items():
+
+        samples_count = stats["samples"]
+
+        if samples_count == 0:
+            continue
+
+        print()
+        print(
+            f"Group: {key}"
+        )
+
+        print(
+            "Samples:",
+            samples_count
+        )
+
+        print(
+            "Average forward-only nodes:",
+            (
+                stats["forward_only_nodes"]
+                /
+                samples_count
+            )
+        )
+
+        print(
+            "Average backward-only nodes:",
+            (
+                stats["backward_only_nodes"]
+                /
+                samples_count
+            )
+        )
+
+        print(
+            "Average overlap nodes:",
+            (
+                stats["overlap_nodes"]
+                /
+                samples_count
+            )
+        )
+
+    #
+    # Print overall node type distribution.
+    #
+    print()
+    print("=" * 80)
+    print("OVERALL NODE TYPE DISTRIBUTION")
+    print("=" * 80)
+
+    for group in [
+
+        "forward_only",
+        "backward_only",
+        "overlap"
+
+    ]:
+
+        print()
+        print(
+            group
+            .upper()
+            .replace("_", " ")
+        )
+
+        print("-" * 50)
+
+        for node_type, count in (
+            overall[group]
+            .most_common()
+        ):
+
+            print(
+                f"{node_type:<25} {count}"
+            )
+
+    #
+    # Print distributions by label.
+    #
+    for label in sorted(
+        by_label.keys()
+    ):
+
+        print()
+        print("=" * 80)
+
+        print(
+            f"LABEL {label}"
+        )
+
+        print("=" * 80)
+
+        for group in [
+
+            "forward_only",
+            "backward_only",
+            "overlap"
+
+        ]:
+
+            print()
+            print(
+                group
+                .upper()
+                .replace("_", " ")
+            )
+
+            print("-" * 50)
+
+            for node_type, count in (
+                by_label[label][group]
+                .most_common()
+            ):
+
+                print(
+                    f"{node_type:<25} {count}"
+                )
+
+    return {
+
+        "results":
+            results,
+
+        "overall":
+            overall,
+
+        "by_label":
+            by_label,
+
+        "sample_stats":
+            sample_stats
+
+    }
