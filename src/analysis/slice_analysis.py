@@ -75,6 +75,7 @@ def get_slice_nodes(
             )
 
     return keep
+
 def analyze_slice(
     sample
 ):
@@ -121,6 +122,17 @@ def analyze_slice(
         forward=True
     )
 
+    #
+    # Make sure they are sets.
+    #
+    backward_nodes = set(
+        backward_nodes
+    )
+
+    forward_nodes = set(
+        forward_nodes
+    )
+
     function_size = len(
         function_nodes
     )
@@ -136,6 +148,9 @@ def analyze_slice(
         "label":
             sample.label,
 
+        #
+        # Counts
+        #
         "seed_nodes":
             len(seed_nodes),
 
@@ -151,6 +166,9 @@ def analyze_slice(
         "forward_nodes":
             len(forward_nodes),
 
+        #
+        # Ratios
+        #
         "backward_ratio":
             len(backward_nodes)
             /
@@ -159,7 +177,22 @@ def analyze_slice(
         "forward_ratio":
             len(forward_nodes)
             /
-            function_size
+            function_size,
+
+        #
+        # Actual node IDs.
+        #
+        "seed_node_ids":
+            sorted(seed_nodes),
+
+        "function_node_ids":
+            sorted(function_nodes),
+
+        "backward_node_ids":
+            sorted(backward_nodes),
+
+        "forward_node_ids":
+            sorted(forward_nodes)
     }
 
     #
