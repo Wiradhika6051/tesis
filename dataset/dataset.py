@@ -28,49 +28,83 @@ class VulnerabilityDataset(Dataset):
             )
         )
 
-import torch
-
 from torch.utils.data import Dataset
 
 
-class PhpNetDataset(Dataset):
+class PhpNetDataset(
+    Dataset
+):
 
     def __init__(
-
         self,
-
         samples
-
     ):
 
         self.samples = samples
 
-    def __len__(self):
+    def __len__(
+        self
+    ):
 
         return len(
             self.samples
         )
 
     def __getitem__(
-
         self,
-
-        idx
-
+        index
     ):
 
-        sample = self.samples[idx]
+        sample = self.samples[
+            index
+        ]
+
+        graph = sample.graph
+
+        label = torch.tensor(
+
+            sample.label,
+
+            dtype=torch.long
+
+        )
+
+        #
+        # Same identifier for vulnerable/fixed pair.
+        #
+        pair_id = (
+
+            sample.repo,
+
+            sample.parent_commit,
+
+            sample.file_path
+
+        )
+
+        #
+        # Unique identifier for this version.
+        #
+        sample_id = (
+
+            sample.repo,
+
+            sample.parent_commit,
+
+            sample.file_path,
+
+            sample.label
+
+        )
 
         return (
 
-            sample.graph,
+            graph,
 
-            torch.tensor(
+            label,
 
-                sample.label,
+            pair_id,
 
-                dtype=torch.long
-
-            )
+            sample_id
 
         )
