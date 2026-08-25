@@ -345,7 +345,8 @@ def compare_paired_slices(
         )
 
         results.append({
-
+            "pair_id":
+                key,
             "repo":
                 key[0],
 
