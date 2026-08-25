@@ -22,11 +22,7 @@ def analyze_similarity_by_outcome(
     for outcome in model_outcomes:
 
         sample_id = (
-
-            outcome[
-                "sample_id"
-            ]
-
+            outcome["sample_id"]
         )
 
         outcome_lookup[
@@ -35,9 +31,15 @@ def analyze_similarity_by_outcome(
 
     #
     # --------------------------------------------------
-    # Group similarity by classification outcome.
+    # Get paired similarity records.
     # --------------------------------------------------
     #
+
+    pair_results = (
+        similarity_results[
+            "pairs"
+        ]
+    )
 
     grouped = defaultdict(
         list
@@ -45,94 +47,70 @@ def analyze_similarity_by_outcome(
 
     unmatched = []
 
-    for result in similarity_results:
+    #
+    # --------------------------------------------------
+    # Match each vulnerable/fixed pair
+    # with model outcomes.
+    # --------------------------------------------------
+    #
 
-        #
-        # Your paired similarity result should contain
-        # vulnerable and fixed samples or their metadata.
-        #
-        pair_id = result.get(
-            "pair_id"
+    for result in pair_results:
+
+        pair_id = (
+
+            result["repo"],
+
+            result["parent_commit"],
+
+            result["file"]
+
         )
 
-        if pair_id is None:
-
-            #
-            # Fallback if your current structure stores
-            # repo/file/etc. separately.
-            #
-            pair_id = (
-
-                result.get("repo"),
-
-                result.get("parent_commit"),
-
-                result.get("file")
-
-            )
-
         #
-        # Extract similarity.
-        #
-        similarity = result.get(
-            "similarity"
-        )
-
-        if similarity is None:
-
-            #
-            # Adjust this depending on your existing
-            # paired similarity structure.
-            #
-            similarity = result.get(
-                "jaccard_similarity"
-            )
-
-        #
-        # Vulnerable sample ID.
+        # Sample IDs must match the IDs produced
+        # by your evaluator / dataset.
         #
         vulnerable_id = (
 
-            pair_id[0],
+            result["repo"],
 
-            pair_id[1],
+            result["parent_commit"],
 
-            pair_id[2],
+            result["file"],
 
             1
 
         )
 
-        #
-        # Fixed sample ID.
-        #
         fixed_id = (
 
-            pair_id[0],
+            result["repo"],
 
-            pair_id[1],
+            result["parent_commit"],
 
-            pair_id[2],
+            result["file"],
 
             0
 
         )
 
         vulnerable_outcome = (
-
             outcome_lookup.get(
                 vulnerable_id
             )
-
         )
 
         fixed_outcome = (
-
             outcome_lookup.get(
                 fixed_id
             )
-
         )
+
+        #
+        # --------------------------------------------------
+        # Record vulnerable sample.
+        # --------------------------------------------------
+        #
 
         if vulnerable_outcome is None:
 
@@ -152,14 +130,13 @@ def analyze_similarity_by_outcome(
                 vulnerable_outcome[
                     "outcome"
                 ]
-
             ].append({
 
                 "pair_id":
                     pair_id,
 
-                "similarity":
-                    similarity,
+                "version":
+                    "vulnerable",
 
                 "label":
                     1,
@@ -167,9 +144,30 @@ def analyze_similarity_by_outcome(
                 "prediction":
                     vulnerable_outcome[
                         "prediction"
+                    ],
+
+                "forward_similarity":
+                    result[
+                        "forward_similarity"
+                    ],
+
+                "backward_similarity":
+                    result[
+                        "backward_similarity"
+                    ],
+
+                "similarity_gap":
+                    result[
+                        "similarity_gap"
                     ]
 
             })
+
+        #
+        # --------------------------------------------------
+        # Record fixed sample.
+        # --------------------------------------------------
+        #
 
         if fixed_outcome is None:
 
@@ -189,14 +187,13 @@ def analyze_similarity_by_outcome(
                 fixed_outcome[
                     "outcome"
                 ]
-
             ].append({
 
                 "pair_id":
                     pair_id,
 
-                "similarity":
-                    similarity,
+                "version":
+                    "fixed",
 
                 "label":
                     0,
@@ -204,6 +201,21 @@ def analyze_similarity_by_outcome(
                 "prediction":
                     fixed_outcome[
                         "prediction"
+                    ],
+
+                "forward_similarity":
+                    result[
+                        "forward_similarity"
+                    ],
+
+                "backward_similarity":
+                    result[
+                        "backward_similarity"
+                    ],
+
+                "similarity_gap":
+                    result[
+                        "similarity_gap"
                     ]
 
             })
@@ -219,16 +231,22 @@ def analyze_similarity_by_outcome(
     }
 
 def print_similarity_by_outcome(
+
     analysis
+
 ):
 
-    grouped = analysis[
-        "grouped"
-    ]
+    grouped = (
+        analysis[
+            "grouped"
+        ]
+    )
 
-    unmatched = analysis[
-        "unmatched"
-    ]
+    unmatched = (
+        analysis[
+            "unmatched"
+        ]
+    )
 
     print()
 
@@ -258,9 +276,11 @@ def print_similarity_by_outcome(
 
     for outcome in outcomes:
 
-        records = grouped.get(
-            outcome,
-            []
+        records = (
+            grouped.get(
+                outcome,
+                []
+            )
         )
 
         print()
@@ -270,77 +290,128 @@ def print_similarity_by_outcome(
         )
 
         print(
-            "-" * 40
+            "-" * 50
         )
 
         print(
-
             "Samples:",
-
             len(records)
-
         )
 
         if not records:
 
             continue
 
-        similarities = [
+        forward_values = [
 
-            r["similarity"]
+            record[
+                "forward_similarity"
+            ]
 
-            for r in records
-
-            if r["similarity"] is not None
+            for record in records
 
         ]
 
-        if not similarities:
+        backward_values = [
 
-            print(
-                "No similarity values."
-            )
+            record[
+                "backward_similarity"
+            ]
 
-            continue
+            for record in records
+
+        ]
+
+        gap_values = [
+
+            record[
+                "similarity_gap"
+            ]
+
+            for record in records
+
+        ]
+
+        print()
 
         print(
-
-            f"Average similarity : "
-            f"{statistics.mean(similarities):.4f}"
-
+            "Forward similarity"
         )
 
         print(
-
-            f"Median similarity  : "
-            f"{statistics.median(similarities):.4f}"
-
+            f"Average : "
+            f"{statistics.mean(forward_values):.4f}"
         )
 
         print(
+            f"Median  : "
+            f"{statistics.median(forward_values):.4f}"
+        )
 
-            f"Minimum similarity : "
-            f"{min(similarities):.4f}"
+        print()
 
+        print(
+            "Backward similarity"
         )
 
         print(
+            f"Average : "
+            f"{statistics.mean(backward_values):.4f}"
+        )
 
-            f"Maximum similarity : "
-            f"{max(similarities):.4f}"
+        print(
+            f"Median  : "
+            f"{statistics.median(backward_values):.4f}"
+        )
 
+        print()
+
+        print(
+            "Similarity gap"
+        )
+
+        print(
+            f"Average : "
+            f"{statistics.mean(gap_values):.4f}"
+        )
+
+        print(
+            f"Median  : "
+            f"{statistics.median(gap_values):.4f}"
+        )
+
+        print(
+            f"Minimum : "
+            f"{min(gap_values):.4f}"
+        )
+
+        print(
+            f"Maximum : "
+            f"{max(gap_values):.4f}"
         )
 
     print()
 
     print(
-        "UNMATCHED RESULTS"
+        "=" * 80
     )
 
     print(
-        "-" * 40
+        "UNMATCHED SAMPLE RESULTS"
+    )
+
+    print(
+        "=" * 80
     )
 
     print(
         len(unmatched)
     )
+
+    for item in unmatched[:20]:
+
+        print(
+
+            item
+
+        )
