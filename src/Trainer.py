@@ -142,35 +142,71 @@ class Trainer:
         epochs,
         loader
     ):
-
+    
         self.model.train()
-
+    
         total_loss = 0
-
+    
         progress = tqdm(
             loader,
             total=len(loader),
             desc=f"Epoch {epoch+1}/{epochs}"
         )
-
-        for graph, labels in progress:
-            graph = graph.to(self.device)
-            labels = labels.to(self.device)
-            logits = self.model(graph)
+    
+        for batch in progress:
         
+            #
+            # First two elements are always
+            # graph and labels.
+            #
+            graph = batch[0]
+    
+            labels = batch[1]
+    
+            graph = graph.to(
+                self.device
+            )
+    
+            labels = labels.to(
+                self.device
+            )
+    
+            #
+            # Reset gradients
+            #
+            self.optimizer.zero_grad()
+    
+            #
+            # Forward pass
+            #
+            logits = self.model(
+                graph
+            )
+    
+            #
+            # Compute loss
+            #
             loss = self.criterion(
                 logits,
                 labels
             )
+    
+            #
+            # Backpropagation
+            #
             loss.backward()
+    
+            #
+            # Update parameters
+            #
             self.optimizer.step()
-
+    
             total_loss += loss.item()
-
+    
             progress.set_postfix(
                 loss=f"{loss.item():.4f}"
             )
-
+    
         return (
             total_loss
             /
