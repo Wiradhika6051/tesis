@@ -16,6 +16,7 @@ class Encoder:
         self.token_vocab = token_vocab
         self.cfg_vocab = cfg_vocab
 
+
     def encode(
         self,
         sample
@@ -70,9 +71,6 @@ class Encoder:
 
         )
 
-        #
-        # Custom attributes.
-        #
         graph.node_tokens = node_tokens
 
         graph.node_types = torch.tensor(
@@ -84,22 +82,14 @@ class Encoder:
         )
 
         #
-        # Preserve sample metadata.
+        # Use the same ID helpers.
         #
-        graph.sample_id = (
-            sample.repo,
-            sample.parent_commit,
-            sample.file_path,
-            sample.label
+        graph.sample_id = self.get_sample_id(
+            sample
         )
 
-        #
-        # Pair identifier.
-        #
-        graph.pair_id = (
-            sample.repo,
-            sample.parent_commit,
-            sample.file_path
+        graph.pair_id = self.get_pair_id(
+            sample
         )
 
         graph.repo = sample.repo
@@ -113,3 +103,31 @@ class Encoder:
         sample.graph = graph
 
         return sample
+
+    def get_sample_id(
+        self,
+        sample
+    ):
+    
+        return (
+        
+            sample.repo,
+            sample.parent_commit,
+            sample.file_path,
+            sample.label
+    
+        )
+    
+    
+    def get_pair_id(
+        self,
+        sample
+    ):
+    
+        return (
+        
+            sample.repo,
+            sample.parent_commit,
+            sample.file_path
+    
+        )
