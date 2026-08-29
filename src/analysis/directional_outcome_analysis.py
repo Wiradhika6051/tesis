@@ -73,9 +73,11 @@ def _node_line_map(sample):
     if sample.cfg is None:
         return result
 
-    for node in sample.cfg["nodes"]:
+    for node_id, node in enumerate(
+        sample.cfg["nodes"]
+    ):
 
-        result[node.id] = node.lineno
+        result[node_id] = node.lineno
 
     return result
 

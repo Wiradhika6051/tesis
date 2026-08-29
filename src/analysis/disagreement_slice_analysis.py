@@ -272,25 +272,23 @@ def node_type_distribution(
     node_ids
 ):
 
-    lookup = {
-
-        node.node_id:
-            node
-
-        for node in sample.cfg["nodes"]
-
-    }
-
     counter = Counter()
+
+    if sample.cfg is None:
+        return counter
+
+    nodes = sample.cfg["nodes"]
 
     for node_id in node_ids:
 
-        node = lookup.get(
-            node_id
-        )
-
-        if node is None:
+        if (
+            node_id < 0
+            or
+            node_id >= len(nodes)
+        ):
             continue
+
+        node = nodes[node_id]
 
         counter[
             node.node_type
@@ -693,12 +691,10 @@ def print_disagreement_slice_analysis(
             continue
 
         node_lookup = {
-
-            node.node_id:
-                node
-
-            for node in sample.cfg["nodes"]
-
+            node_id: node
+            for node_id, node in enumerate(
+                sample.cfg["nodes"]
+            )
         }
 
         print()
