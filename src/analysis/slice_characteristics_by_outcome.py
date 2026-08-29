@@ -413,3 +413,232 @@ def print_slice_characteristics_by_prediction_outcome(
             f"Average function size  : "
             f"{statistics.mean([r['forward']['function_size'] for r in records]):.2f}"
         )
+
+from collections import defaultdict
+import statistics
+
+
+def analyze_slice_characteristics_by_outcome(
+    comparison_results,
+    forward_samples,
+    backward_samples
+):
+
+    #
+    # Build sample lookup.
+    #
+    forward_lookup = {
+        sample.graph.sample_id: sample
+        for sample in forward_samples
+        if sample.graph is not None
+    }
+
+    backward_lookup = {
+        sample.graph.sample_id: sample
+        for sample in backward_samples
+        if sample.graph is not None
+    }
+
+    grouped = defaultdict(list)
+
+    comparisons = comparison_results[
+        "comparisons"
+    ]
+
+    for comparison in comparisons:
+
+        sample_id = comparison[
+            "sample_id"
+        ]
+
+        forward_sample = forward_lookup.get(
+            sample_id
+        )
+
+        backward_sample = backward_lookup.get(
+            sample_id
+        )
+
+        if (
+            forward_sample is None
+            or
+            backward_sample is None
+        ):
+            continue
+
+        #
+        # Slice sizes.
+        #
+        forward_nodes = len(
+            forward_sample.pruned_cfg["nodes"]
+        )
+
+        backward_nodes = len(
+            backward_sample.pruned_cfg["nodes"]
+        )
+
+        #
+        # Function size.
+        #
+        function_nodes = len(
+            forward_sample.function_nodes
+        )
+
+        #
+        # Number of seed nodes.
+        #
+        seeds = len(
+            forward_sample.seed_nodes
+        )
+
+        #
+        # Store characteristics.
+        #
+        record = {
+
+            "sample_id":
+                sample_id,
+
+            "label":
+                comparison["label"],
+
+            "forward_prediction":
+                comparison["forward_prediction"],
+
+            "backward_prediction":
+                comparison["backward_prediction"],
+
+            "comparison":
+                comparison["comparison"],
+
+            "function_nodes":
+                function_nodes,
+
+            "seed_nodes":
+                seeds,
+
+            "forward_nodes":
+                forward_nodes,
+
+            "backward_nodes":
+                backward_nodes,
+
+            "forward_ratio":
+                (
+                    forward_nodes / function_nodes
+                    if function_nodes > 0
+                    else 0
+                ),
+
+            "backward_ratio":
+                (
+                    backward_nodes / function_nodes
+                    if function_nodes > 0
+                    else 0
+                )
+
+        }
+
+        grouped[
+            comparison["comparison"]
+        ].append(
+            record
+        )
+
+    return grouped
+
+def print_slice_characteristics_by_outcome(
+    grouped
+):
+
+    print()
+    print("=" * 80)
+    print("SLICE CHARACTERISTICS BY PREDICTION OUTCOME")
+    print("=" * 80)
+
+    outcomes = [
+
+        "BOTH_CORRECT",
+        "BOTH_WRONG",
+        "FORWARD_CORRECT",
+        "BACKWARD_CORRECT"
+
+    ]
+
+    for outcome in outcomes:
+
+        records = grouped.get(
+            outcome,
+            []
+        )
+
+        print()
+        print(outcome)
+        print("-" * 60)
+
+        print(
+            f"Samples: {len(records)}"
+        )
+
+        if not records:
+            continue
+
+        function_sizes = [
+            r["function_nodes"]
+            for r in records
+        ]
+
+        seed_sizes = [
+            r["seed_nodes"]
+            for r in records
+        ]
+
+        forward_sizes = [
+            r["forward_nodes"]
+            for r in records
+        ]
+
+        backward_sizes = [
+            r["backward_nodes"]
+            for r in records
+        ]
+
+        forward_ratios = [
+            r["forward_ratio"]
+            for r in records
+        ]
+
+        backward_ratios = [
+            r["backward_ratio"]
+            for r in records
+        ]
+
+        print(
+            f"Average function nodes : "
+            f"{statistics.mean(function_sizes):.2f}"
+        )
+
+        print(
+            f"Average seed nodes     : "
+            f"{statistics.mean(seed_sizes):.2f}"
+        )
+
+        print(
+            f"Average forward nodes  : "
+            f"{statistics.mean(forward_sizes):.2f}"
+        )
+
+        print(
+            f"Average backward nodes : "
+            f"{statistics.mean(backward_sizes):.2f}"
+        )
+
+        print(
+            f"Average forward ratio  : "
+            f"{statistics.mean(forward_ratios):.2%}"
+        )
+
+        print(
+            f"Average backward ratio : "
+            f"{statistics.mean(backward_ratios):.2%}"
+        )
