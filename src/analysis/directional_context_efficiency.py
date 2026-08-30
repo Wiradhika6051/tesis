@@ -78,16 +78,9 @@ def build_context_efficiency_profiles(
         if outcome not in OUTCOMES:
             continue
 
-        forward = result.get(
-            "forward_slice",
-            0
-        )
-
-        backward = result.get(
-            "backward_slice",
-            0
-        )
-
+        #
+        # Directional components.
+        #
         forward_only = result.get(
             "forward_only",
             0
@@ -104,34 +97,22 @@ def build_context_efficiency_profiles(
         )
 
         #
-        # Handle sets.
+        # Derive complete slice sizes.
         #
-        if isinstance(
-            forward_only,
-            (set, list, tuple)
-        ):
-            forward_only = len(
-                forward_only
-            )
+        forward = (
+            forward_only
+            +
+            overlap
+        )
 
-        if isinstance(
-            backward_only,
-            (set, list, tuple)
-        ):
-            backward_only = len(
-                backward_only
-            )
-
-        if isinstance(
-            overlap,
-            (set, list, tuple)
-        ):
-            overlap = len(
-                overlap
-            )
+        backward = (
+            backward_only
+            +
+            overlap
+        )
 
         #
-        # Union of directional slices.
+        # Union.
         #
         union = (
             forward_only
@@ -161,7 +142,7 @@ def build_context_efficiency_profiles(
         )
 
         #
-        # How different are the directions?
+        # Similarity between directional slices.
         #
         directional_jaccard = _safe_ratio(
             overlap,
@@ -169,7 +150,7 @@ def build_context_efficiency_profiles(
         )
 
         #
-        # Relative size difference.
+        # Size difference.
         #
         size_difference = (
             forward
@@ -553,3 +534,56 @@ def print_context_efficiency_extremes(
             "Size difference:",
             record["size_difference"]
         )
+
+def check_duplicate_directional_results(
+    directional_results
+):
+
+    seen = set()
+    duplicates = []
+
+    for result in directional_results:
+
+        sample_id = result.get(
+            "sample_id"
+        )
+
+        if sample_id in seen:
+
+            duplicates.append(
+                sample_id
+            )
+
+        else:
+
+            seen.add(
+                sample_id
+            )
+
+    print()
+    print("=" * 80)
+    print("DIRECTIONAL RESULT DUPLICATE CHECK")
+    print("=" * 80)
+
+    print(
+        "Total results:",
+        len(directional_results)
+    )
+
+    print(
+        "Unique sample IDs:",
+        len(seen)
+    )
+
+    print(
+        "Duplicate results:",
+        len(duplicates)
+    )
+
+    for sample_id in duplicates[:20]:
+
+        print(
+            sample_id
+        )
+
+    return duplicates
