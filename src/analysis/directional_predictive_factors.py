@@ -250,3 +250,138 @@ def analyze_winner_slice_compactness(
         "  Equal:",
         equal_backward
     )
+
+def print_winning_direction_analysis(
+    analysis
+):
+
+    print()
+
+    print(
+        "=" * 100
+    )
+
+    print(
+        "WINNING DIRECTION: CONTEXT FACTORS"
+    )
+
+    print(
+        "=" * 100
+    )
+
+    forward = analysis[
+        "FORWARD_CORRECT"
+    ]
+
+    backward = analysis[
+        "BACKWARD_CORRECT"
+    ]
+
+    print()
+
+    print(
+
+        f"{'Metric':<30}"
+        f"{'Forward correct':>20}"
+        f"{'Backward correct':>20}"
+        f"{'Difference':>20}"
+
+    )
+
+    print(
+        "-" * 95
+    )
+
+    metrics = [
+
+        (
+            "Forward slice",
+            "forward_slice_mean"
+        ),
+
+        (
+            "Backward slice",
+            "backward_slice_mean"
+        ),
+
+        (
+            "Forward-only",
+            "forward_only_mean"
+        ),
+
+        (
+            "Backward-only",
+            "backward_only_mean"
+        ),
+
+        (
+            "Overlap",
+            "overlap_mean"
+        ),
+
+        (
+            "Forward context share",
+            "forward_share_mean"
+        ),
+
+        (
+            "Backward context share",
+            "backward_share_mean"
+        ),
+
+        (
+            "Directional Jaccard",
+            "directional_jaccard_mean"
+        ),
+
+        (
+            "Size difference",
+            "size_difference_mean"
+        ),
+
+        (
+            "Size ratio",
+            "size_ratio_mean"
+        )
+
+    ]
+
+    for name, key in metrics:
+
+        f = forward.get(
+            key,
+            0.0
+        )
+
+        b = backward.get(
+            key,
+            0.0
+        )
+
+        difference = f - b
+
+        if (
+            "share" in key
+            or
+            "jaccard" in key
+        ):
+
+            print(
+
+                f"{name:<30}"
+                f"{f * 100:>19.2f}%"
+                f"{b * 100:>19.2f}%"
+                f"{difference * 100:>19.2f}%"
+
+            )
+
+        else:
+
+            print(
+
+                f"{name:<30}"
+                f"{f:>20.2f}"
+                f"{b:>20.2f}"
+                f"{difference:>20.2f}"
+
+            )
