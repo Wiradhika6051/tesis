@@ -1,175 +1,53 @@
 from collections import Counter, defaultdict
 import statistics
 
-
-def _node_type_map(sample):
-
-    return {
-
-        node_index: node.node_type
-
-        for node_index, node
-        in enumerate(sample.cfg["nodes"])
-
-    }
+from src.analysis.paired_slice_similarity import (
+    get_slice_signatures
+)
 
 
-def _get_node_types(
-    sample,
-    node_ids
-):
-
-    node_type_map = _node_type_map(
-        sample
-    )
-
-    return [
-
-        node_type_map[node_id]
-
-        for node_id in node_ids
-
-        if node_id in node_type_map
-
-    ]
-
-
-def _composition(
-    node_types
-):
-
-    counter = Counter(
-        node_types
-    )
-
-    total = len(
-        node_types
-    )
-
-    if total == 0:
-
-        return {}
-
-    return {
-
-        node_type:
-            count / total
-
-        for node_type, count
-        in counter.items()
-
-    }
-
-
-def _analyze_sample(
-    forward_sample,
-    backward_sample,
-    outcome
-):
-
-    forward_nodes = set(
-        forward_sample.pruned_cfg["nodes"]
-    )
-
-    backward_nodes = set(
-        backward_sample.pruned_cfg["nodes"]
-    )
-
-    #
-    # The pruned CFG nodes themselves may not be
-    # directly comparable as objects, so use their
-    # node indices.
-    #
-    forward_ids = set(
-        range(
-            len(
-                forward_sample.pruned_cfg[
-                    "nodes"
-                ]
-            )
-        )
-    )
-
-    backward_ids = set(
-        range(
-            len(
-                backward_sample.pruned_cfg[
-                    "nodes"
-                ]
-            )
-        )
-    )
-
-    forward_only_ids = (
-        forward_ids
-        -
-        backward_ids
-    )
-
-    backward_only_ids = (
-        backward_ids
-        -
-        forward_ids
-    )
-
-    forward_types = _get_node_types(
-        forward_sample,
-        forward_only_ids
-    )
-
-    backward_types = _get_node_types(
-        backward_sample,
-        backward_only_ids
-    )
-
-    return {
-
-        "sample_id":
-            (
-                forward_sample.repo,
-                forward_sample.parent_commit,
-                forward_sample.file_path,
-                forward_sample.label
-            ),
-
-        "outcome":
-            outcome,
-
-        "forward_only_count":
-            len(forward_types),
-
-        "backward_only_count":
-            len(backward_types),
-
-        "forward_only_types":
-            Counter(forward_types),
-
-        "backward_only_types":
-            Counter(backward_types),
-
-        "forward_only_composition":
-            _composition(
-                forward_types
-            ),
-
-        "backward_only_composition":
-            _composition(
-                backward_types
-            )
-
-    }
-
-
-def _sample_id(
-    sample
-):
+def _sample_id(sample):
 
     return (
-
         sample.repo,
         sample.parent_commit,
         sample.file_path,
         sample.label
+    )
+
+
+def _get_slice_sets(sample):
+
+    forward = get_slice_signatures(
+        sample,
+        forward=True
+    )
+
+    backward = get_slice_signatures(
+        sample,
+        forward=False
+    )
+
+    return forward, backward
+
+
+def _extract_node_type(
+    signature
+):
+
+    return signature[0]
+
+def _composition(signatures):
+
+    if not signatures:
+
+        return Counter()
+
+    return Counter(
+
+        _extract_node_type(signature)
+
+        for signature in signatures
 
     )
 
@@ -223,82 +101,127 @@ def analyze_directional_node_composition(
             or
             backward_sample is None
         ):
+
             continue
 
-        results.append(
-
-            _analyze_sample(
-
+        #
+        # Get actual directional slices.
+        #
+        forward_signatures = (
+            get_slice_signatures(
                 forward_sample,
-
-                backward_sample,
-
-                comparison[
-                    "outcome"
-                ]
-
+                forward=True
             )
+        )
+
+        backward_signatures = (
+            get_slice_signatures(
+                backward_sample,
+                forward=False
+            )
+        )
+
+        #
+        # Directional differences.
+        #
+        forward_only = (
+
+            forward_signatures
+            -
+            backward_signatures
 
         )
+
+        backward_only = (
+
+            backward_signatures
+            -
+            forward_signatures
+
+        )
+
+        overlap = (
+
+            forward_signatures
+            &
+            backward_signatures
+
+        )
+
+        #
+        # Node-type composition.
+        #
+        forward_types = _composition(
+            forward_only
+        )
+
+        backward_types = _composition(
+            backward_only
+        )
+
+        results.append({
+
+            "sample_id":
+                sample_id,
+
+            "outcome":
+                comparison[
+                    "outcome"
+                ],
+
+            "label":
+                comparison[
+                    "label"
+                ],
+
+            "forward_only":
+                forward_only,
+
+            "backward_only":
+                backward_only,
+
+            "overlap":
+                overlap,
+
+            "forward_only_count":
+                len(
+                    forward_only
+                ),
+
+            "backward_only_count":
+                len(
+                    backward_only
+                ),
+
+            "overlap_count":
+                len(
+                    overlap
+                ),
+
+            "forward_only_types":
+                forward_types,
+
+            "backward_only_types":
+                backward_types
+
+        })
 
     return results
 
-
-def _aggregate_composition(
+def _aggregate_types(
     records,
     field
 ):
 
-    total_counter = Counter()
-    total_nodes = 0
+    counter = Counter()
 
     for record in records:
 
-        counter = record[field]
-
-        total_counter.update(
-            counter
+        counter.update(
+            record[field]
         )
 
-        total_nodes += sum(
-            counter.values()
-        )
-
-    if total_nodes == 0:
-
-        return {}
-
-    return {
-
-        node_type:
-            count / total_nodes
-
-        for node_type, count
-        in total_counter.items()
-
-    }
-
-
-def _aggregate_size(
-    records,
-    field
-):
-
-    values = [
-
-        record[field]
-
-        for record in records
-
-    ]
-
-    if not values:
-
-        return 0.0
-
-    return statistics.mean(
-        values
-    )
+    return counter
 
 
 def print_directional_node_composition(
@@ -335,8 +258,10 @@ def print_directional_node_composition(
         print()
         print("=" * 80)
         print(
-            f"DIRECTIONAL NODE COMPOSITION: "
-            f"{outcome}"
+            f"DIRECTIONAL NODE COMPOSITION"
+        )
+        print(
+            f"Outcome: {outcome}"
         )
         print("=" * 80)
 
@@ -348,36 +273,65 @@ def print_directional_node_composition(
         if not records:
             continue
 
-        print()
+        avg_forward = statistics.mean(
 
-        print(
-            f"Average forward-only nodes : "
-            f"{_aggregate_size(
-                records,
+            record[
                 "forward_only_count"
-            ):.2f}"
+            ]
+
+            for record in records
+
+        )
+
+        avg_backward = statistics.mean(
+
+            record[
+                "backward_only_count"
+            ]
+
+            for record in records
+
+        )
+
+        avg_overlap = statistics.mean(
+
+            record[
+                "overlap_count"
+            ]
+
+            for record in records
+
+        )
+
+        print()
+        print(
+            f"Average forward-only  : "
+            f"{avg_forward:.2f}"
         )
 
         print(
-            f"Average backward-only nodes: "
-            f"{_aggregate_size(
-                records,
-                "backward_only_count"
-            ):.2f}"
+            f"Average backward-only : "
+            f"{avg_backward:.2f}"
+        )
+
+        print(
+            f"Average overlap       : "
+            f"{avg_overlap:.2f}"
         )
 
         #
-        # Forward-only composition.
+        # Forward-only.
         #
+        forward_counter = _aggregate_types(
 
-        forward_composition = (
-            _aggregate_composition(
+            records,
 
-                records,
+            "forward_only_types"
 
-                "forward_only_types"
+        )
 
-            )
+        forward_total = sum(
+            forward_counter.values()
         )
 
         print()
@@ -386,35 +340,44 @@ def print_directional_node_composition(
         )
         print("-" * 60)
 
-        for node_type, ratio in sorted(
+        for node_type, count in (
+            forward_counter.most_common(
+                top_n
+            )
+        ):
 
-            forward_composition.items(),
+            ratio = (
 
-            key=lambda x: x[1],
+                count
+                /
+                forward_total
 
-            reverse=True
+                if forward_total
+                else 0
 
-        )[:top_n]:
+            )
 
             print(
 
                 f"{node_type:<25}"
-                f"{ratio * 100:>7.2f}%"
+                f"{count:>8}"
+                f" ({ratio * 100:>6.2f}%)"
 
             )
 
         #
-        # Backward-only composition.
+        # Backward-only.
         #
+        backward_counter = _aggregate_types(
 
-        backward_composition = (
-            _aggregate_composition(
+            records,
 
-                records,
+            "backward_only_types"
 
-                "backward_only_types"
+        )
 
-            )
+        backward_total = sum(
+            backward_counter.values()
         )
 
         print()
@@ -423,258 +386,27 @@ def print_directional_node_composition(
         )
         print("-" * 60)
 
-        for node_type, ratio in sorted(
+        for node_type, count in (
+            backward_counter.most_common(
+                top_n
+            )
+        ):
 
-            backward_composition.items(),
+            ratio = (
 
-            key=lambda x: x[1],
+                count
+                /
+                backward_total
 
-            reverse=True
+                if backward_total
+                else 0
 
-        )[:top_n]:
+            )
 
             print(
 
                 f"{node_type:<25}"
-                f"{ratio * 100:>7.2f}%"
+                f"{count:>8}"
+                f" ({ratio * 100:>6.2f}%)"
 
             )
-
-
-def print_directional_composition_comparison(
-    results,
-    top_n=15
-):
-
-    grouped = defaultdict(list)
-
-    for record in results:
-
-        grouped[
-            record["outcome"]
-        ].append(
-            record
-        )
-
-    forward_correct = grouped.get(
-        "FORWARD_CORRECT",
-        []
-    )
-
-    backward_correct = grouped.get(
-        "BACKWARD_CORRECT",
-        []
-    )
-
-    #
-    # Collect all node types appearing in either
-    # group.
-    #
-
-    forward_composition = (
-        _aggregate_composition(
-
-            forward_correct,
-
-            "forward_only_types"
-
-        )
-    )
-
-    backward_composition = (
-        _aggregate_composition(
-
-            backward_correct,
-
-            "forward_only_types"
-
-        )
-    )
-
-    all_types = set(
-        forward_composition
-    ) | set(
-        backward_composition
-    )
-
-    ranking = sorted(
-
-        all_types,
-
-        key=lambda node_type:
-            abs(
-
-                forward_composition.get(
-                    node_type,
-                    0.0
-                )
-                -
-                backward_composition.get(
-                    node_type,
-                    0.0
-                )
-
-            ),
-
-        reverse=True
-
-    )
-
-    print()
-    print("=" * 80)
-    print(
-        "FORWARD-ONLY NODE COMPOSITION"
-    )
-    print(
-        "FORWARD-CORRECT VS BACKWARD-CORRECT"
-    )
-    print("=" * 80)
-
-    print()
-
-    print(
-        f"{'Node Type':<25}"
-        f"{'Forward correct':>20}"
-        f"{'Backward correct':>20}"
-        f"{'Difference':>15}"
-    )
-
-    print("-" * 80)
-
-    for node_type in ranking[:top_n]:
-
-        forward_ratio = (
-            forward_composition.get(
-                node_type,
-                0.0
-            )
-        )
-
-        backward_ratio = (
-            backward_composition.get(
-                node_type,
-                0.0
-            )
-        )
-
-        difference = (
-            forward_ratio
-            -
-            backward_ratio
-        )
-
-        print(
-
-            f"{node_type:<25}"
-            f"{forward_ratio * 100:>19.2f}%"
-            f"{backward_ratio * 100:>19.2f}%"
-            f"{difference * 100:>14.2f}%"
-
-        )
-
-    #
-    # --------------------------------------------------
-    # Backward-only comparison.
-    # --------------------------------------------------
-    #
-
-    forward_composition = (
-        _aggregate_composition(
-
-            forward_correct,
-
-            "backward_only_types"
-
-        )
-    )
-
-    backward_composition = (
-        _aggregate_composition(
-
-            backward_correct,
-
-            "backward_only_types"
-
-        )
-    )
-
-    all_types = set(
-        forward_composition
-    ) | set(
-        backward_composition
-    )
-
-    ranking = sorted(
-
-        all_types,
-
-        key=lambda node_type:
-            abs(
-
-                forward_composition.get(
-                    node_type,
-                    0.0
-                )
-                -
-                backward_composition.get(
-                    node_type,
-                    0.0
-                )
-
-            ),
-
-        reverse=True
-
-    )
-
-    print()
-    print("=" * 80)
-    print(
-        "BACKWARD-ONLY NODE COMPOSITION"
-    )
-    print(
-        "FORWARD-CORRECT VS BACKWARD-CORRECT"
-    )
-    print("=" * 80)
-
-    print()
-
-    print(
-        f"{'Node Type':<25}"
-        f"{'Forward correct':>20}"
-        f"{'Backward correct':>20}"
-        f"{'Difference':>15}"
-    )
-
-    print("-" * 80)
-
-    for node_type in ranking[:top_n]:
-
-        forward_ratio = (
-            forward_composition.get(
-                node_type,
-                0.0
-            )
-        )
-
-        backward_ratio = (
-            backward_composition.get(
-                node_type,
-                0.0
-            )
-        )
-
-        difference = (
-            forward_ratio
-            -
-            backward_ratio
-        )
-
-        print(
-
-            f"{node_type:<25}"
-            f"{forward_ratio * 100:>19.2f}%"
-            f"{backward_ratio * 100:>19.2f}%"
-            f"{difference * 100:>14.2f}%"
-
-        )
