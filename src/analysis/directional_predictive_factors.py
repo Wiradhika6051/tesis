@@ -122,7 +122,6 @@ def analyze_winning_direction(
                 ] = 0.0
 
     return result
-
 def analyze_winner_slice_compactness(
     directional_results
 ):
@@ -163,45 +162,83 @@ def analyze_winner_slice_compactness(
 
     ]
 
+    #
+    # --------------------------------------------------
+    # Forward-correct samples.
+    # --------------------------------------------------
+    #
+
     forward_smaller = sum(
 
-        r["forward_slice"]
+        r["forward_size"]
         <
-        r["backward_slice"]
+        r["backward_size"]
 
         for r in forward_wins
 
     )
+
+    forward_larger = sum(
+
+        r["forward_size"]
+        >
+        r["backward_size"]
+
+        for r in forward_wins
+
+    )
+
+    forward_equal = sum(
+
+        r["forward_size"]
+        ==
+        r["backward_size"]
+
+        for r in forward_wins
+
+    )
+
+    #
+    # --------------------------------------------------
+    # Backward-correct samples.
+    # --------------------------------------------------
+    #
 
     backward_smaller = sum(
 
-        r["backward_slice"]
+        r["backward_size"]
         <
-        r["forward_slice"]
+        r["forward_size"]
 
         for r in backward_wins
 
     )
 
-    equal_forward = sum(
+    backward_larger = sum(
 
-        r["forward_slice"]
-        ==
-        r["backward_slice"]
-
-        for r in forward_wins
-
-    )
-
-    equal_backward = sum(
-
-        r["forward_slice"]
-        ==
-        r["backward_slice"]
+        r["backward_size"]
+        >
+        r["forward_size"]
 
         for r in backward_wins
 
     )
+
+    backward_equal = sum(
+
+        r["backward_size"]
+        ==
+        r["forward_size"]
+
+        for r in backward_wins
+
+    )
+
+    #
+    # --------------------------------------------------
+    # Print.
+    # --------------------------------------------------
+    #
 
     print()
 
@@ -226,12 +263,26 @@ def analyze_winner_slice_compactness(
 
     print(
         "  Forward slice smaller:",
-        forward_smaller
+        forward_smaller,
+        f"({forward_smaller / len(forward_wins) * 100:.2f}%)"
+        if forward_wins
+        else "(0.00%)"
+    )
+
+    print(
+        "  Forward slice larger:",
+        forward_larger,
+        f"({forward_larger / len(forward_wins) * 100:.2f}%)"
+        if forward_wins
+        else "(0.00%)"
     )
 
     print(
         "  Equal:",
-        equal_forward
+        forward_equal,
+        f"({forward_equal / len(forward_wins) * 100:.2f}%)"
+        if forward_wins
+        else "(0.00%)"
     )
 
     print()
@@ -243,13 +294,63 @@ def analyze_winner_slice_compactness(
 
     print(
         "  Backward slice smaller:",
-        backward_smaller
+        backward_smaller,
+        f"({backward_smaller / len(backward_wins) * 100:.2f}%)"
+        if backward_wins
+        else "(0.00%)"
+    )
+
+    print(
+        "  Backward slice larger:",
+        backward_larger,
+        f"({backward_larger / len(backward_wins) * 100:.2f}%)"
+        if backward_wins
+        else "(0.00%)"
     )
 
     print(
         "  Equal:",
-        equal_backward
+        backward_equal,
+        f"({backward_equal / len(backward_wins) * 100:.2f}%)"
+        if backward_wins
+        else "(0.00%)"
     )
+
+    return {
+
+        "forward_correct": {
+
+            "samples":
+                len(forward_wins),
+
+            "smaller":
+                forward_smaller,
+
+            "larger":
+                forward_larger,
+
+            "equal":
+                forward_equal
+
+        },
+
+        "backward_correct": {
+
+            "samples":
+                len(backward_wins),
+
+            "smaller":
+                backward_smaller,
+
+            "larger":
+                backward_larger,
+
+            "equal":
+                backward_equal
+
+        }
+
+    }
 
 def print_winning_direction_analysis(
     analysis
