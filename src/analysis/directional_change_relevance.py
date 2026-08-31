@@ -1,5 +1,7 @@
 from collections import Counter
 
+from src.analysis.paired_slice_similarity import normalize_text
+
 
 def _sample_id(sample):
 
