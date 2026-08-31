@@ -1,7 +1,7 @@
 from collections import defaultdict
 import statistics
 
-from src.analysis.similarity import normalize_text
+from src.analysis.paired_slice_similarity import normalize_text
 
 
 def _node_signature(node):
