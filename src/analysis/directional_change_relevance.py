@@ -3,6 +3,15 @@ from collections import Counter
 from src.analysis.paired_slice_similarity import normalize_text
 
 
+def _pair_id(sample):
+
+    return (
+        sample.repo,
+        sample.parent_commit,
+        sample.file_path
+    )
+
+
 def _sample_id(sample):
 
     return (
@@ -37,124 +46,55 @@ def _signatures(sample):
     }
 
 
-def _changed_nodes(
-    vulnerable,
-    fixed
-):
+def _build_pair_lookup(samples):
 
-    vulnerable_nodes = _signatures(
-        vulnerable
-    )
+    lookup = {}
 
-    fixed_nodes = _signatures(
-        fixed
-    )
+    for sample in samples:
 
-    return {
+        pair_id = _pair_id(
+            sample
+        )
 
-        "vulnerable_only":
-            vulnerable_nodes - fixed_nodes,
+        lookup.setdefault(
+            pair_id,
+            {}
+        )[sample.label] = sample
 
-        "fixed_only":
-            fixed_nodes - vulnerable_nodes,
-
-        "common":
-            vulnerable_nodes & fixed_nodes
-
-    }
-
-
-def _node_types(
-    nodes
-):
-
-    return Counter(
-
-        node_type
-
-        for node_type, _ in nodes
-
-    )
+    return lookup
 
 
 def analyze_directional_change_relevance(
 
     directional_results,
-
     forward_samples,
     backward_samples
 
 ):
 
     #
-    # --------------------------------------------------------
-    # Lookups
-    # --------------------------------------------------------
+    # --------------------------------------------------
+    # Build pair-level lookups.
+    # --------------------------------------------------
     #
 
-    forward_lookup = {
+    forward_pairs = _build_pair_lookup(
+        forward_samples
+    )
 
-        _sample_id(sample):
-            sample
-
-        for sample in forward_samples
-
-    }
-
-    backward_lookup = {
-
-        _sample_id(sample):
-            sample
-
-        for sample in backward_samples
-
-    }
-
-    #
-    # --------------------------------------------------------
-    # Group vulnerable/fixed samples.
-    # --------------------------------------------------------
-    #
-
-    pairs = {}
-
-    for sample in forward_samples:
-
-        pair_id = (
-
-            sample.repo,
-            sample.parent_commit,
-            sample.file_path
-
-        )
-
-        pairs.setdefault(
-            pair_id,
-            {}
-        )["forward"] = sample
-
-    for sample in backward_samples:
-
-        pair_id = (
-
-            sample.repo,
-            sample.parent_commit,
-            sample.file_path
-
-        )
-
-        pairs.setdefault(
-            pair_id,
-            {}
-        )["backward"] = sample
-
-    #
-    # --------------------------------------------------------
-    # Results.
-    # --------------------------------------------------------
-    #
+    backward_pairs = _build_pair_lookup(
+        backward_samples
+    )
 
     results = []
+
+    unmatched = []
+
+    #
+    # --------------------------------------------------
+    # Process directional prediction results.
+    # --------------------------------------------------
+    #
 
     for directional in directional_results:
 
@@ -178,88 +118,66 @@ def analyze_directional_change_relevance(
         if sample_id is None:
             continue
 
+        #
+        # sample_id:
+        #
+        # (
+        #     repo,
+        #     parent_commit,
+        #     file_path,
+        #     label
+        # )
+        #
+
         pair_id = sample_id[:3]
 
-        forward_sample = forward_lookup.get(
-            sample_id
-        )
-
-        backward_sample = backward_lookup.get(
-            sample_id
-        )
-
-        if (
-            forward_sample is None
-            or
-            backward_sample is None
-        ):
-
-            continue
-
         #
-        # Need vulnerable/fixed versions.
+        # --------------------------------------------------
+        # Get both vulnerable/fixed samples.
+        # --------------------------------------------------
         #
 
-        pair = pairs.get(
+        forward_pair = forward_pairs.get(
             pair_id
         )
 
-        if pair is None:
+        backward_pair = backward_pairs.get(
+            pair_id
+        )
+
+        if (
+            forward_pair is None
+            or
+            backward_pair is None
+        ):
+
+            unmatched.append({
+
+                "sample_id":
+                    sample_id,
+
+                "reason":
+                    "missing pair"
+
+            })
+
             continue
 
-        #
-        # Find vulnerable/fixed sample.
-        #
+        vulnerable_forward = forward_pair.get(
+            1
+        )
 
-        vulnerable_forward = None
-        fixed_forward = None
+        fixed_forward = forward_pair.get(
+            0
+        )
 
-        vulnerable_backward = None
-        fixed_backward = None
+        vulnerable_backward = backward_pair.get(
+            1
+        )
 
-        #
-        # Search explicitly because sample_id contains label.
-        #
-
-        for sample in forward_samples:
-
-            if (
-
-                sample.repo,
-                sample.parent_commit,
-                sample.file_path
-
-            ) != pair_id:
-
-                continue
-
-            if sample.label == 1:
-
-                vulnerable_forward = sample
-
-            else:
-
-                fixed_forward = sample
-
-        for sample in backward_samples:
-
-            if (
-
-                sample.repo,
-                sample.parent_commit,
-                sample.file_path
-
-            ) != pair_id:
-
-                continue
-
-            if sample.label == 1:
-
-                vulnerable_backward = sample
-
-            else:
-
-                fixed_backward = sample
+        fixed_backward = backward_pair.get(
+            0
+        )
 
         if (
             vulnerable_forward is None
@@ -271,90 +189,186 @@ def analyze_directional_change_relevance(
             fixed_backward is None
         ):
 
+            unmatched.append({
+
+                "sample_id":
+                    sample_id,
+
+                "reason":
+                    "incomplete vulnerable/fixed pair"
+
+            })
+
             continue
 
         #
-        # ----------------------------------------------------
-        # Semantic changes.
-        # ----------------------------------------------------
+        # --------------------------------------------------
+        # Determine which sample won.
+        # --------------------------------------------------
         #
 
-        forward_change = _changed_nodes(
-
-            vulnerable_forward,
-            fixed_forward
-
-        )
-
-        backward_change = _changed_nodes(
-
-            vulnerable_backward,
-            fixed_backward
-
-        )
+        winning_label = sample_id[3]
 
         #
-        # ----------------------------------------------------
-        # Directional context.
-        # ----------------------------------------------------
+        # The directional sample corresponding to
+        # the prediction result.
         #
 
-        forward_nodes = _signatures(
-            forward_sample
+        if winning_label == 1:
+
+            forward_prediction_sample = (
+                vulnerable_forward
+            )
+
+            backward_prediction_sample = (
+                vulnerable_backward
+            )
+
+        else:
+
+            forward_prediction_sample = (
+                fixed_forward
+            )
+
+            backward_prediction_sample = (
+                fixed_backward
+            )
+
+        #
+        # --------------------------------------------------
+        # Directional contexts.
+        # --------------------------------------------------
+        #
+
+        forward_context = _signatures(
+            forward_prediction_sample
         )
 
-        backward_nodes = _signatures(
-            backward_sample
+        backward_context = _signatures(
+            backward_prediction_sample
         )
 
         forward_only = (
-            forward_nodes
+            forward_context
             -
-            backward_nodes
+            backward_context
         )
 
         backward_only = (
-            backward_nodes
+            backward_context
             -
-            forward_nodes
+            forward_context
         )
 
         #
-        # Which directional nodes are actually
-        # related to the vulnerable/fixed change?
+        # --------------------------------------------------
+        # Semantic change.
         #
+        # We compare vulnerable vs fixed within the
+        # SAME direction.
+        # --------------------------------------------------
+        #
+
+        vulnerable_forward_nodes = _signatures(
+            vulnerable_forward
+        )
+
+        fixed_forward_nodes = _signatures(
+            fixed_forward
+        )
+
+        vulnerable_backward_nodes = _signatures(
+            vulnerable_backward
+        )
+
+        fixed_backward_nodes = _signatures(
+            fixed_backward
+        )
+
+        #
+        # Nodes that actually changed between
+        # vulnerable and fixed.
+        #
+
         forward_changed = (
-            forward_only
-            &
-            (
-                forward_change[
-                    "vulnerable_only"
-                ]
-                |
-                forward_change[
-                    "fixed_only"
-                ]
-            )
+
+            vulnerable_forward_nodes
+            ^
+            fixed_forward_nodes
+
         )
 
         backward_changed = (
-            backward_only
-            &
-            (
-                backward_change[
-                    "vulnerable_only"
-                ]
-                |
-                backward_change[
-                    "fixed_only"
-                ]
-            )
+
+            vulnerable_backward_nodes
+            ^
+            fixed_backward_nodes
+
         )
 
         #
-        # ----------------------------------------------------
+        # Directional-only context that is also
+        # part of the semantic change.
+        #
+
+        forward_changed_context = (
+
+            forward_only
+            &
+            forward_changed
+
+        )
+
+        backward_changed_context = (
+
+            backward_only
+            &
+            backward_changed
+
+        )
+
+        #
+        # --------------------------------------------------
+        # Relevance.
+        # --------------------------------------------------
+        #
+
+        forward_relevance = (
+
+            len(
+                forward_changed_context
+            )
+            /
+            len(
+                forward_only
+            )
+
+            if forward_only
+
+            else 0.0
+
+        )
+
+        backward_relevance = (
+
+            len(
+                backward_changed_context
+            )
+            /
+            len(
+                backward_only
+            )
+
+            if backward_only
+
+            else 0.0
+
+        )
+
+        #
+        # --------------------------------------------------
         # Store.
-        # ----------------------------------------------------
+        # --------------------------------------------------
         #
 
         results.append({
@@ -362,60 +376,99 @@ def analyze_directional_change_relevance(
             "sample_id":
                 sample_id,
 
+            "pair_id":
+                pair_id,
+
             "outcome":
                 outcome,
 
+            "forward_context":
+                len(
+                    forward_context
+                ),
+
+            "backward_context":
+                len(
+                    backward_context
+                ),
+
             "forward_only":
-                len(forward_only),
+                len(
+                    forward_only
+                ),
 
             "backward_only":
-                len(backward_only),
+                len(
+                    backward_only
+                ),
 
             "forward_changed":
-                len(forward_changed),
+                len(
+                    forward_changed
+                ),
 
             "backward_changed":
-                len(backward_changed),
-
-            "forward_change_relevance":
-                (
-                    len(forward_changed)
-                    /
-                    len(forward_only)
-                    if forward_only
-                    else 0.0
+                len(
+                    backward_changed
                 ),
 
-            "backward_change_relevance":
-                (
-                    len(backward_changed)
-                    /
-                    len(backward_only)
-                    if backward_only
-                    else 0.0
+            "forward_changed_context":
+                len(
+                    forward_changed_context
                 ),
+
+            "backward_changed_context":
+                len(
+                    backward_changed_context
+                ),
+
+            "forward_relevance":
+                forward_relevance,
+
+            "backward_relevance":
+                backward_relevance,
 
             "forward_changed_types":
                 dict(
-                    _node_types(
-                        forward_changed
+                    Counter(
+                        node_type
+                        for node_type, _ in
+                        forward_changed_context
                     )
                 ),
 
             "backward_changed_types":
                 dict(
-                    _node_types(
-                        backward_changed
+                    Counter(
+                        node_type
+                        for node_type, _ in
+                        backward_changed_context
                     )
                 )
 
         })
 
-    return results
+    return {
+
+        "results":
+            results,
+
+        "unmatched":
+            unmatched
+
+    }
 
 def print_directional_change_relevance(
-    results
+    analysis
 ):
+
+    results = analysis[
+        "results"
+    ]
+
+    unmatched = analysis[
+        "unmatched"
+    ]
 
     print()
 
@@ -468,7 +521,7 @@ def print_directional_change_relevance(
 
         forward_relevance = [
 
-            r["forward_change_relevance"]
+            r["forward_relevance"]
 
             for r in subset
 
@@ -476,7 +529,7 @@ def print_directional_change_relevance(
 
         backward_relevance = [
 
-            r["backward_change_relevance"]
+            r["backward_relevance"]
 
             for r in subset
 
@@ -489,8 +542,10 @@ def print_directional_change_relevance(
         )
 
         print(
+
             "  Average change relevance:",
             f"{sum(forward_relevance) / len(forward_relevance):.2%}"
+
         )
 
         print()
@@ -500,8 +555,10 @@ def print_directional_change_relevance(
         )
 
         print(
+
             "  Average change relevance:",
             f"{sum(backward_relevance) / len(backward_relevance):.2%}"
+
         )
 
         print()
@@ -520,41 +577,80 @@ def print_directional_change_relevance(
             )
 
             print(
-                "  Forward-only:",
+                "Forward context:",
+                r["forward_context"]
+            )
+
+            print(
+                "Backward context:",
+                r["backward_context"]
+            )
+
+            print(
+                "Forward-only:",
                 r["forward_only"]
             )
 
             print(
-                "  Forward changed:",
-                r["forward_changed"]
-            )
-
-            print(
-                "  Forward relevance:",
-                f"{r['forward_change_relevance']:.2%}"
-            )
-
-            print(
-                "  Backward-only:",
+                "Backward-only:",
                 r["backward_only"]
             )
 
             print(
-                "  Backward changed:",
+                "Forward changed:",
+                r["forward_changed"]
+            )
+
+            print(
+                "Backward changed:",
                 r["backward_changed"]
             )
 
             print(
-                "  Backward relevance:",
-                f"{r['backward_change_relevance']:.2%}"
+                "Forward changed context:",
+                r["forward_changed_context"]
             )
 
             print(
-                "  Forward changed types:",
+                "Backward changed context:",
+                r["backward_changed_context"]
+            )
+
+            print(
+                "Forward relevance:",
+                f"{r['forward_relevance']:.2%}"
+            )
+
+            print(
+                "Backward relevance:",
+                f"{r['backward_relevance']:.2%}"
+            )
+
+            print(
+                "Forward changed types:",
                 r["forward_changed_types"]
             )
 
             print(
-                "  Backward changed types:",
+                "Backward changed types:",
                 r["backward_changed_types"]
             )
+
+    print()
+
+    print(
+        "=" * 100
+    )
+
+    print(
+        "UNMATCHED"
+    )
+
+    print(
+        "=" * 100
+    )
+
+    print(
+        "Count:",
+        len(unmatched)
+    )
