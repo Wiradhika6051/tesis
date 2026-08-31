@@ -3,6 +3,13 @@ import statistics
 
 from src.analysis.paired_slice_similarity import normalize_text
 
+def _get_sample_id(sample):
+    return (
+        sample.repo,
+        sample.parent_commit,
+        sample.file_path,
+        sample.label
+    )
 
 def _node_signature(node):
     """
@@ -255,41 +262,29 @@ def _change_capture(
             )
     }
 
-
 def analyze_change_coverage(
     directional_results,
     forward_samples,
     backward_samples
 ):
-    """
-    Analyze whether the direction that wins the
-    prediction captures more of the semantic change.
-
-    directional_results contains the prediction
-    comparison.
-
-    forward_samples and backward_samples contain
-    the corresponding samples after pruning.
-    """
 
     #
     # Build sample lookup.
     #
     forward_lookup = {
-        sample.sample_id:
+        _get_sample_id(sample):
             sample
+
         for sample in forward_samples
     }
 
     backward_lookup = {
-        sample.sample_id:
+        _get_sample_id(sample):
             sample
+
         for sample in backward_samples
     }
 
-    #
-    # Results.
-    #
     results = []
 
     for result in directional_results:
@@ -302,7 +297,7 @@ def analyze_change_coverage(
             continue
 
         #
-        # Remove label from ID to find the pair.
+        # Remove label to obtain pair identity.
         #
         pair_key = sample_id[:3]
 
@@ -321,7 +316,7 @@ def analyze_change_coverage(
         )
 
         #
-        # Get samples from forward dataset.
+        # Locate vulnerable/fixed samples.
         #
         forward_vulnerable = (
             forward_lookup.get(
@@ -336,8 +331,7 @@ def analyze_change_coverage(
         )
 
         #
-        # Get directional samples for the
-        # current sample.
+        # Locate the exact sample being analyzed.
         #
         forward_sample = (
             forward_lookup.get(
@@ -351,10 +345,6 @@ def analyze_change_coverage(
             )
         )
 
-        #
-        # We need the pair to exist in both
-        # vulnerable/fixed forms.
-        #
         if (
             forward_vulnerable is None
             or
@@ -367,7 +357,7 @@ def analyze_change_coverage(
             continue
 
         #
-        # Directional slices for this sample.
+        # Get directional slice signatures.
         #
         forward_signatures = _slice_signatures(
             forward_sample,
@@ -385,11 +375,9 @@ def analyze_change_coverage(
         coverage = _change_capture(
 
             forward_vulnerable,
-
             forward_fixed,
 
             forward_signatures,
-
             backward_signatures
 
         )
@@ -402,22 +390,20 @@ def analyze_change_coverage(
             coverage
         )
 
-        #
-        # Difference:
-        #
-        # positive -> forward captures more
-        # negative -> backward captures more
-        #
         record[
             "change_coverage_difference"
         ] = (
+
             coverage[
                 "forward_change_coverage"
             ]
+
             -
+
             coverage[
                 "backward_change_coverage"
             ]
+
         )
 
         results.append(
@@ -425,7 +411,6 @@ def analyze_change_coverage(
         )
 
     return results
-
 
 def _mean(
     records,
