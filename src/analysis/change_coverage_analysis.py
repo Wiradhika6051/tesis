@@ -2,6 +2,7 @@ from collections import defaultdict
 import statistics
 
 from src.analysis.paired_slice_similarity import normalize_text
+from src.analysis.slice_analysis import get_slice_nodes
 
 def _get_sample_id(sample):
     return (
@@ -261,157 +262,280 @@ def _change_capture(
                 fixed_only
             )
     }
-
 def analyze_change_coverage(
     directional_results,
     forward_samples,
     backward_samples
 ):
 
+    forward_lookup = _build_sample_lookup(
+        forward_samples
+    )
+
+    backward_lookup = _build_sample_lookup(
+        backward_samples
+    )
+
     #
-    # Build sample lookup.
+    # Build pair lookup.
     #
-    forward_lookup = {
-        _get_sample_id(sample):
-            sample
+    forward_pairs = {}
 
-        for sample in forward_samples
-    }
+    for sample in forward_samples:
 
-    backward_lookup = {
-        _get_sample_id(sample):
-            sample
+        pair_id = _pair_id(sample)
 
-        for sample in backward_samples
-    }
+        forward_pairs.setdefault(
+            pair_id,
+            {}
+        )[sample.label] = sample
+
+    backward_pairs = {}
+
+    for sample in backward_samples:
+
+        pair_id = _pair_id(sample)
+
+        backward_pairs.setdefault(
+            pair_id,
+            {}
+        )[sample.label] = sample
 
     results = []
 
-    for result in directional_results:
+    for directional in directional_results:
 
-        sample_id = result.get(
+        sample_id = directional.get(
             "sample_id"
         )
 
         if sample_id is None:
             continue
 
-        #
-        # Remove label to obtain pair identity.
-        #
-        pair_key = sample_id[:3]
-
-        vulnerable_id = (
-            pair_key[0],
-            pair_key[1],
-            pair_key[2],
-            1
+        outcome = directional.get(
+            "outcome"
         )
 
-        fixed_id = (
-            pair_key[0],
-            pair_key[1],
-            pair_key[2],
-            0
-        )
+        pair_id = sample_id[:3]
 
         #
-        # Locate vulnerable/fixed samples.
+        # Locate pair.
         #
+        forward_pair = forward_pairs.get(
+            pair_id,
+            {}
+        )
+
+        backward_pair = backward_pairs.get(
+            pair_id,
+            {}
+        )
+
         forward_vulnerable = (
-            forward_lookup.get(
-                vulnerable_id
-            )
+            forward_pair.get(1)
         )
 
         forward_fixed = (
-            forward_lookup.get(
-                fixed_id
-            )
+            forward_pair.get(0)
+        )
+
+        backward_vulnerable = (
+            backward_pair.get(1)
+        )
+
+        backward_fixed = (
+            backward_pair.get(0)
         )
 
         #
-        # Locate the exact sample being analyzed.
+        # Require complete pairs.
         #
-        forward_sample = (
-            forward_lookup.get(
-                sample_id
-            )
-        )
-
-        backward_sample = (
-            backward_lookup.get(
-                sample_id
-            )
-        )
-
         if (
             forward_vulnerable is None
             or
             forward_fixed is None
             or
+            backward_vulnerable is None
+            or
+            backward_fixed is None
+        ):
+            continue
+
+        #
+        # Semantic changes.
+        #
+        forward_vulnerable_signatures = (
+            _get_pruned_signatures(
+                forward_vulnerable
+            )
+        )
+
+        forward_fixed_signatures = (
+            _get_pruned_signatures(
+                forward_fixed
+            )
+        )
+
+        backward_vulnerable_signatures = (
+            _get_pruned_signatures(
+                backward_vulnerable
+            )
+        )
+
+        backward_fixed_signatures = (
+            _get_pruned_signatures(
+                backward_fixed
+            )
+        )
+
+        #
+        # What changed between vulnerable
+        # and fixed versions?
+        #
+        forward_vulnerable_only = (
+            forward_vulnerable_signatures
+            -
+            forward_fixed_signatures
+        )
+
+        forward_fixed_only = (
+            forward_fixed_signatures
+            -
+            forward_vulnerable_signatures
+        )
+
+        backward_vulnerable_only = (
+            backward_vulnerable_signatures
+            -
+            backward_fixed_signatures
+        )
+
+        backward_fixed_only = (
+            backward_fixed_signatures
+            -
+            backward_vulnerable_signatures
+        )
+
+        forward_change = (
+            forward_vulnerable_only
+            |
+            forward_fixed_only
+        )
+
+        backward_change = (
+            backward_vulnerable_only
+            |
+            backward_fixed_only
+        )
+
+        #
+        # Directional slice for the exact
+        # sample being classified.
+        #
+        forward_sample = forward_lookup.get(
+            sample_id
+        )
+
+        backward_sample = backward_lookup.get(
+            sample_id
+        )
+
+        if (
             forward_sample is None
             or
             backward_sample is None
         ):
             continue
 
+        forward_slice = (
+            _get_directional_signatures(
+                forward_sample,
+                forward=True
+            )
+        )
+
+        backward_slice = (
+            _get_directional_signatures(
+                backward_sample,
+                forward=False
+            )
+        )
+
         #
-        # Get directional slice signatures.
+        # Coverage of semantic change.
         #
-        forward_signatures = _slice_signatures(
-            forward_sample,
-            forward=True
+        forward_captured = (
+            forward_slice
+            &
+            forward_change
         )
 
-        backward_signatures = _slice_signatures(
-            backward_sample,
-            forward=False
+        backward_captured = (
+            backward_slice
+            &
+            backward_change
         )
 
-        #
-        # Calculate change coverage.
-        #
-        coverage = _change_capture(
+        if forward_change:
 
-            forward_vulnerable,
-            forward_fixed,
+            forward_coverage = (
+                len(forward_captured)
+                /
+                len(forward_change)
+            )
 
-            forward_signatures,
-            backward_signatures
+        else:
 
-        )
+            forward_coverage = 0.0
 
-        record = dict(
-            result
-        )
+        if backward_change:
 
-        record.update(
-            coverage
-        )
+            backward_coverage = (
+                len(backward_captured)
+                /
+                len(backward_change)
+            )
 
-        record[
-            "change_coverage_difference"
-        ] = (
+        else:
 
-            coverage[
-                "forward_change_coverage"
-            ]
+            backward_coverage = 0.0
 
-            -
+        results.append({
 
-            coverage[
-                "backward_change_coverage"
-            ]
+            "sample_id":
+                sample_id,
 
-        )
+            "outcome":
+                outcome,
 
-        results.append(
-            record
-        )
+            "forward_change_size":
+                len(forward_change),
+
+            "backward_change_size":
+                len(backward_change),
+
+            "forward_captured":
+                len(forward_captured),
+
+            "backward_captured":
+                len(backward_captured),
+
+            "forward_change_coverage":
+                forward_coverage,
+
+            "backward_change_coverage":
+                backward_coverage,
+
+            "coverage_difference":
+                (
+                    forward_coverage
+                    -
+                    backward_coverage
+                )
+
+        })
 
     return results
-
 def _mean(
     records,
     key
@@ -755,3 +879,107 @@ def print_change_coverage(
             f"{_mean(backward_wins, key):19.2%}"
 
         )
+
+def _sample_id(sample):
+
+    return (
+        sample.repo,
+        sample.parent_commit,
+        sample.file_path,
+        sample.label
+    )
+
+
+def _pair_id(sample):
+
+    return (
+        sample.repo,
+        sample.parent_commit,
+        sample.file_path
+    )
+
+def _build_sample_lookup(samples):
+
+    lookup = {}
+
+    for sample in samples:
+
+        sample_id = _sample_id(sample)
+
+        lookup[sample_id] = sample
+
+    return lookup
+
+def _get_pruned_signatures(sample):
+
+    if sample.pruned_cfg is None:
+        return set()
+
+    signatures = set()
+
+    for node in sample.pruned_cfg["nodes"]:
+
+        signatures.add(
+            (
+                node.node_type,
+                normalize_text(node.text)
+            )
+        )
+
+    return signatures
+
+def _get_directional_signatures(
+    sample,
+    forward
+):
+
+    if sample.cfg is None:
+        return set()
+
+    if not sample.seed_nodes:
+        return set()
+
+    if not sample.function_nodes:
+        return set()
+
+    node_ids = get_slice_nodes(
+
+        sample.cfg,
+
+        set(sample.seed_nodes),
+
+        set(sample.function_nodes),
+
+        forward=forward
+
+    )
+
+    node_lookup = {
+
+        node.node_id: node
+
+        for node in sample.cfg["nodes"]
+
+    }
+
+    signatures = set()
+
+    for node_id in node_ids:
+
+        node = node_lookup.get(
+            node_id
+        )
+
+        if node is None:
+            continue
+
+        signatures.add(
+
+            (
+                node.node_type,
+                normalize_text(node.text)
+            )
+
+        )
+
+    return signatures
