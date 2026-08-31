@@ -1,6 +1,8 @@
 from collections import Counter
 from collections import defaultdict
 
+from src.analysis.paired_slice_similarity import normalize_text
+
 
 # ============================================================
 # Helpers
