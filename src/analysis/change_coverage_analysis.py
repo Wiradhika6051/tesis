@@ -4,13 +4,6 @@ import statistics
 from src.analysis.paired_slice_similarity import normalize_text
 from src.analysis.slice_analysis import get_slice_nodes
 
-def _get_sample_id(sample):
-    return (
-        sample.repo,
-        sample.parent_commit,
-        sample.file_path,
-        sample.label
-    )
 
 def _node_signature(node):
     """
@@ -526,7 +519,7 @@ def analyze_change_coverage(
             "backward_change_coverage":
                 backward_coverage,
 
-            "coverage_difference":
+            "change_coverage_difference":
                 (
                     forward_coverage
                     -
