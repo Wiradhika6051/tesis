@@ -119,47 +119,27 @@ def analyze_directional_semantic_context(
     )
 
     grouped = {
-
-        "BOTH_CORRECT": {
-
+    
+        outcome: {
+        
             "forward_only":
                 Counter(),
-
+    
             "backward_only":
-                Counter()
-
-        },
-
-        "BOTH_WRONG": {
-
-            "forward_only":
                 Counter(),
-
-            "backward_only":
+    
+            "overlap":
                 Counter()
-
-        },
-
-        "FORWARD_CORRECT": {
-
-            "forward_only":
-                Counter(),
-
-            "backward_only":
-                Counter()
-
-        },
-
-        "BACKWARD_CORRECT": {
-
-            "forward_only":
-                Counter(),
-
-            "backward_only":
-                Counter()
-
+    
         }
-
+    
+        for outcome in (
+            "BOTH_CORRECT",
+            "BOTH_WRONG",
+            "FORWARD_CORRECT",
+            "BACKWARD_CORRECT"
+        )
+    
     }
 
     sample_counts = defaultdict(int)
@@ -168,9 +148,9 @@ def analyze_directional_semantic_context(
 
     #
     # --------------------------------------------------
-    # Analyze every directional result.
-    # --------------------------------------------------
-    #
+        # Analyze every directional result.
+        # --------------------------------------------------
+        #
 
     for result in directional_results:
 
@@ -185,16 +165,12 @@ def analyze_directional_semantic_context(
         if outcome not in grouped:
             continue
 
-        forward_sample = (
-            forward_lookup.get(
-                sample_id
-            )
+        forward_sample = forward_lookup.get(
+            sample_id
         )
 
-        backward_sample = (
-            backward_lookup.get(
-                sample_id
-            )
+        backward_sample = backward_lookup.get(
+            sample_id
         )
 
         if (
@@ -202,36 +178,51 @@ def analyze_directional_semantic_context(
             or
             backward_sample is None
         ):
-
             unmatched.append(
                 sample_id
             )
-
             continue
 
         #
-        # IMPORTANT:
+        # Actual representations fed to each model.
         #
-        # We need the directional representation
-        # from the corresponding directional sample.
-        #
-        forward_context = _get_pruned_signatures(
-            forward_sample
+
+        forward_signatures = (
+            _get_pruned_signatures(
+                forward_sample
+            )
         )
 
-        backward_context = _get_pruned_signatures(
-            backward_sample
+        backward_signatures = (
+            _get_pruned_signatures(
+                backward_sample
+            )
         )
 
         #
-        # Forward model's forward-only context.
+        # Direction-specific semantic information.
         #
-        # Backward model's backward-only context.
+
+        forward_only = (
+            forward_signatures
+            -
+            backward_signatures
+        )
+
+        backward_only = (
+            backward_signatures
+            -
+            forward_signatures
+        )
+
+        overlap = (
+            forward_signatures
+            &
+            backward_signatures
+        )
+
         #
-        #
-        # Since each sample has its own pruned CFG,
-        # we analyze the actual node signatures in
-        # each directional representation.
+        # Store.
         #
 
         grouped[
@@ -239,11 +230,7 @@ def analyze_directional_semantic_context(
         ][
             "forward_only"
         ].update(
-
-            forward_context[
-                "forward_only"
-            ]
-
+            forward_only
         )
 
         grouped[
@@ -251,17 +238,20 @@ def analyze_directional_semantic_context(
         ][
             "backward_only"
         ].update(
+            backward_only
+        )
 
-            backward_context[
-                "backward_only"
-            ]
-
+        grouped[
+            outcome
+        ][
+            "overlap"
+        ].update(
+            overlap
         )
 
         sample_counts[
             outcome
         ] += 1
-
     return {
 
         "grouped":
