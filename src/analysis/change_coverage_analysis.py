@@ -18,6 +18,13 @@ def _node_signature(node):
         )
     )
 
+def _get_sample_id(sample):
+    return (
+        sample.repo,
+        sample.parent_commit,
+        sample.file_path,
+        sample.label
+    )
 
 def _cfg_signatures(sample):
     """
