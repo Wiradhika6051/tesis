@@ -183,12 +183,12 @@ def analyze_directional_node_composition(
             "overlap":
                 overlap,
 
-            "forward_only_count":
+            "forward_only":
                 len(
                     forward_only
                 ),
 
-            "backward_only_count":
+            "backward_only":
                 len(
                     backward_only
                 ),
@@ -276,7 +276,7 @@ def print_directional_node_composition(
         avg_forward = statistics.mean(
 
             record[
-                "forward_only_count"
+                "forward_only"
             ]
 
             for record in records
@@ -286,7 +286,7 @@ def print_directional_node_composition(
         avg_backward = statistics.mean(
 
             record[
-                "backward_only_count"
+                "backward_only"
             ]
 
             for record in records
