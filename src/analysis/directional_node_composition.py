@@ -52,7 +52,7 @@ def _slice_signatures(
 
     # Import the actual slice calculation used by
     # your existing directional analysis.
-    from src.analysis.directional_outcome_analysis import (
+    from src.analysis.slice_analysis import (
         get_slice_nodes
     )
 
