@@ -69,7 +69,7 @@ def _get_slice_nodes(
     if not sample.function_nodes:
         return []
 
-    from src.analysis.directional_outcome_analysis import (
+    from src.analysis.slice_analysis import (
         get_slice_nodes,
     )
 
