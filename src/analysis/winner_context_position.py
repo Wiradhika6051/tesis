@@ -94,79 +94,135 @@ def _get_slice_nodes(
 # ============================================================
 # CFG DISTANCE
 # ============================================================
+from collections import defaultdict, deque
+
 
 def _build_undirected_adjacency(cfg):
+    """
+    Build an undirected adjacency map from the CFG edges.
+
+    The CFG stores nodes and edges separately:
+
+        cfg["nodes"]
+        cfg["edges"]
+
+    Edges are expected to contain source/destination
+    node IDs.
+    """
 
     adjacency = defaultdict(set)
 
-    for node in cfg["nodes"]:
-
-        node_id = node.node_id
+    for edge in cfg["edges"]:
 
         #
-        # Support several possible CFG representations.
+        # Handle tuple/list representation:
         #
-        for attr in (
-            "successors",
-            "successor_ids",
-            "children",
-        ):
+        #     (source, destination)
+        #
+        if isinstance(edge, (tuple, list)):
 
-            values = getattr(
-                node,
-                attr,
-                None,
-            )
-
-            if values is None:
+            if len(edge) < 2:
                 continue
 
-            for value in values:
+            source = edge[0]
+            target = edge[1]
 
-                if hasattr(value, "node_id"):
-                    other = value.node_id
-                else:
-                    other = value
+        #
+        # Handle object representation if needed.
+        #
+        else:
 
-                adjacency[node_id].add(
-                    other
+            source = getattr(
+                edge,
+                "source",
+                None
+            )
+
+            target = getattr(
+                edge,
+                "target",
+                None
+            )
+
+            if source is None:
+
+                source = getattr(
+                    edge,
+                    "src",
+                    None
                 )
 
-                adjacency[other].add(
-                    node_id
+            if target is None:
+
+                target = getattr(
+                    edge,
+                    "dst",
+                    None
                 )
+
+        #
+        # Convert CFGNode objects to node IDs.
+        #
+        if hasattr(source, "node_id"):
+            source = source.node_id
+
+        if hasattr(target, "node_id"):
+            target = target.node_id
+
+        if source is None or target is None:
+            continue
+
+        adjacency[source].add(
+            target
+        )
+
+        adjacency[target].add(
+            source
+        )
 
     return adjacency
-
 
 def _shortest_distances(
     adjacency,
     seeds,
 ):
+    """
+    Compute shortest undirected CFG distance from
+    every seed node to every reachable node.
+    """
 
     distances = {}
 
-    queue = []
+    queue = deque()
 
     for seed in seeds:
 
+        #
+        # Seeds may occasionally be CFGNode objects.
+        #
+        if hasattr(seed, "node_id"):
+            seed = seed.node_id
+
+        if seed in distances:
+            continue
+
         distances[seed] = 0
-        queue.append(seed)
 
-    index = 0
+        queue.append(
+            seed
+        )
 
-    while index < len(queue):
+    while queue:
 
-        current = queue[index]
-        index += 1
+        current = queue.popleft()
 
-        current_distance = distances[
-            current
-        ]
+        current_distance = (
+            distances[current]
+        )
 
         for neighbor in adjacency.get(
             current,
-            (),
+            ()
         ):
 
             if neighbor in distances:
@@ -181,7 +237,6 @@ def _shortest_distances(
             )
 
     return distances
-
 
 # ============================================================
 # POSITION RELATIVE TO SEED
@@ -248,25 +303,32 @@ def _get_seed_line_range(
         max(lines),
     )
 
-
 def _position_relative_to_seed(
     node,
+    seed_node_ids,
     seed_min,
     seed_max,
 ):
     """
-    Classify a node as:
+    Classify a node relative to the actual seed.
 
-        BEFORE
-        AT_SEED
-        AFTER
-        UNKNOWN
+    Priority:
 
-    based on source-code line position.
+        actual seed node -> AT_SEED
 
-    This is deliberately independent of traversal
-    direction.
+        source line before seed -> BEFORE
+
+        source line after seed -> AFTER
+
+        otherwise -> UNKNOWN
     """
+
+    #
+    # Actual seed membership comes first.
+    #
+    if node.node_id in seed_node_ids:
+
+        return "AT_SEED"
 
     line = _get_line_number(
         node
@@ -281,8 +343,11 @@ def _position_relative_to_seed(
     if line > seed_max:
         return "AFTER"
 
-    return "AT_SEED"
-
+    #
+    # Node lies inside the seed's source-line
+    # range but isn't itself a seed node.
+    #
+    return "WITHIN_SEED_RANGE"
 
 # ============================================================
 # DISTANCE BUCKET
@@ -378,6 +443,7 @@ def _directional_context(
         position = (
             _position_relative_to_seed(
                 node,
+                set(sample.seed_nodes),
                 seed_min,
                 seed_max,
             )
@@ -421,6 +487,7 @@ def _directional_context(
         position = (
             _position_relative_to_seed(
                 node,
+                set(sample.seed_nodes),
                 seed_min,
                 seed_max,
             )
@@ -528,13 +595,11 @@ def analyze_winner_context_position(
         # The two samples should represent
         # the same underlying example.
         #
-        forward_context = _directional_context(
+        forward_context, backward_context = (
+            _directional_context(
             forward_sample
         )
-
-        backward_context = _directional_context(
-            backward_sample
-        )
+)
 
         if outcome == "FORWARD_CORRECT":
 
@@ -576,27 +641,61 @@ def analyze_winner_context_position(
 # ============================================================
 # AGGREGATION
 # ============================================================
-
 def _aggregate_dimension(
     records,
     context_key,
     dimension,
 ):
+    """
+    Aggregate one dimension from winner/loser context.
+
+    Handles both:
+        context = [dict, dict, ...]
+    and accidentally nested:
+        context = [[dict, dict, ...], ...]
+    """
 
     counter = Counter()
 
+    def flatten(items):
+
+        if isinstance(items, dict):
+            yield items
+            return
+
+        if isinstance(items, (list, tuple, set)):
+
+            for item in items:
+
+                yield from flatten(
+                    item
+                )
+
     for record in records:
 
-        for item in record[
-            context_key
-        ]:
+        context = record.get(
+            context_key,
+            []
+        )
 
-            counter[
-                item[dimension]
-            ] += 1
+        for item in flatten(context):
+
+            if not isinstance(
+                item,
+                dict
+            ):
+                continue
+
+            value = item.get(
+                dimension
+            )
+
+            if value is None:
+                value = "UNKNOWN"
+
+            counter[value] += 1
 
     return counter
-
 
 def _aggregate_type_position(
     records,
