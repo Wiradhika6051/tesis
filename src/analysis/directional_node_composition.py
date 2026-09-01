@@ -193,7 +193,7 @@ def analyze_directional_node_composition(
                     backward_only
                 ),
 
-            "overlap_count":
+            "overlap":
                 len(
                     overlap
                 ),
@@ -296,7 +296,7 @@ def print_directional_node_composition(
         avg_overlap = statistics.mean(
 
             record[
-                "overlap_count"
+                "overlap"
             ]
 
             for record in records

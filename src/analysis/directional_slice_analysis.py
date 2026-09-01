@@ -1053,7 +1053,7 @@ def analyze_directional_slice_composition(
         "backward_only":
             len(backward_only),
 
-        "overlap_count":
+        "overlap":
             len(overlap),
 
         "forward_only_types":
