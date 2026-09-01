@@ -48,7 +48,7 @@ def _get_slice_signatures(
     if not sample.function_nodes:
         return set()
 
-    from src.analysis.directional_outcome_analysis import (
+    from src.analysis.slice_analysis import (
         get_slice_nodes
     )
 
