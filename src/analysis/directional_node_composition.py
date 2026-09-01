@@ -1,13 +1,11 @@
 from collections import Counter, defaultdict
-import statistics
 
-from src.analysis.paired_slice_similarity import (
-    get_slice_signatures
-)
 
+# ============================================================
+# Helpers
+# ============================================================
 
 def _sample_id(sample):
-
     return (
         sample.repo,
         sample.parent_commit,
@@ -16,84 +14,190 @@ def _sample_id(sample):
     )
 
 
-def _get_slice_sets(sample):
+def _normalize_text(text):
 
-    forward = get_slice_signatures(
-        sample,
+    if text is None:
+        return ""
+
+    return " ".join(
+        text.strip().split()
+    )
+
+
+def _node_signature(node):
+
+    return (
+        node.node_type,
+        _normalize_text(node.text)
+    )
+
+
+def _slice_signatures(
+    sample,
+    forward
+):
+    """
+    Get semantic node signatures belonging to one
+    directional slice.
+    """
+
+    if sample.cfg is None:
+        return set()
+
+    if not sample.seed_nodes:
+        return set()
+
+    if not sample.function_nodes:
+        return set()
+
+    # Import the actual slice calculation used by
+    # your existing directional analysis.
+    from src.analysis.directional_outcome_analysis import (
+        get_slice_nodes
+    )
+
+    node_ids = get_slice_nodes(
+
+        sample.cfg,
+
+        set(sample.seed_nodes),
+
+        set(sample.function_nodes),
+
+        forward=forward
+
+    )
+
+    node_lookup = {
+
+        node.node_id: node
+        for node in sample.cfg["nodes"]
+
+    }
+
+    return {
+
+        _node_signature(
+            node_lookup[node_id]
+        )
+
+        for node_id in node_ids
+
+        if node_id in node_lookup
+
+    }
+
+
+def _get_directional_types(
+    forward_sample,
+    backward_sample
+):
+    """
+    Return node-type counters for:
+
+        forward-only
+        backward-only
+    """
+
+    forward_signatures = _slice_signatures(
+        forward_sample,
         forward=True
     )
 
-    backward = get_slice_signatures(
-        sample,
+    backward_signatures = _slice_signatures(
+        backward_sample,
         forward=False
     )
 
-    return forward, backward
+    forward_only = (
+        forward_signatures
+        - backward_signatures
+    )
 
+    backward_only = (
+        backward_signatures
+        - forward_signatures
+    )
 
-def _extract_node_type(
-    signature
-):
+    forward_types = Counter(
+        node_type
+        for node_type, _ in forward_only
+    )
 
-    return signature[0]
+    backward_types = Counter(
+        node_type
+        for node_type, _ in backward_only
+    )
 
-def _composition(signatures):
-
-    if not signatures:
-
-        return Counter()
-
-    return Counter(
-
-        _extract_node_type(signature)
-
-        for signature in signatures
-
+    return (
+        forward_types,
+        backward_types
     )
 
 
+# ============================================================
+# Build composition results
+# ============================================================
+
 def analyze_directional_node_composition(
+    directional_results,
     forward_samples,
-    backward_samples,
-    comparison_results
+    backward_samples
 ):
+    """
+    Build directional node-type composition grouped
+    by prediction outcome.
+    """
 
     forward_lookup = {
-
-        _sample_id(sample):
-            sample
-
+        _sample_id(sample): sample
         for sample in forward_samples
-
     }
 
     backward_lookup = {
-
-        _sample_id(sample):
-            sample
-
+        _sample_id(sample): sample
         for sample in backward_samples
-
     }
 
-    results = []
+    grouped = defaultdict(
+        lambda: {
+            "samples": 0,
+            "forward_types": Counter(),
+            "backward_types": Counter(),
+            "records": []
+        }
+    )
 
-    for comparison in comparison_results:
+    seen = set()
 
-        sample_id = comparison[
-            "sample_id"
-        ]
+    for result in directional_results:
 
-        forward_sample = (
-            forward_lookup.get(
-                sample_id
-            )
+        outcome = result.get(
+            "outcome"
         )
 
-        backward_sample = (
-            backward_lookup.get(
-                sample_id
-            )
+        if outcome not in (
+            "BOTH_CORRECT",
+            "BOTH_WRONG",
+            "FORWARD_CORRECT",
+            "BACKWARD_CORRECT"
+        ):
+            continue
+
+        sample_id = result.get(
+            "sample_id"
+        )
+
+        # Protect against duplicate directional results.
+        if sample_id in seen:
+            continue
+
+        forward_sample = forward_lookup.get(
+            sample_id
+        )
+
+        backward_sample = backward_lookup.get(
+            sample_id
         )
 
         if (
@@ -101,145 +205,118 @@ def analyze_directional_node_composition(
             or
             backward_sample is None
         ):
-
             continue
 
-        #
-        # Get actual directional slices.
-        #
-        forward_signatures = (
-            get_slice_signatures(
-                forward_sample,
-                forward=True
-            )
+        (
+            forward_types,
+            backward_types
+        ) = _get_directional_types(
+            forward_sample,
+            backward_sample
         )
 
-        backward_signatures = (
-            get_slice_signatures(
-                backward_sample,
-                forward=False
-            )
+        grouped[outcome]["samples"] += 1
+
+        grouped[outcome]["forward_types"].update(
+            forward_types
         )
 
-        #
-        # Directional differences.
-        #
-        forward_only = (
-
-            forward_signatures
-            -
-            backward_signatures
-
+        grouped[outcome]["backward_types"].update(
+            backward_types
         )
 
-        backward_only = (
+        grouped[outcome]["records"].append({
 
-            backward_signatures
-            -
-            forward_signatures
+            "sample_id": sample_id,
 
-        )
-
-        overlap = (
-
-            forward_signatures
-            &
-            backward_signatures
-
-        )
-
-        #
-        # Node-type composition.
-        #
-        forward_types = _composition(
-            forward_only
-        )
-
-        backward_types = _composition(
-            backward_only
-        )
-
-        results.append({
-
-            "sample_id":
-                sample_id,
-
-            "outcome":
-                comparison[
-                    "outcome"
-                ],
-
-            "label":
-                comparison[
-                    "label"
-                ],
-
-            "forward_only":
-                forward_only,
-
-            "backward_only":
-                backward_only,
-
-            "overlap":
-                overlap,
-
-            "forward_only":
-                len(
-                    forward_only
-                ),
-
-            "backward_only":
-                len(
-                    backward_only
-                ),
-
-            "overlap":
-                len(
-                    overlap
-                ),
-
-            "forward_only_types":
+            "forward_types":
                 forward_types,
 
-            "backward_only_types":
+            "backward_types":
                 backward_types
 
         })
 
-    return results
-
-def _aggregate_types(
-    records,
-    field
-):
-
-    counter = Counter()
-
-    for record in records:
-
-        counter.update(
-            record[field]
+        seen.add(
+            sample_id
         )
 
-    return counter
+    return dict(
+        grouped
+    )
+
+
+# ============================================================
+# Printing
+# ============================================================
+
+def _print_counter(
+    counter
+):
+    """
+    Print node types ordered by frequency.
+    """
+
+    total = sum(
+        counter.values()
+    )
+
+    if total == 0:
+
+        print(
+            "None"
+        )
+
+        return
+
+    for node_type, count in counter.most_common():
+
+        percentage = (
+            count / total * 100
+        )
+
+        print(
+            f"{node_type:<30}"
+            f"{count:>6}"
+            f"{percentage:>10.2f}%"
+        )
 
 
 def print_directional_node_composition(
-    results,
-    top_n=15
+    directional_results,
+    forward_samples=None,
+    backward_samples=None
 ):
+    """
+    Print directional node-type composition.
 
-    grouped = defaultdict(list)
+    The function accepts paired samples because the
+    current directional_results schema stores counts,
+    not node-type information.
+    """
 
-    for record in results:
+    if (
+        forward_samples is None
+        or
+        backward_samples is None
+    ):
 
-        grouped[
-            record["outcome"]
-        ].append(
-            record
+        raise ValueError(
+            "forward_samples and backward_samples "
+            "are required for node composition analysis."
         )
 
-    outcomes = [
+    results = analyze_directional_node_composition(
+
+        directional_results,
+
+        forward_samples,
+
+        backward_samples
+
+    )
+
+    outcome_order = [
 
         "BOTH_CORRECT",
         "BOTH_WRONG",
@@ -248,165 +325,59 @@ def print_directional_node_composition(
 
     ]
 
-    for outcome in outcomes:
+    for outcome in outcome_order:
 
-        records = grouped.get(
-            outcome,
-            []
+        group = results.get(
+            outcome
         )
+
+        if group is None:
+            continue
 
         print()
-        print("=" * 80)
         print(
-            f"DIRECTIONAL NODE COMPOSITION"
+            "=" * 80
         )
+
+        print(
+            "DIRECTIONAL NODE COMPOSITION"
+        )
+
         print(
             f"Outcome: {outcome}"
         )
-        print("=" * 80)
 
         print(
-            "Samples:",
-            len(records)
-        )
-
-        if not records:
-            continue
-
-        avg_forward = statistics.mean(
-
-            record[
-                "forward_only"
-            ]
-
-            for record in records
-
-        )
-
-        avg_backward = statistics.mean(
-
-            record[
-                "backward_only"
-            ]
-
-            for record in records
-
-        )
-
-        avg_overlap = statistics.mean(
-
-            record[
-                "overlap"
-            ]
-
-            for record in records
-
-        )
-
-        print()
-        print(
-            f"Average forward-only  : "
-            f"{avg_forward:.2f}"
+            "=" * 80
         )
 
         print(
-            f"Average backward-only : "
-            f"{avg_backward:.2f}"
-        )
-
-        print(
-            f"Average overlap       : "
-            f"{avg_overlap:.2f}"
-        )
-
-        #
-        # Forward-only.
-        #
-        forward_counter = _aggregate_types(
-
-            records,
-
-            "forward_only_types"
-
-        )
-
-        forward_total = sum(
-            forward_counter.values()
+            f"Samples: "
+            f"{group['samples']}"
         )
 
         print()
         print(
             "FORWARD-ONLY NODE TYPES"
         )
-        print("-" * 60)
 
-        for node_type, count in (
-            forward_counter.most_common(
-                top_n
-            )
-        ):
-
-            ratio = (
-
-                count
-                /
-                forward_total
-
-                if forward_total
-                else 0
-
-            )
-
-            print(
-
-                f"{node_type:<25}"
-                f"{count:>8}"
-                f" ({ratio * 100:>6.2f}%)"
-
-            )
-
-        #
-        # Backward-only.
-        #
-        backward_counter = _aggregate_types(
-
-            records,
-
-            "backward_only_types"
-
+        print(
+            "-" * 60
         )
 
-        backward_total = sum(
-            backward_counter.values()
+        _print_counter(
+            group["forward_types"]
         )
 
         print()
         print(
             "BACKWARD-ONLY NODE TYPES"
         )
-        print("-" * 60)
 
-        for node_type, count in (
-            backward_counter.most_common(
-                top_n
-            )
-        ):
+        print(
+            "-" * 60
+        )
 
-            ratio = (
-
-                count
-                /
-                backward_total
-
-                if backward_total
-                else 0
-
-            )
-
-            print(
-
-                f"{node_type:<25}"
-                f"{count:>8}"
-                f" ({ratio * 100:>6.2f}%)"
-
-            )
+        _print_counter(
+            group["backward_types"]
+        )
