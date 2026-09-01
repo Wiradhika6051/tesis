@@ -1,7 +1,7 @@
 from collections import defaultdict
 from statistics import mean, median
 
-from src.analysis.directional_outcome_analysis import (
+from src.analysis.paired_slice_similarity import (
     get_slice_signatures
 )
 
