@@ -231,7 +231,7 @@ def compare_directional_outcomes(
     The forward and backward sample lists must represent the
     same test samples.
     """
-
+    seen_sample_ids = set()
     forward_predictions = (
         forward_results[
             "predictions"
@@ -421,6 +421,16 @@ def compare_directional_outcomes(
 
         records.append(
             stats
+        )
+        if sample_id in seen_sample_ids:
+            print(
+                "Skipping duplicate sample:",
+                sample_id
+            )
+            continue
+
+        seen_sample_ids.add(
+            sample_id
         )
 
     return records
