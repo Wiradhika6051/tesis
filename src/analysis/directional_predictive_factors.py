@@ -486,3 +486,396 @@ def print_winning_direction_analysis(
                 f"{difference:>20.2f}"
 
             )
+
+import statistics
+
+
+def _safe_mean(values):
+    """
+    Return mean or 0 when no values exist.
+    """
+
+    if not values:
+        return 0.0
+
+    return statistics.mean(values)
+
+
+def _get_value(record, key, default=0):
+    """
+    Safely retrieve a numeric field.
+    """
+
+    value = record.get(key, default)
+
+    if value is None:
+        return default
+
+    return value
+
+
+def analyze_directional_predictive_factors(
+    directional_results,
+):
+    """
+    Analyze structural factors associated with
+    FORWARD_CORRECT and BACKWARD_CORRECT outcomes.
+    """
+
+    forward_correct = [
+        record
+        for record in directional_results
+        if record.get("outcome")
+        == "FORWARD_CORRECT"
+    ]
+
+    backward_correct = [
+        record
+        for record in directional_results
+        if record.get("outcome")
+        == "BACKWARD_CORRECT"
+    ]
+
+    metrics = {
+        "forward_size": {
+            "label": "Forward slice",
+        },
+        "backward_size": {
+            "label": "Backward slice",
+        },
+        "forward_only": {
+            "label": "Forward-only",
+        },
+        "backward_only": {
+            "label": "Backward-only",
+        },
+        "overlap": {
+            "label": "Overlap",
+        },
+        "size_difference": {
+            "label": "Size difference",
+        },
+    }
+
+    results = {
+        "forward_correct": {
+            "samples": len(forward_correct),
+            "metrics": {},
+        },
+        "backward_correct": {
+            "samples": len(backward_correct),
+            "metrics": {},
+        },
+    }
+
+    for metric_name in metrics:
+
+        results[
+            "forward_correct"
+        ]["metrics"][metric_name] = _safe_mean(
+            [
+                _get_value(
+                    record,
+                    metric_name,
+                )
+                for record in forward_correct
+            ]
+        )
+
+        results[
+            "backward_correct"
+        ]["metrics"][metric_name] = _safe_mean(
+            [
+                _get_value(
+                    record,
+                    metric_name,
+                )
+                for record in backward_correct
+            ]
+        )
+
+    #
+    # Context-share metrics.
+    #
+    for group_name, records in [
+        (
+            "forward_correct",
+            forward_correct,
+        ),
+        (
+            "backward_correct",
+            backward_correct,
+        ),
+    ]:
+
+        forward_share_values = []
+        backward_share_values = []
+        jaccard_values = []
+        size_ratio_values = []
+
+        for record in records:
+
+            forward_size = _get_value(
+                record,
+                "forward_size",
+            )
+
+            backward_size = _get_value(
+                record,
+                "backward_size",
+            )
+
+            overlap = _get_value(
+                record,
+                "overlap",
+            )
+
+            forward_only = _get_value(
+                record,
+                "forward_only",
+            )
+
+            backward_only = _get_value(
+                record,
+                "backward_only",
+            )
+
+            #
+            # Share of directional context.
+            #
+            if forward_size > 0:
+
+                forward_share_values.append(
+                    forward_only
+                    / forward_size
+                )
+
+            if backward_size > 0:
+
+                backward_share_values.append(
+                    backward_only
+                    / backward_size
+                )
+
+            #
+            # Jaccard similarity.
+            #
+            union = (
+                forward_only
+                +
+                backward_only
+                +
+                overlap
+            )
+
+            if union > 0:
+
+                jaccard_values.append(
+                    overlap
+                    / union
+                )
+
+            #
+            # Size ratio.
+            #
+            if backward_size > 0:
+
+                size_ratio_values.append(
+                    forward_size
+                    / backward_size
+                )
+
+        results[
+            group_name
+        ]["metrics"][
+            "forward_context_share"
+        ] = _safe_mean(
+            forward_share_values
+        )
+
+        results[
+            group_name
+        ]["metrics"][
+            "backward_context_share"
+        ] = _safe_mean(
+            backward_share_values
+        )
+
+        results[
+            group_name
+        ]["metrics"][
+            "directional_jaccard"
+        ] = _safe_mean(
+            jaccard_values
+        )
+
+        results[
+            group_name
+        ]["metrics"][
+            "size_ratio"
+        ] = _safe_mean(
+            size_ratio_values
+        )
+
+    return results
+
+
+def print_directional_predictive_factors(
+    results,
+):
+    """
+    Print directional predictive factor analysis.
+    """
+
+    print()
+
+    print(
+        "=" * 100
+    )
+
+    print(
+        "WINNING DIRECTION: CONTEXT FACTORS"
+    )
+
+    print(
+        "=" * 100
+    )
+
+    print()
+
+    print(
+        f"{'Metric':<35}"
+        f"{'Forward correct':>20}"
+        f"{'Backward correct':>20}"
+        f"{'Difference':>20}"
+    )
+
+    print(
+        "-" * 95
+    )
+
+    metric_labels = [
+        (
+            "forward_size",
+            "Forward slice",
+            False,
+        ),
+        (
+            "backward_size",
+            "Backward slice",
+            False,
+        ),
+        (
+            "forward_only",
+            "Forward-only",
+            False,
+        ),
+        (
+            "backward_only",
+            "Backward-only",
+            False,
+        ),
+        (
+            "overlap",
+            "Overlap",
+            False,
+        ),
+        (
+            "forward_context_share",
+            "Forward context share",
+            True,
+        ),
+        (
+            "backward_context_share",
+            "Backward context share",
+            True,
+        ),
+        (
+            "directional_jaccard",
+            "Directional Jaccard",
+            True,
+        ),
+        (
+            "size_difference",
+            "Size difference",
+            False,
+        ),
+        (
+            "size_ratio",
+            "Size ratio",
+            False,
+        ),
+    ]
+
+    forward_metrics = (
+        results[
+            "forward_correct"
+        ]["metrics"]
+    )
+
+    backward_metrics = (
+        results[
+            "backward_correct"
+        ]["metrics"]
+    )
+
+    for (
+        metric,
+        label,
+        is_percentage,
+    ) in metric_labels:
+
+        forward_value = (
+            forward_metrics.get(
+                metric,
+                0.0,
+            )
+        )
+
+        backward_value = (
+            backward_metrics.get(
+                metric,
+                0.0,
+            )
+        )
+
+        difference = (
+            forward_value
+            -
+            backward_value
+        )
+
+        if is_percentage:
+
+            forward_text = (
+                f"{forward_value:.2%}"
+            )
+
+            backward_text = (
+                f"{backward_value:.2%}"
+            )
+
+            difference_text = (
+                f"{difference:.2%}"
+            )
+
+        else:
+
+            forward_text = (
+                f"{forward_value:.2f}"
+            )
+
+            backward_text = (
+                f"{backward_value:.2f}"
+            )
+
+            difference_text = (
+                f"{difference:.2f}"
+            )
+
+        print(
+            f"{label:<35}"
+            f"{forward_text:>20}"
+            f"{backward_text:>20}"
+            f"{difference_text:>20}"
+        )
