@@ -548,6 +548,37 @@ def analyze_paired_directional_feature_difference(
                     zero_count
                 ),
 
+                # Aliases used by the print function
+                "winner_greater": (
+                    positive_count
+                ),
+
+                "loser_greater": (
+                    negative_count
+                ),
+
+                "equal": (
+                    zero_count
+                ),
+
+                "effect_size": (
+                    _rank_biserial_effect_size(
+                        [
+                            record["winner_features"].get(
+                                feature_name,
+                                0
+                            )
+                            for record in paired_records
+                        ],
+                        [
+                            record["loser_features"].get(
+                                feature_name,
+                                0
+                            )
+                            for record in paired_records
+                        ],
+                    )
+                ),
                 "sample_count": (
                     len(values)
                 ),
@@ -720,14 +751,11 @@ def print_paired_directional_feature_difference(
                 f"{_format_float(winner_mean)}"
                 f"{_format_float(loser_mean)}"
                 f"{_format_float(mean_difference)}"
-                f"{_format_p_value(p_value):>12}"
-            )
-
-            print(
                 f"{result['median_difference']:>12.2f}"
                 f"{result['winner_greater']:>8}"
                 f"{result['loser_greater']:>8}"
                 f"{result['equal']:>8}"
+                f"{_format_p_value(p_value):>12}"
                 f"{result['effect_size']:>10.2f}"
             )
 
