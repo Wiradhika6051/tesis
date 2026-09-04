@@ -674,26 +674,60 @@ def print_paired_directional_feature_difference(
             ].items()
         ):
 
-            p_value = result[
-                "p_value"
-            ]
+            if not isinstance(
+                result,
+                dict,
+            ):
+                print(
+                    f"{feature:<24}"
+                    f"{'N/A':>10}"
+                    f"{'N/A':>10}"
+                    f"{'N/A':>10}"
+                    f"{'N/A':>12}"
+                )
 
-            p_value_text = (
-                f"{p_value:.4f}"
-                if p_value is not None
-                else "N/A"
+                continue
+            
+            winner_mean = _get_feature_value(
+                result,
+                "winner_mean",
+                "winner_avg",
+                "mean_winner",
+            )
+
+            loser_mean = _get_feature_value(
+                result,
+                "loser_mean",
+                "loser_avg",
+                "mean_loser",
+            )
+
+            mean_difference = _get_feature_value(
+                result,
+                "mean_difference",
+                "difference",
+                "mean_diff",
+            )
+
+            p_value = _get_feature_value(
+                result,
+                "p_value",
+                "pvalue",
             )
 
             print(
                 f"{feature:<24}"
-                f"{result['winner_mean']:>10.2f}"
-                f"{result['loser_mean']:>10.2f}"
-                f"{result['mean_difference']:>10.2f}"
+                f"{_format_float(winner_mean)}"
+                f"{_format_float(loser_mean)}"
+                f"{_format_float(mean_difference)}"
+                f"{_format_p_value(p_value):>12}"
+            )
+
+            print(
                 f"{result['median_difference']:>12.2f}"
                 f"{result['winner_greater']:>8}"
                 f"{result['loser_greater']:>8}"
                 f"{result['equal']:>8}"
-                f"{p_value_text:>12}"
                 f"{result['effect_size']:>10.2f}"
             )
 
@@ -1004,3 +1038,46 @@ def categorize_node_type(
         return "STRUCTURAL"
 
     return "OTHER"
+
+def _get_feature_value(result, *keys, default=None):
+    """
+    Return the first available value from a set of
+    possible result keys.
+    """
+
+    for key in keys:
+
+        if key in result:
+            return result[key]
+
+    return default
+
+
+def _format_float(value, width=10):
+
+    if value is None:
+        return f"{'N/A':>{width}}"
+
+    try:
+        return f"{float(value):>{width}.2f}"
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+        return f"{str(value):>{width}}"
+
+
+def _format_p_value(value):
+
+    if value is None:
+        return "N/A"
+
+    try:
+        return f"{float(value):.4f}"
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+        return str(value)
