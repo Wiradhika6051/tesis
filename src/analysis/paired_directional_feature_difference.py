@@ -286,37 +286,28 @@ def _rank_biserial_effect_size(
 # ============================================================
 # MAIN ANALYSIS
 # ============================================================
+from collections import defaultdict
+import statistics
+
 
 def analyze_paired_directional_feature_difference(
     winner_context_results,
 ):
     """
-    Compare winner and loser directional contexts.
+    Compare features of winner and loser contexts
+    within the same sample.
 
-    Expected input structure:
-
-    {
-        "FORWARD_CORRECT": [
-            {
-                "sample_id": ...,
-                "winner": "FORWARD",
-                "winner_context": [...],
-                "loser_context": [...],
-            },
-            ...
-        ],
-        "BACKWARD_CORRECT": [
-            ...
-        ],
-    }
+    Only samples where BOTH winner and loser contexts
+    are non-empty are included in the paired comparison.
     """
 
-    results = {
-        "FORWARD_CORRECT": [],
-        "BACKWARD_CORRECT": [],
-    }
+    results = {}
 
     for outcome, records in winner_context_results.items():
+
+        paired_records = []
+
+        excluded_empty = 0
 
         for record in records:
 
@@ -330,36 +321,37 @@ def analyze_paired_directional_feature_difference(
                 []
             )
 
-            sample_id = record.get(
-                "sample_id"
-            )
-
-            winner = record.get(
-                "winner"
-            )
-
             # --------------------------------------------------
-            # Skip samples where both contexts are empty
+            # Paired comparison requires both contexts
             # --------------------------------------------------
 
-            if not winner_context and not loser_context:
+            if (
+                not winner_context
+                or not loser_context
+            ):
+                excluded_empty += 1
                 continue
 
             # --------------------------------------------------
-            # Calculate features
+            # Extract features
             # --------------------------------------------------
 
-            winner_features = extract_context_features(
-                winner_context
+            winner_features = (
+                extract_context_features(
+                    winner_context
+                )
             )
 
-            loser_features = extract_context_features(
-                loser_context
+            loser_features = (
+                extract_context_features(
+                    loser_context
+                )
             )
 
             # --------------------------------------------------
-            # Calculate paired differences
+            # Compare every feature from either context
             # --------------------------------------------------
+
             all_features = (
                 set(
                     winner_features.keys()
@@ -373,33 +365,19 @@ def analyze_paired_directional_feature_difference(
             differences = {}
 
             for feature_name in all_features:
-            
-                winner_value = winner_features.get(
-                    feature_name,
-                    0
+
+                winner_value = (
+                    winner_features.get(
+                        feature_name,
+                        0
+                    )
                 )
 
-                loser_value = loser_features.get(
-                    feature_name,
-                    0
-                )
-
-                differences[
-                    feature_name
-                ] = (
-                    winner_value
-                    - loser_value
-                )
-            for feature_name in winner_features:
-
-                winner_value = winner_features.get(
-                    feature_name,
-                    0
-                )
-
-                loser_value = loser_features.get(
-                    feature_name,
-                    0
+                loser_value = (
+                    loser_features.get(
+                        feature_name,
+                        0
+                    )
                 )
 
                 differences[
@@ -409,18 +387,148 @@ def analyze_paired_directional_feature_difference(
                     - loser_value
                 )
 
-            results[outcome].append(
+            paired_records.append(
                 {
-                    "sample_id": sample_id,
-                    "winner": winner,
-                    "winner_features": winner_features,
-                    "loser_features": loser_features,
-                    "differences": differences,
+                    "sample_id": record.get(
+                        "sample_id"
+                    ),
+
+                    "winner": record.get(
+                        "winner"
+                    ),
+
+                    "winner_features": (
+                        winner_features
+                    ),
+
+                    "loser_features": (
+                        loser_features
+                    ),
+
+                    "differences": (
+                        differences
+                    ),
                 }
             )
 
-    return results
+        # ------------------------------------------------------
+        # Aggregate feature differences
+        # ------------------------------------------------------
 
+        feature_values = defaultdict(
+            list
+        )
+
+        for record in paired_records:
+
+            for (
+                feature_name,
+                difference,
+            ) in record[
+                "differences"
+            ].items():
+
+                feature_values[
+                    feature_name
+                ].append(
+                    difference
+                )
+
+        feature_summary = {}
+
+        for (
+            feature_name,
+            values,
+        ) in feature_values.items():
+
+            positive_count = sum(
+                value > 0
+                for value in values
+            )
+
+            negative_count = sum(
+                value < 0
+                for value in values
+            )
+
+            zero_count = sum(
+                value == 0
+                for value in values
+            )
+
+            feature_summary[
+                feature_name
+            ] = {
+                "mean_difference": (
+                    statistics.mean(
+                        values
+                    )
+                ),
+
+                "median_difference": (
+                    statistics.median(
+                        values
+                    )
+                ),
+
+                "winner_higher_count": (
+                    positive_count
+                ),
+
+                "loser_higher_count": (
+                    negative_count
+                ),
+
+                "equal_count": (
+                    zero_count
+                ),
+
+                "sample_count": (
+                    len(values)
+                ),
+
+                "winner_higher_ratio": (
+                    positive_count
+                    / len(values)
+                    if values
+                    else 0.0
+                ),
+
+                "loser_higher_ratio": (
+                    negative_count
+                    / len(values)
+                    if values
+                    else 0.0
+                ),
+            }
+
+        # ------------------------------------------------------
+        # Store outcome result
+        # ------------------------------------------------------
+
+        results[outcome] = {
+            "total_samples": (
+                len(records)
+            ),
+
+            "sample_count": (
+                len(paired_records)
+            ),
+
+            "excluded_samples": (
+                excluded_empty
+            ),
+
+            "records": (
+                paired_records
+            ),
+
+            "features": (
+                feature_summary
+            ),
+        }
+
+    return results
 # ============================================================
 # PRINT RESULTS
 # ============================================================
@@ -468,7 +576,21 @@ def print_paired_directional_feature_difference(
         print(header)
 
         print("-" * 100)
-
+        print(
+            f"Total directional samples: "
+            f"{outcome_result['total_samples']}"
+        )
+        
+        print(
+            f"Paired usable samples: "
+            f"{outcome_result['sample_count']}"
+        )
+        
+        print(
+            f"Excluded due to missing "
+            f"winner or loser context: "
+            f"{outcome_result['excluded_samples']}"
+        )
         for feature, result in (
             outcome_result[
                 "features"
