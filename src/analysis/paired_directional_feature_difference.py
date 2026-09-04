@@ -431,8 +431,8 @@ def analyze_paired_directional_feature_difference(
                 feature_values[
                     feature_name
                 ].append(
-                    difference
-                )
+                        difference
+                    )
 
         feature_summary = {}
 
@@ -456,19 +456,84 @@ def analyze_paired_directional_feature_difference(
                 for value in values
             )
 
+            # --------------------------------------------------
+            # Statistical test
+            #
+            # Differences are:
+            #
+            # winner - loser
+            #
+            # Wilcoxon tests whether the paired differences
+            # are systematically different from zero.
+            # --------------------------------------------------
+
+            non_zero_values = [
+                value
+                for value in values
+                if value != 0
+            ]
+
+            if len(non_zero_values) >= 2:
+            
+                try:
+                
+                    statistic, p_value = wilcoxon(
+                        values,
+                        alternative="two-sided",
+                        zero_method="wilcox",
+                    )
+
+                except ValueError:
+                
+                    statistic = None
+                    p_value = None
+
+            else:
+            
+                statistic = None
+                p_value = None
+
+            # --------------------------------------------------
+            # Effect direction
+            # --------------------------------------------------
+
+            mean_difference = statistics.mean(
+                values
+            )
+
+            median_difference = statistics.median(
+                values
+            )
+
+            if mean_difference > 0:
+            
+                direction = "WINNER_HIGHER"
+
+            elif mean_difference < 0:
+            
+                direction = "LOSER_HIGHER"
+
+            else:
+            
+                direction = "EQUAL"
+
+            # --------------------------------------------------
+            # Store feature result
+            # --------------------------------------------------
+
             feature_summary[
                 feature_name
             ] = {
                 "mean_difference": (
-                    statistics.mean(
-                        values
-                    )
+                    mean_difference
                 ),
+                "significant": (
+                    p_value is not None
+                    and p_value < 0.05
+            ),
 
                 "median_difference": (
-                    statistics.median(
-                        values
-                    )
+                    median_difference
                 ),
 
                 "winner_higher_count": (
@@ -499,6 +564,18 @@ def analyze_paired_directional_feature_difference(
                     / len(values)
                     if values
                     else 0.0
+                ),
+
+                "wilcoxon_statistic": (
+                    statistic
+                ),
+
+                "p_value": (
+                    p_value
+                ),
+
+                "direction": (
+                    direction
                 ),
             }
 
@@ -580,12 +657,12 @@ def print_paired_directional_feature_difference(
             f"Total directional samples: "
             f"{outcome_result['total_samples']}"
         )
-        
+
         print(
             f"Paired usable samples: "
             f"{outcome_result['sample_count']}"
         )
-        
+
         print(
             f"Excluded due to missing "
             f"winner or loser context: "
