@@ -290,211 +290,109 @@ def _rank_biserial_effect_size(
 def analyze_paired_directional_feature_difference(
     winner_context_results,
 ):
+    """
+    Compare winner and loser directional contexts.
 
-    outcomes = {
+    Expected input structure:
+
+    {
+        "FORWARD_CORRECT": [
+            {
+                "sample_id": ...,
+                "winner": "FORWARD",
+                "winner_context": [...],
+                "loser_context": [...],
+            },
+            ...
+        ],
+        "BACKWARD_CORRECT": [
+            ...
+        ],
+    }
+    """
+
+    results = {
         "FORWARD_CORRECT": [],
         "BACKWARD_CORRECT": [],
     }
 
-    # --------------------------------------------------------
-    # Collect paired features
-    # --------------------------------------------------------
+    for outcome, records in winner_context_results.items():
 
-    for record in winner_context_results:
+        for record in records:
 
-        outcome = record.get(
-            "outcome"
-        )
-
-        if outcome not in outcomes:
-            continue
-
-        winner_context = record.get(
-            "winner_context"
-        )
-
-        loser_context = record.get(
-            "loser_context"
-        )
-
-        if winner_context is None:
-            continue
-
-        if loser_context is None:
-            continue
-
-        winner_features = _extract_features(
-            winner_context
-        )
-
-        loser_features = _extract_features(
-            loser_context
-        )
-
-        outcomes[outcome].append(
-            {
-                "sample_id": record.get(
-                    "sample_id"
-                ),
-
-                "winner": winner_features,
-
-                "loser": loser_features,
-            }
-        )
-
-    # --------------------------------------------------------
-    # Features to compare
-    # --------------------------------------------------------
-
-    feature_names = [
-        "context_size",
-
-        "before",
-        "after",
-        "within_seed_range",
-
-        "local_cfg",
-        "distant_cfg",
-
-        "data_operation",
-        "control_flow",
-        "structural",
-    ]
-
-    analysis = {}
-
-    # --------------------------------------------------------
-    # Analyze each directional outcome
-    # --------------------------------------------------------
-
-    for outcome, records in outcomes.items():
-
-        outcome_results = {}
-
-        for feature in feature_names:
-
-            winner_values = [
-                record["winner"][feature]
-                for record in records
-            ]
-
-            loser_values = [
-                record["loser"][feature]
-                for record in records
-            ]
-
-            differences = [
-                winner - loser
-                for winner, loser in zip(
-                    winner_values,
-                    loser_values
-                )
-            ]
-
-            wilcoxon_result = _paired_wilcoxon(
-                winner_values,
-                loser_values,
+            winner_context = record.get(
+                "winner_context",
+                []
             )
 
-            effect_size = (
-                _rank_biserial_effect_size(
-                    winner_values,
-                    loser_values,
-                )
+            loser_context = record.get(
+                "loser_context",
+                []
             )
 
-            outcome_results[feature] = {
+            sample_id = record.get(
+                "sample_id"
+            )
 
-                "winner_mean": (
-                    mean(winner_values)
-                    if winner_values
-                    else 0.0
-                ),
+            winner = record.get(
+                "winner"
+            )
 
-                "loser_mean": (
-                    mean(loser_values)
-                    if loser_values
-                    else 0.0
-                ),
+            # --------------------------------------------------
+            # Skip samples where both contexts are empty
+            # --------------------------------------------------
 
-                "winner_median": (
-                    median(winner_values)
-                    if winner_values
-                    else 0.0
-                ),
+            if not winner_context and not loser_context:
+                continue
 
-                "loser_median": (
-                    median(loser_values)
-                    if loser_values
-                    else 0.0
-                ),
+            # --------------------------------------------------
+            # Calculate features
+            # --------------------------------------------------
 
-                "mean_difference": (
-                    mean(differences)
-                    if differences
-                    else 0.0
-                ),
+            winner_features = extract_context_features(
+                winner_context
+            )
 
-                "median_difference": (
-                    median(differences)
-                    if differences
-                    else 0.0
-                ),
+            loser_features = extract_context_features(
+                loser_context
+            )
 
-                "winner_greater": sum(
-                    difference > 0
-                    for difference
-                    in differences
-                ),
+            # --------------------------------------------------
+            # Calculate paired differences
+            # --------------------------------------------------
 
-                "loser_greater": sum(
-                    difference < 0
-                    for difference
-                    in differences
-                ),
+            differences = {}
 
-                "equal": sum(
-                    difference == 0
-                    for difference
-                    in differences
-                ),
+            for feature_name in winner_features:
 
-                "wilcoxon_statistic": (
-                    wilcoxon_result[
-                        "statistic"
-                    ]
-                ),
+                winner_value = winner_features.get(
+                    feature_name,
+                    0
+                )
 
-                "p_value": (
-                    wilcoxon_result[
-                        "p_value"
-                    ]
-                ),
+                loser_value = loser_features.get(
+                    feature_name,
+                    0
+                )
 
-                "n_nonzero": (
-                    wilcoxon_result[
-                        "n_nonzero"
-                    ]
-                ),
+                differences[
+                    feature_name
+                ] = (
+                    winner_value
+                    - loser_value
+                )
 
-                "effect_size": effect_size,
+            results[outcome].append(
+                {
+                    "sample_id": sample_id,
+                    "winner": winner,
+                    "winner_features": winner_features,
+                    "loser_features": loser_features,
+                    "differences": differences,
+                }
+            )
 
-                "sample_count": len(
-                    records
-                ),
-            }
-
-        analysis[outcome] = {
-            "sample_count": len(
-                records
-            ),
-
-            "features": outcome_results,
-        }
-
-    return analysis
-
+    return results
 
 # ============================================================
 # PRINT RESULTS
