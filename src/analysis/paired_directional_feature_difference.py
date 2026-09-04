@@ -360,9 +360,36 @@ def analyze_paired_directional_feature_difference(
             # --------------------------------------------------
             # Calculate paired differences
             # --------------------------------------------------
+            all_features = (
+                set(
+                    winner_features.keys()
+                )
+                |
+                set(
+                    loser_features.keys()
+                )
+            )
 
             differences = {}
 
+            for feature_name in all_features:
+            
+                winner_value = winner_features.get(
+                    feature_name,
+                    0
+                )
+
+                loser_value = loser_features.get(
+                    feature_name,
+                    0
+                )
+
+                differences[
+                    feature_name
+                ] = (
+                    winner_value
+                    - loser_value
+                )
             for feature_name in winner_features:
 
                 winner_value = winner_features.get(
@@ -498,3 +525,283 @@ def print_paired_directional_feature_difference(
     print(
         "p < 0.05    : paired difference is statistically significant"
     )
+
+from collections import Counter
+
+
+def extract_context_features(
+    context,
+):
+    """
+    Extract numerical features from a directional context.
+
+    Parameters
+    ----------
+    context : list[dict]
+
+        Each item is expected to contain:
+
+        {
+            "node_type": str,
+            "position": str,
+            "distance": int | None,
+            "distance_bucket": str,
+        }
+
+    Returns
+    -------
+    dict
+
+        Flat dictionary of numerical features.
+    """
+
+    # --------------------------------------------------
+    # Basic context size
+    # --------------------------------------------------
+
+    features = {}
+
+    features["context_size"] = len(
+        context
+    )
+
+    # --------------------------------------------------
+    # Node type counts
+    # --------------------------------------------------
+
+    node_types = Counter(
+        item.get(
+            "node_type",
+            "UNKNOWN"
+        )
+        for item in context
+    )
+
+    for node_type, count in node_types.items():
+
+        features[
+            f"node_type::{node_type}"
+        ] = count
+
+    # --------------------------------------------------
+    # Position counts
+    # --------------------------------------------------
+
+    positions = Counter(
+        item.get(
+            "position",
+            "UNKNOWN"
+        )
+        for item in context
+    )
+
+    for position, count in positions.items():
+
+        features[
+            f"position::{position}"
+        ] = count
+
+    # --------------------------------------------------
+    # CFG distance bucket counts
+    # --------------------------------------------------
+
+    distance_buckets = Counter(
+        item.get(
+            "distance_bucket",
+            "UNKNOWN"
+        )
+        for item in context
+    )
+
+    for bucket, count in distance_buckets.items():
+
+        features[
+            f"distance::{bucket}"
+        ] = count
+
+    # --------------------------------------------------
+    # Explicit locality features
+    # --------------------------------------------------
+
+    local_count = 0
+    distant_count = 0
+
+    for item in context:
+
+        bucket = item.get(
+            "distance_bucket",
+            "UNKNOWN"
+        )
+
+        if bucket in {
+            "1",
+            "2-3",
+        }:
+
+            local_count += 1
+
+        elif bucket in {
+            "4-5",
+            ">5",
+        }:
+
+            distant_count += 1
+
+    features["local_context"] = (
+        local_count
+    )
+
+    features["distant_context"] = (
+        distant_count
+    )
+
+    # --------------------------------------------------
+    # Node category counts
+    # --------------------------------------------------
+
+    category_counts = Counter()
+
+    for item in context:
+
+        node_type = item.get(
+            "node_type",
+            "UNKNOWN"
+        )
+
+        category = categorize_node_type(
+            node_type
+        )
+
+        category_counts[
+            category
+        ] += 1
+
+    for category, count in category_counts.items():
+
+        features[
+            f"category::{category}"
+        ] = count
+    # --------------------------------------------------
+    # Normalized composition features
+    # --------------------------------------------------
+
+    context_size = len(
+        context
+    )
+
+    if context_size > 0:
+
+        for node_type, count in node_types.items():
+
+            features[
+                f"node_type_ratio::{node_type}"
+            ] = (
+                count / context_size
+            )
+
+        for position, count in positions.items():
+
+            features[
+                f"position_ratio::{position}"
+            ] = (
+                count / context_size
+            )
+
+        for bucket, count in distance_buckets.items():
+
+            features[
+                f"distance_ratio::{bucket}"
+            ] = (
+                count / context_size
+            )
+
+        for category, count in category_counts.items():
+
+            features[
+                f"category_ratio::{category}"
+            ] = (
+                count / context_size
+            )
+
+        features[
+            "local_context_ratio"
+        ] = (
+            local_count
+            / context_size
+        )
+
+        features[
+            "distant_context_ratio"
+        ] = (
+            distant_count
+            / context_size
+        )
+
+    else:
+
+        features[
+            "local_context_ratio"
+        ] = 0.0
+
+        features[
+            "distant_context_ratio"
+        ] = 0.0
+
+    return features
+
+def categorize_node_type(
+    node_type,
+):
+    """
+    Group CFG / AST node types into
+    broader program-context categories.
+    """
+
+    data_operation_types = {
+        "Assign",
+        "AnnAssign",
+        "AugAssign",
+        "Expr",
+        "Return",
+        "Raise",
+    }
+
+    control_flow_types = {
+        "If",
+        "For",
+        "AsyncFor",
+        "While",
+        "Try",
+        "With",
+        "AsyncWith",
+        "Continue",
+        "Break",
+        "Pass",
+        "Assert",
+        "LOOP_EXIT",
+    }
+
+    structural_types = {
+        "FunctionDef",
+        "AsyncFunctionDef",
+        "ClassDef",
+        "Import",
+        "ImportFrom",
+        "ENTRY",
+        "EXIT",
+        "MERGE",
+    }
+
+    if node_type in data_operation_types:
+
+        return "DATA_OPERATION"
+
+    if node_type in control_flow_types:
+
+        return "CONTROL_FLOW"
+
+    if node_type in structural_types:
+
+        return "STRUCTURAL"
+
+    return "OTHER"
