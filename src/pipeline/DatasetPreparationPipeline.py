@@ -223,15 +223,15 @@ class DatasetPreparationPipeline:
             sample = self.function_localizer.localize(
                 sample
             )
-            if (
-                sample.repo == DEBUG_REPO
-                and sample.file_path == DEBUG_FILE
-            ):
+            # if (
+            #     sample.repo == DEBUG_REPO
+            #     and sample.file_path == DEBUG_FILE
+            # ):
             
-                print("AFTER FUNCTION LOCALIZER")
-                print("Seed lines:", sample.seed_lines)
-                print("Seed nodes:", sample.seed_nodes)
-                print("Function nodes:", sample.function_nodes)
+            #     print("AFTER FUNCTION LOCALIZER")
+            #     print("Seed lines:", sample.seed_lines)
+            #     print("Seed nodes:", sample.seed_nodes)
+            #     print("Function nodes:", sample.function_nodes)
             #
             # Keep it for seed diagnostics.
             #
