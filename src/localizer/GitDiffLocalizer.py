@@ -60,11 +60,11 @@ class GitDiffLocalizer(DiffLocalizer):
 
                 new_line += 1
                 continue
-            print("DIFF:")
-            # print(sample.diff)
+            # print("DIFF:")
+            # # print(sample.diff)
 
-            print("LABEL:", sample.label)
-            print("SEED LINES:", sample.seed_lines)
+            # print("LABEL:", sample.label)
+            # print("SEED LINES:", sample.seed_lines)
             #
             # Context line
             #
