@@ -178,45 +178,45 @@ class DatasetPreparationPipeline:
             sample = self.cfg_localizer.localize(
                 sample
             )
-            if (
-                sample.repo == DEBUG_REPO
-                and sample.file_path == DEBUG_FILE
-            ):
+            # if (
+            #     sample.repo == DEBUG_REPO
+            #     and sample.file_path == DEBUG_FILE
+            # ):
 
-                print("AFTER CFG LOCALIZER")
-                print("Seed lines:", sample.seed_lines)
-                print("Seed nodes:", sample.seed_nodes)
-            print("=" * 70)
-            print("LOCALIZATION DEBUG")
-            print("=" * 70)
+            #     print("AFTER CFG LOCALIZER")
+            #     print("Seed lines:", sample.seed_lines)
+            #     print("Seed nodes:", sample.seed_nodes)
+            # print("=" * 70)
+            # print("LOCALIZATION DEBUG")
+            # print("=" * 70)
             
-            print("Repo:", sample.repo)
-            print("File:", sample.file_path)
-            print("Label:", sample.label)
+            # print("Repo:", sample.repo)
+            # print("File:", sample.file_path)
+            # print("Label:", sample.label)
             
-            print()
-            print("Seed lines:")
-            print(sample.seed_lines[:50])
+            # print()
+            # print("Seed lines:")
+            # print(sample.seed_lines[:50])
             
-            print()
-            print("Seed nodes:")
-            print(sample.seed_nodes[:50])
+            # print()
+            # print("Seed nodes:")
+            # print(sample.seed_nodes[:50])
             
-            print()
-            print("CFG nodes:")
-            for node in sample.cfg["nodes"][:30]:
-                print(
-                    node.node_id,
-                    node.lineno,
-                    node.node_type,
-                    repr(node.text[:100])
-                )
+            # print()
+            # print("CFG nodes:")
+            # for node in sample.cfg["nodes"][:30]:
+            #     print(
+            #         node.node_id,
+            #         node.lineno,
+            #         node.node_type,
+            #         repr(node.text[:100])
+            #     )
             
-            print()
-            print("Function nodes:")
-            print(sample.function_nodes[:50])
+            # print()
+            # print("Function nodes:")
+            # print(sample.function_nodes[:50])
             
-            print("=" * 70)
+            # print("=" * 70)
             #
             # 4. Localize target function.
             #
