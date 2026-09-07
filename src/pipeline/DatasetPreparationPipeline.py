@@ -315,17 +315,17 @@ class DatasetPreparationPipeline:
         # --------------------------------------------------
         #
 
-        seed_diagnostics.analyze(
-            localized_samples
-        )
+        # seed_diagnostics.analyze(
+        #     localized_samples
+        # )
 
-        seed_diagnostics.print_worst_samples(
-            limit=20
-        )
+        # seed_diagnostics.print_worst_samples(
+        #     limit=20
+        # )
 
         #
         # Normal pruning diagnostics.
         #
-        diagnostics.summary()
+        # diagnostics.summary()
 
         return prepared_samples
