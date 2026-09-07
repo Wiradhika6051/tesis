@@ -8,25 +8,32 @@ class LineCFGLocalizer(CFGLocalizer):
         sample
     ):
 
-        mapping = {}
-
-        for node in sample.cfg["nodes"]:
-
-            mapping.setdefault(
-                node.lineno,
-                []
-            ).append(
-                node.node_id
-            )
-
-        sample.line_to_node = mapping
+        sample.line_to_node = {}
 
         sample.seed_nodes = []
 
         for line in sample.seed_lines:
 
+            matched_nodes = []
+
+            for node in sample.cfg["nodes"]:
+
+                if (
+                    node.lineno
+                    <= line
+                    <= node.end_lineno
+                ):
+
+                    matched_nodes.append(
+                        node.node_id
+                    )
+
+            sample.line_to_node[
+                line
+            ] = matched_nodes
+
             sample.seed_nodes.extend(
-                mapping.get(line, [])
+                matched_nodes
             )
 
         return sample
