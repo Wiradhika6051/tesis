@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any
 from src.type.NodeFeature import NodeFeature
 from torch_geometric.data import Data
+from typing import Optional, List
 
 @dataclass
 class Sample:
@@ -33,7 +34,8 @@ class Sample:
     pruned_cfg: Optional[Any] = None
 
     # ========= Model Input =========
-    node_features: List[NodeFeature] | None = None
+    # node_features: List[NodeFeature] | None = None
+    node_features: Optional[List[NodeFeature]] = None
 
     # ========= Statistics =========
 

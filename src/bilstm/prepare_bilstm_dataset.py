@@ -5,13 +5,12 @@ from sklearn.model_selection import train_test_split
 
 from src.loader import load_samples
 from src.bilstm.bilstm_preprocessor import VUDENCVectorizer
-from src.pipeline import DatasetPreparationPipeline
-from src.cfg.cfg_builder import CFGBuilder
-from src.localizer import (
-    GitDiffLocalizer,
-    LineCFGLocalizer,
-    FunctionCFGLocalizer,
-)
+from src.pipeline.LegacyDatasetPreparationPipeline import DatasetPreparationPipeline
+from src.cfg.legacy_cfg_builder import CFGBuilder
+from src.localizer.GitDiffLocalizer import GitDiffLocalizer
+from src.localizer.LineCFGLocalizer import LineCFGLocalizer
+from src.localizer.FunctionCFGLocalizer import FunctionCFGLocalizer
+
 from src.pruners.backward_slice_pruner import BackwardSlicePruner
 from src.pruners.forward_slice_pruner import ForwardSlicePruner
 from src.pruners.identity_pruner import IdentityPruner
@@ -118,10 +117,13 @@ for pruner_name, pruner in PRUNERS.items():
     test_samples = copy.deepcopy(base_test)
 
     # Same preprocessing pipeline as the GCN experiment.
+    print(pruner)
+    print(type(pruner))
+    print(pruner.__class__.__name__)
     pipeline = DatasetPreparationPipeline(
         cfg_builder=CFGBuilder(),
         diff_localizer=GitDiffLocalizer(),
-        line_localizer=LineCFGLocalizer(),
+        cfg_localizer=LineCFGLocalizer(),
         function_localizer=FunctionCFGLocalizer(),
         pruner=pruner,
     )
