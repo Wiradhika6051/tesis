@@ -1,5 +1,5 @@
 import numpy as np
-import myutils
+import utils.bilstm_myutils as myutils
 
 from gensim.models import Word2Vec
 

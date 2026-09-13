@@ -4,31 +4,29 @@ import copy
 import numpy as np
 from sklearn.model_selection import train_test_split
 
-from loader import load_samples
+from dataset.pruners.neighborhood_pruner import NeighborhoodPruner
+from src.loader import load_samples
 
-from bilstm_preprocessor import (
+from src.bilstm.bilstm_preprocessor import (
     VUDENCVectorizer
 )
 
-from pipeline import (
+from src.pipeline import (
     DatasetPreparationPipeline
 )
 
-from cfg import CFGBuilder
+from src.cfg.cfg_builder import CFGBuilder
 
-from localizer import (
+from src.localizer import (
     GitDiffLocalizer,
     LineCFGLocalizer,
     FunctionCFGLocalizer
 )
 
-from pruner import (
-    IdentityPruner,
-    BackwardSlicePruner,
-    ForwardSlicePruner,
-    NeighborhoodPruner
-)
-
+from src.pruners.backward_slice_pruner import BackwardSlicePruner
+from src.pruners.forward_slice_pruner import ForwardSlicePruner
+from src.pruners.identity_pruner import IdentityPruner
+from src.pruners.neighborhood_pruner import NeighborhoodPruner
 
 SEED = 42
 
