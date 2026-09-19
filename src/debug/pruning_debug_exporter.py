@@ -2,29 +2,30 @@ import csv
 import json
 import os
 
-from src.vocabulary import tokenize_code
-
 
 class PruningDebugExporter:
 
     def __init__(self, output_dir):
         self.output_dir = output_dir
 
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+        os.makedirs(
+            output_dir,
+            exist_ok=True
+        )
 
     def export(self, samples, pruner_name):
+
         output_path = os.path.join(
             self.output_dir,
             "{}.csv".format(pruner_name)
         )
 
-        rows = []
-
-        for sample in samples:
-            rows.append(
-                self._build_row(sample)
-            )
+        rows = [
+            self._build_row(sample)
+            for sample in samples
+            if sample.cfg
+            and sample.pruned_cfg
+        ]
 
         if not rows:
             print(
@@ -59,30 +60,9 @@ class PruningDebugExporter:
             pruned_cfg
         )
 
-        nodes_after_set = set(
+        nodes_removed = self._get_removed_nodes(
+            nodes_before,
             nodes_after
-        )
-
-        nodes_removed = [
-            node_id
-            for node_id in nodes_before
-            if node_id not in nodes_after_set
-        ]
-
-        text_before = self._get_node_text(
-            cfg
-        )
-
-        text_after = self._get_node_text(
-            pruned_cfg
-        )
-
-        tokens_before = self._get_tokens(
-            cfg
-        )
-
-        tokens_after = self._get_tokens(
-            pruned_cfg
         )
 
         return {
@@ -111,12 +91,6 @@ class PruningDebugExporter:
             "label": getattr(
                 sample,
                 "label",
-                ""
-            ),
-
-            "source_code": getattr(
-                sample,
-                "source",
                 ""
             ),
 
@@ -149,19 +123,11 @@ class PruningDebugExporter:
             ),
 
             "text_before": self._serialize(
-                text_before
+                self._get_node_text(cfg)
             ),
 
             "text_after": self._serialize(
-                text_after
-            ),
-
-            "tokens_before": self._serialize(
-                tokens_before
-            ),
-
-            "tokens_after": self._serialize(
-                tokens_after
+                self._get_node_text(pruned_cfg)
             ),
 
             "node_count_before": len(
@@ -170,68 +136,101 @@ class PruningDebugExporter:
 
             "node_count_after": len(
                 nodes_after
-            ),
-
-            "edge_count_before": len(
-                cfg.get("edges", [])
-            ),
-
-            "edge_count_after": len(
-                pruned_cfg.get("edges", [])
             )
         }
 
     @staticmethod
     def _get_sample_id(sample):
+
         return "{}:{}:{}".format(
-            getattr(sample, "repo", ""),
-            getattr(sample, "commit", ""),
-            getattr(sample, "file_path", "")
+            getattr(
+                sample,
+                "repo",
+                ""
+            ),
+            getattr(
+                sample,
+                "commit",
+                ""
+            ),
+            getattr(
+                sample,
+                "file_path",
+                ""
+            )
         )
 
     @staticmethod
     def _get_node_ids(cfg):
+
         return [
             node.node_id
-            for node in cfg.get("nodes", [])
+            for node in cfg.get(
+                "nodes",
+                []
+            )
         ]
 
     @staticmethod
     def _get_node_text(cfg):
+
         return [
-            node.text
-            for node in cfg.get("nodes", [])
+            "{}: {}".format(
+                node.node_id,
+                node.text
+            )
+            for node in cfg.get(
+                "nodes",
+                []
+            )
         ]
 
     @staticmethod
-    def _get_tokens(cfg):
+    def _get_removed_nodes(
+        nodes_before,
+        nodes_after
+    ):
 
-        code = "\n".join(
-            node.text
-            for node in cfg.get("nodes", [])
-            if node.text and node.text.strip()
+        nodes_after = set(
+            nodes_after
         )
 
-        if not code.strip():
-            return []
-
-        return tokenize_code(
-            code
-        )
+        return [
+            node_id
+            for node_id in nodes_before
+            if node_id not in nodes_after
+        ]
 
     @staticmethod
     def _serialize(value):
+
         return json.dumps(
             value,
             ensure_ascii=False
         )
 
     @staticmethod
-    def _write_csv(path, rows):
+    def _write_csv(
+        path,
+        rows
+    ):
 
-        fieldnames = list(
-            rows[0].keys()
-        )
+        fieldnames = [
+            "sample_id",
+            "repo",
+            "file_path",
+            "commit",
+            "label",
+            "seed_lines",
+            "seed_nodes",
+            "nodes_before",
+            "nodes_after",
+            "nodes_removed",
+            "text_before",
+            "text_after",
+            "node_count_before",
+            "node_count_after"
+        ]
 
         with open(
             path,
