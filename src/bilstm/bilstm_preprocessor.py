@@ -139,14 +139,15 @@ class VUDENCVectorizer:
                     )
                 ) == 0
             ):
+                print("[VECTORIZER SKIP] empty pruned CFG")
                 skipped += 1
                 continue
 
             vectors = self.sample_to_vectors(
                 sample
             )
-
             if vectors is None:
+                print("[VECTORIZER SKIP] no usable Word2Vec tokens")
                 skipped += 1
                 continue
 

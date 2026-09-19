@@ -77,7 +77,7 @@ class DatasetPreparationPipeline:
             # DEBUG: CFG LINE COVERAGE
             #
             
-            print("\nCFG LINE COVERAGE")
+            # print("\nCFG LINE COVERAGE")
             
             cfg_lines = sorted(
                 node.lineno
@@ -85,21 +85,21 @@ class DatasetPreparationPipeline:
                 if node.lineno >= 0
             )
             
-            print("CFG lines:")
-            print(cfg_lines)
+            # print("CFG lines:")
+            # print(cfg_lines)
             
-            print("\nSeed lines:")
-            print(sample.seed_lines)
+            # print("\nSeed lines:")
+            # print(sample.seed_lines)
             
-            print("\nMissing seed lines:")
+            # print("\nMissing seed lines:")
             
-            for line in sample.seed_lines:
+            # for line in sample.seed_lines:
             
-                if line not in cfg_lines:
+            #     if line not in cfg_lines:
                 
-                    print(
-                        f"Line {line} is NOT represented in CFG"
-                    )
+            #         print(
+            #             f"Line {line} is NOT represented in CFG"
+            #         )
             
             
             #

@@ -33,7 +33,8 @@ class Sample:
     pruned_cfg: Optional[Any] = None
 
     # ========= Model Input =========
-    node_features: List[NodeFeature] | None = None
+    # node_features: List[NodeFeature] | None = None
+    node_features= None
 
     # ========= Statistics =========
 
@@ -50,4 +51,4 @@ class Sample:
     graph: Optional[Data] = None
 
     # function_nodes: list[int] = field(default_factory=list)
-    function_nodes: List[int] = field(default_factory=list)
+    function_nodes: any = field(default_factory=list)

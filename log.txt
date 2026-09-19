@@ -1,0 +1,1028 @@
+
+Repo : https://github.com/cortexuvula/Medical-Assistant
+File : database.py
+Diff files: 1
+
+Repo : https://github.com/infiniflow/ragflow
+File : rag/utils/opendal_conn.py
+Diff files: 1
+Skipping ragflow-local (checkpoint not found)
+
+Repo : https://github.com/angelZhuzhu/SG-ragflow
+File : rag/utils/opendal_conn.py
+Diff files: 1
+Skipping veris-memory (checkpoint not found)
+
+Repo : https://github.com/langgenius/dify
+File : api/core/rag/datasource/vdb/oracle/oraclevector.py
+Diff files: 1
+
+Repo : https://github.com/singh895/ScrapyShield
+File : app.py
+Diff files: 1
+
+Repo : https://github.com/singh895/ScrapyShield
+File : app.py
+Diff files: 1
+Skipping Security_Vulnerabilities (checkpoint not found)
+
+Repo : https://github.com/shirochan/chatbot-created-by-claude-code
+File : src/utils/database.py
+Diff files: 1
+
+Repo : https://github.com/martianbandit/E_com_clt_pers_ima_grok_campagn
+File : add_auth_provider_columns.py
+Diff files: 1
+
+Repo : https://github.com/martianbandit/E_com_clt_pers_ima_grok_campagn
+File : add_user_ownership.py
+Diff files: 1
+
+Repo : https://github.com/martianbandit/E_com_clt_pers_ima_grok_campagn
+File : add_campaign_metrics.py
+Diff files: 1
+
+Repo : https://github.com/martianbandit/E_com_clt_pers_ima_grok_campagn
+File : add_user_ownership.py
+Diff files: 1
+
+Repo : https://github.com/martianbandit/E_com_clt_pers_ima_grok_campagn
+File : check_tables.py
+Diff files: 1
+
+Repo : https://github.com/martianbandit/E_com_clt_pers_ima_grok_campagn
+File : update_campaign_model.py
+Diff files: 1
+
+Repo : https://github.com/martianbandit/E_com_clt_pers_ima_grok_campagn
+File : update_campaign_model.py
+Diff files: 1
+
+Repo : https://github.com/martianbandit/E_com_clt_pers_ima_grok_campagn
+File : add_campaign_metrics.py
+Diff files: 1
+
+Repo : https://github.com/martianbandit/E_com_clt_pers_ima_grok_campagn
+File : update_user_model.py
+Diff files: 1
+
+Repo : https://github.com/martianbandit/E_com_clt_pers_ima_grok_campagn
+File : add_user_ownership.py
+Diff files: 1
+Skipping Arabic-VoC (checkpoint not found)
+
+Repo : https://github.com/LeanVibe/ant-farm
+File : src/api/main.py
+Diff files: 1
+
+Repo : https://github.com/LeanVibe/ant-farm
+File : src/core/orchestrator.py
+Diff files: 1
+
+Repo : https://github.com/LeanVibe/ant-farm
+File : src/core/self_modifier.py
+Diff files: 1
+
+Repo : https://github.com/LeanVibe/ant-farm
+File : tests/unit/test_context_engine.py
+Diff files: 1
+
+Repo : https://github.com/LeanVibe/ant-farm
+File : tests/unit/test_self_modifier.py
+Diff files: 1
+Skipping business_intelligence_platform (checkpoint not found)
+Skipping auraconnectai (checkpoint not found)
+
+Repo : https://github.com/cncaiprojem/projem
+File : apps/api/alembic/migration_helpers.py
+Diff files: 1
+
+Repo : https://github.com/cncaiprojem/projem
+File : apps/api/alembic/versions/20250817_1200-task_23_core_tables_optimization.py
+Diff files: 1
+
+Repo : https://github.com/cncaiprojem/projem
+File : apps/api/app/models/model.py
+Diff files: 1
+
+Repo : https://github.com/akaBoyLovesToCode/sol-evaluation-system
+File : backend/app/api/evaluation.py
+Diff files: 1
+
+Repo : https://github.com/DataDog/dd-trace-py
+File : ddtrace/appsec/_iast/_taint_utils.py
+Diff files: 1
+
+Repo : https://github.com/DataDog/dd-trace-py
+File : ddtrace/contrib/dbapi.py
+Diff files: 1
+
+Repo : https://github.com/DataDog/dd-trace-py
+File : ddtrace/contrib/dbapi_async.py
+Diff files: 1
+
+Repo : https://github.com/DataDog/dd-trace-py
+File : tests/appsec/iast/test_taint_utils.py
+Diff files: 1
+
+Repo : https://github.com/awslabs/open-hostfactory-plugin
+File : src/config/schemas/server_schema.py
+Diff files: 1
+
+Repo : https://github.com/awslabs/open-hostfactory-plugin
+File : src/interface/serve_command_handler.py
+Diff files: 1
+
+Repo : https://github.com/awslabs/open-hostfactory-plugin
+File : src/cli/main.py
+Diff files: 1
+
+Repo : https://github.com/awslabs/open-hostfactory-plugin
+File : src/config/schemas/server_schema.py
+Diff files: 1
+
+Repo : https://github.com/awslabs/open-hostfactory-plugin
+File : src/infrastructure/auth/strategy/bearer_token_strategy.py
+Diff files: 1
+
+Repo : https://github.com/awslabs/open-hostfactory-plugin
+File : src/infrastructure/persistence/components/sql_query_builder.py
+Diff files: 1
+
+Repo : https://github.com/awslabs/open-hostfactory-plugin
+File : src/interface/serve_command_handler.py
+Diff files: 1
+
+Repo : https://github.com/awslabs/open-hostfactory-plugin
+File : src/providers/aws/domain/template/value_objects.py
+Diff files: 1
+
+Repo : https://github.com/WHS3-Fuzzk/SmartWebFuzzer
+File : src/scanners/sqli.py
+Diff files: 1
+
+Repo : https://github.com/StygianSummer/vulnAppThesis
+File : app/main/__init__.py
+Diff files: 1
+
+Repo : https://github.com/StygianSummer/vulnAppThesis
+File : app/main/routes.py
+Diff files: 1
+Skipping TraitorTrack (checkpoint not found)
+
+Repo : https://github.com/B3waR3/WebSecurityProject_Secured
+File : app.py
+Diff files: 1
+
+Repo : https://github.com/geevis/Fiscflowai
+File : database_security.py
+Diff files: 1
+
+Repo : https://github.com/geevis/Fiscflowai
+File : security_config.py
+Diff files: 1
+
+Repo : https://github.com/autopenai/AutoPen
+File : backend/agent_with_playwright.py
+Diff files: 1
+
+Repo : https://github.com/autopenai/AutoPen
+File : backend/agent_with_playwright.py
+Diff files: 1
+
+Repo : https://github.com/autopenai/AutoPen
+File : backend/agent_with_playwright.py
+Diff files: 1
+Skipping checkmk (checkpoint not found)
+
+Repo : https://github.com/harshit-8723/vulnera_scan
+File : backend/app/main.py
+Diff files: 1
+
+Repo : https://github.com/harshit-8723/vulnera_scan
+File : backend/app/services/sql_scanner.py
+Diff files: 1
+Skipping my_checkmk (checkpoint not found)
+Skipping checkmk (checkpoint not found)
+
+Repo : https://github.com/Mklevns/PentestX
+File : plugins/scanning/advncd_sql_scan.py
+Diff files: 1
+
+Repo : https://github.com/gaatma/simple-web-scanner
+File : scanner.py
+Diff files: 1
+
+Repo : https://github.com/jmfk/eceee_v4
+File : backend/config/settings.py
+Diff files: 1
+
+Repo : https://github.com/jmfk/eceee_v4
+File : backend/file_manager/performance.py
+Diff files: 1
+
+Repo : https://github.com/jmfk/eceee_v4
+File : backend/file_manager/security.py
+Diff files: 1
+Skipping Homemade_WAF (checkpoint not found)
+
+Repo : https://github.com/goolamabbas/Prod-Telegram-Messages-Save-to-Notion
+File : backup_database.py
+Diff files: 1
+
+Repo : https://github.com/LaurentiusVAdela/flask-web-vuln-demo
+File : app.py
+Diff files: 1
+
+Repo : https://github.com/Hellkryptonium/skills-secure-code-game
+File : Season-1/Level-3/code.py
+Diff files: 1
+
+Repo : https://github.com/Hellkryptonium/skills-secure-code-game
+File : Season-1/Level-4/code.py
+Diff files: 1
+
+Repo : https://github.com/CyberSully/wsrp
+File : server/server.py
+Diff files: 1
+
+Repo : https://github.com/Cyber-Security-Tech/simple-vuln-matcher
+File : app.py
+Diff files: 1
+
+Repo : https://github.com/synfinner/KEVin
+File : utils/sanitizer.py
+Diff files: 1
+Skipping crypto-analysis-dashboard (checkpoint not found)
+
+Repo : https://github.com/trieloff/scriptrag
+File : src/scriptrag/cli.py
+Diff files: 1
+
+Repo : https://github.com/trieloff/scriptrag
+File : src/scriptrag/search/interface.py
+Diff files: 1
+
+Repo : https://github.com/trieloff/scriptrag
+File : src/scriptrag/search/text_search.py
+Diff files: 1
+
+Repo : https://github.com/trieloff/scriptrag
+File : src/scriptrag/cli.py
+Diff files: 1
+
+Repo : https://github.com/trieloff/scriptrag
+File : src/scriptrag/search/interface.py
+Diff files: 1
+
+Repo : https://github.com/trieloff/scriptrag
+File : src/scriptrag/search/text_search.py
+Diff files: 1
+
+Repo : https://github.com/trieloff/scriptrag
+File : src/scriptrag/api/app.py
+Diff files: 1
+
+Repo : https://github.com/trieloff/scriptrag
+File : src/scriptrag/api/db_operations.py
+Diff files: 1
+
+Repo : https://github.com/trieloff/scriptrag
+File : src/scriptrag/api/fountain_parser.py
+Diff files: 1
+
+Repo : https://github.com/trieloff/scriptrag
+File : src/scriptrag/api/models.py
+Diff files: 1
+
+Repo : https://github.com/trieloff/scriptrag
+File : src/scriptrag/api/v1/endpoints/embeddings.py
+Diff files: 1
+
+Repo : https://github.com/trieloff/scriptrag
+File : src/scriptrag/api/v1/endpoints/graphs.py
+Diff files: 1
+
+Repo : https://github.com/trieloff/scriptrag
+File : src/scriptrag/api/v1/endpoints/scenes.py
+Diff files: 1
+
+Repo : https://github.com/trieloff/scriptrag
+File : src/scriptrag/api/v1/endpoints/scripts.py
+Diff files: 1
+
+Repo : https://github.com/trieloff/scriptrag
+File : src/scriptrag/api/v1/endpoints/search.py
+Diff files: 1
+
+Repo : https://github.com/trieloff/scriptrag
+File : src/scriptrag/api/v1/schemas.py
+Diff files: 1
+
+Repo : https://github.com/trieloff/scriptrag
+File : src/scriptrag/config/settings.py
+Diff files: 1
+
+Repo : https://github.com/trieloff/scriptrag
+File : tests/test_api.py
+Diff files: 1
+Skipping piwardrive (checkpoint not found)
+
+Repo : https://github.com/dansarmiento/ollama_sql_runner
+File : sql_exec.py
+Diff files: 1
+
+Repo : https://github.com/LeanVibe/agent-hive
+File : scratchpad/analyze_sqlite_databases.py
+Diff files: 1
+
+Repo : https://github.com/LeanVibe/agent-hive
+File : scratchpad/migration_scripts.py
+Diff files: 1
+
+Repo : https://github.com/LeanVibe/agent-hive
+File : state/migration_scripts.py
+Diff files: 1
+
+Repo : https://github.com/LeanVibe/agent-hive
+File : .claude/intelligence/confidence_tracker.py
+Diff files: 1
+
+Repo : https://github.com/LeanVibe/agent-hive
+File : .claude/scripts/compressor.py
+Diff files: 1
+
+Repo : https://github.com/seaberger/rag-lab
+File : src/pipeline_v3/cli/management.py
+Diff files: 1
+
+Repo : https://github.com/seaberger/rag-lab
+File : src/pipeline_v3/cli/utils/formatting.py
+Diff files: 1
+
+Repo : https://github.com/seaberger/rag-lab
+File : src/pipeline_v3/core/change_detector.py
+Diff files: 1
+
+Repo : https://github.com/seaberger/rag-lab
+File : src/pipeline_v3/core/consistency_checker.py
+Diff files: 1
+
+Repo : https://github.com/seaberger/rag-lab
+File : src/pipeline_v3/core/database_base.py
+Diff files: 1
+
+Repo : https://github.com/seaberger/rag-lab
+File : src/chat/chat_engine.py
+Diff files: 1
+
+Repo : https://github.com/seaberger/rag-lab
+File : src/db/create_vector_db.py
+Diff files: 1
+
+Repo : https://github.com/MissyCanada2019/LegalAiEngine
+File : app.py
+Diff files: 1
+Skipping NousIntelligence (checkpoint not found)
+
+Repo : https://github.com/DNYoussef/AIVillage
+File : core/agent-forge/benchmarks/hyperag_repair_test_suite.py
+Diff files: 1
+
+Repo : https://github.com/DNYoussef/AIVillage
+File : core/agent-forge/model-management/search_magi_candidates.py
+Diff files: 1
+
+Repo : https://github.com/DNYoussef/AIVillage
+File : core/agent-forge/phases/cognate_pretrain/real_pretraining_pipeline.py
+Diff files: 1
+
+Repo : https://github.com/DNYoussef/AIVillage
+File : core/agents/governance/shield_agent.py
+Diff files: 1
+
+Repo : https://github.com/DNYoussef/AIVillage
+File : core/agents/specialized/governance/shield_agent.py
+Diff files: 1
+
+Repo : https://github.com/DNYoussef/AIVillage
+File : core/decentralized_architecture/unified_edge_device_system.py
+Diff files: 1
+
+Repo : https://github.com/DNYoussef/AIVillage
+File : core/decentralized_architecture/unified_mcp_integration_system.py
+Diff files: 1
+
+Repo : https://github.com/DNYoussef/AIVillage
+File : core/rag/mcp_servers/hyperag/guardian/audit.py
+Diff files: 1
+
+Repo : https://github.com/DNYoussef/AIVillage
+File : experiments/agents/agents/navigator/services/network_monitoring_service.py
+Diff files: 1
+
+Repo : https://github.com/DNYoussef/AIVillage
+File : experiments/training/training/magi_specialization.py
+Diff files: 1
+
+Repo : https://github.com/DNYoussef/AIVillage
+File : infrastructure/edge/integration/mobile_bridge.py
+Diff files: 1
+
+Repo : https://github.com/DNYoussef/AIVillage
+File : infrastructure/fog/edge/beacon.py
+Diff files: 1
+
+Repo : https://github.com/DNYoussef/AIVillage
+File : infrastructure/fog/edge/monitor.py
+Diff files: 1
+
+Repo : https://github.com/DNYoussef/AIVillage
+File : infrastructure/fog/edge/runner.py
+Diff files: 1
+
+Repo : https://github.com/DNYoussef/AIVillage
+File : infrastructure/fog/integration/integration_test_suite.py
+Diff files: 1
+
+Repo : https://github.com/DNYoussef/AIVillage
+File : infrastructure/fog/market/scheduler_integration.py
+Diff files: 1
+
+Repo : https://github.com/DNYoussef/AIVillage
+File : infrastructure/fog/quorum/infrastructure_classifier.py
+Diff files: 1
+
+Repo : https://github.com/DNYoussef/AIVillage
+File : infrastructure/fog/tee/device_tee_capabilities.py
+Diff files: 1
+
+Repo : https://github.com/DNYoussef/AIVillage
+File : tests/guards/security/test_websocket_security_regression.py
+Diff files: 1
+
+Repo : https://github.com/DNYoussef/AIVillage
+File : tests/marketplace/run_validation.py
+Diff files: 1
+
+Repo : https://github.com/sdcarter/cat-weight-tracker
+File : backend/app/auth.py
+Diff files: 1
+
+Repo : https://github.com/sdcarter/cat-weight-tracker
+File : backend/app/crud.py
+Diff files: 1
+
+Repo : https://github.com/sdcarter/cat-weight-tracker
+File : backend/app/main.py
+Diff files: 1
+
+Repo : https://github.com/sdcarter/cat-weight-tracker
+File : backend/app/plots.py
+Diff files: 1
+
+Repo : https://github.com/MockLoop/mockloop-mcp
+File : examples/schemapin/advanced_usage.py
+Diff files: 1
+
+Repo : https://github.com/MockLoop/mockloop-mcp
+File : src/mockloop_mcp/generator.py
+Diff files: 1
+
+Repo : https://github.com/MockLoop/mockloop-mcp
+File : src/mockloop_mcp/mcp_audit_logger.py
+Diff files: 1
+
+Repo : https://github.com/MockLoop/mockloop-mcp
+File : src/mockloop_mcp/mcp_compliance.py
+Diff files: 1
+
+Repo : https://github.com/MockLoop/mockloop-mcp
+File : src/mockloop_mcp/schemapin/audit.py
+Diff files: 1
+
+Repo : https://github.com/MockLoop/mockloop-mcp
+File : src/mockloop_mcp/schemapin/key_management.py
+Diff files: 1
+
+Repo : https://github.com/MockLoop/mockloop-mcp
+File : tests/integration/test_schemapin_integration.py
+Diff files: 1
+
+Repo : https://github.com/MockLoop/mockloop-mcp
+File : tests/unit/test_schemapin_integration.py
+Diff files: 1
+
+Repo : https://github.com/voicebootix/jyotiflow-ai
+File : backend/database_self_healing_system.py
+Diff files: 1
+
+Repo : https://github.com/voicebootix/jyotiflow-ai
+File : backend/deploy_testing_infrastructure.py
+Diff files: 1
+
+Repo : https://github.com/voicebootix/jyotiflow-ai
+File : backend/monitoring/dashboard.py
+Diff files: 1
+
+Repo : https://github.com/voicebootix/jyotiflow-ai
+File : backend/test_suite_generator.py
+Diff files: 1
+
+Repo : https://github.com/voicebootix/jyotiflow-ai
+File : backend/testing_integration.py
+Diff files: 1
+
+Repo : https://github.com/voicebootix/jyotiflow-ai
+File : test_autofix_dummy.py
+Diff files: 1
+
+Repo : https://github.com/voicebootix/jyotiflow-ai
+File : backend/testing_integration.py
+Diff files: 1
+
+Repo : https://github.com/BenjaminRains/dbt_dental_clinic
+File : etl_pipeline/tests/integration/config/test_logging_integration.py
+Diff files: 1
+
+Repo : https://github.com/Sferratore/CodeStresser
+File : tests/test_static_analyzer.py
+Diff files: 1
+
+Repo : https://github.com/liquidweavergit/rmp-admin-site
+File : backend/app/api/v1/endpoints/circles.py
+Diff files: 1
+
+Repo : https://github.com/liquidweavergit/rmp-admin-site
+File : backend/app/schemas/circle.py
+Diff files: 1
+
+Repo : https://github.com/liquidweavergit/rmp-admin-site
+File : backend/app/services/circle_service.py
+Diff files: 1
+
+Repo : https://github.com/AndreaBozzo/Osservatorio
+File : src/database/duckdb/config.py
+Diff files: 1
+
+Repo : https://github.com/AndreaBozzo/Osservatorio
+File : src/database/duckdb/manager.py
+Diff files: 1
+
+Repo : https://github.com/AndreaBozzo/Osservatorio
+File : src/database/duckdb/partitioning.py
+Diff files: 1
+
+Repo : https://github.com/AndreaBozzo/Osservatorio
+File : src/database/duckdb/query_optimizer.py
+Diff files: 1
+
+Repo : https://github.com/AndreaBozzo/Osservatorio
+File : src/database/duckdb/simple_adapter.py
+Diff files: 1
+
+Repo : https://github.com/AndreaBozzo/Osservatorio
+File : src/utils/temp_file_manager.py
+Diff files: 1
+
+Repo : https://github.com/AndreaBozzo/Osservatorio
+File : tests/unit/test_duckdb_integration.py
+Diff files: 1
+
+Repo : https://github.com/AndreaBozzo/Osservatorio
+File : src/database/duckdb/config.py
+Diff files: 1
+
+Repo : https://github.com/AndreaBozzo/Osservatorio
+File : src/database/duckdb/manager.py
+Diff files: 1
+
+Repo : https://github.com/AndreaBozzo/Osservatorio
+File : src/database/duckdb/partitioning.py
+Diff files: 1
+
+Repo : https://github.com/AndreaBozzo/Osservatorio
+File : src/database/duckdb/query_optimizer.py
+Diff files: 1
+
+Repo : https://github.com/AndreaBozzo/Osservatorio
+File : src/database/duckdb/simple_adapter.py
+Diff files: 1
+
+Repo : https://github.com/AndreaBozzo/Osservatorio
+File : src/utils/temp_file_manager.py
+Diff files: 1
+
+Repo : https://github.com/AndreaBozzo/Osservatorio
+File : tests/unit/test_duckdb_integration.py
+Diff files: 1
+
+Repo : https://github.com/AndreaBozzo/Osservatorio
+File : src/auth/sqlite_auth.py
+Diff files: 1
+
+Repo : https://github.com/AndreaBozzo/Osservatorio
+File : src/database/sqlite/manager.py
+Diff files: 1
+
+Repo : https://github.com/AndreaBozzo/Osservatorio
+File : tests/unit/test_auth_system.py
+Diff files: 1
+
+Repo : https://github.com/hashen-ruwanpura/LogSentry-PUSL3190
+File : threat_detection/rules.py
+Diff files: 1
+
+Repo : https://github.com/taznux/RadOncBackupSystem
+File : src/data_sources/mosaiq.py
+Diff files: 1
+
+Repo : https://github.com/taznux/RadOncBackupSystem
+File : src/tests/test_mosaiq.py
+Diff files: 1
+
+Repo : https://github.com/Fixverse25/KonvoAI
+File : backend/app/api/endpoints/chat.py
+Diff files: 1
+
+Repo : https://github.com/Fixverse25/KonvoAI
+File : backend/app/api/endpoints/voice.py
+Diff files: 1
+
+Repo : https://github.com/Fixverse25/KonvoAI
+File : backend/app/core/config.py
+Diff files: 1
+
+Repo : https://github.com/Fixverse25/KonvoAI
+File : backend/app/main.py
+Diff files: 1
+
+Repo : https://github.com/Fixverse25/KonvoAI
+File : backend/app/services/azure_speech_service.py
+Diff files: 1
+
+Repo : https://github.com/Fixverse25/KonvoAI
+File : backend/app/services/claude_service.py
+Diff files: 1
+
+Repo : https://github.com/rinadelph/Agent-MCP
+File : agent_mcp/app/routes.py
+Diff files: 1
+
+Repo : https://github.com/rinadelph/Agent-MCP
+File : agent_mcp/db/actions/agent_db.py
+Diff files: 1
+
+Repo : https://github.com/rinadelph/Agent-MCP
+File : agent_mcp/db/actions/task_db.py
+Diff files: 1
+
+Repo : https://github.com/rinadelph/Agent-MCP
+File : agent_mcp/db/schema.py
+Diff files: 1
+
+Repo : https://github.com/rinadelph/Agent-MCP
+File : agent_mcp/features/rag/query.py
+Diff files: 1
+
+Repo : https://github.com/rinadelph/Agent-MCP
+File : agent_mcp/tools/task_tools.py
+Diff files: 1
+Skipping evaluation-system (checkpoint not found)
+Skipping landbruget.dk (checkpoint not found)
+
+Repo : https://github.com/Compagnie-Hydromel/CompagnieHydromel
+File : libs/databases/repository/sqlite/sqlite.py
+Diff files: 1
+
+Repo : https://github.com/Compagnie-Hydromel/CompagnieHydromel
+File : libs/databases/repository/sqlite/sqlite_access.py
+Diff files: 1
+
+Repo : https://github.com/Yuvanesh-ux/Test
+File : test.py
+Diff files: 1
+
+Repo : https://github.com/Yuvanesh-ux/Test
+File : test.py
+Diff files: 1
+
+Repo : https://github.com/getsentry/snuba
+File : snuba/clickhouse/optimize/optimize.py
+Diff files: 1
+
+Repo : https://github.com/getsentry/snuba
+File : snuba/clusters/cluster.py
+Diff files: 1
+
+Repo : https://github.com/getsentry/snuba
+File : snuba/migrations/runner.py
+Diff files: 1
+
+Repo : https://github.com/Swiftia-dev/ragflow-coolify
+File : rag/utils/opendal_conn.py
+Diff files: 1
+
+Repo : https://github.com/ludia8888/SPICE-Harvester
+File : backend/bff/routers/instances.py
+Diff files: 1
+
+Repo : https://github.com/ludia8888/SPICE-Harvester
+File : backend/bff/routers/websocket.py
+Diff files: 1
+
+Repo : https://github.com/ludia8888/SPICE-Harvester
+File : backend/oms/routers/instance.py
+Diff files: 1
+
+Repo : https://github.com/nmanningFIT/CyberFinalProject
+File : app/db-init/init_admin.py
+Diff files: 1
+
+Repo : https://github.com/nmanningFIT/CyberFinalProject
+File : app/main.py
+Diff files: 1
+
+Repo : https://github.com/bellyliu/devsecops-hands-on-project
+File : devsecops-pipeline/vulnerable_code.py
+Diff files: 1
+Skipping DevCycle (checkpoint not found)
+
+Repo : https://github.com/auldsyababua/BrainBot
+File : tests/integration/test_document_storage.py
+Diff files: 1
+
+Repo : https://github.com/auldsyababua/BrainBot
+File : tests/integration/test_media_storage.py
+Diff files: 1
+
+Repo : https://github.com/auldsyababua/BrainBot
+File : tests/integration/test_rails_integration.py
+Diff files: 1
+
+Repo : https://github.com/auldsyababua/BrainBot
+File : tests/integration/test_s3_connection.py
+Diff files: 1
+
+Repo : https://github.com/auldsyababua/BrainBot
+File : tests/integration/test_storage_integrations.py
+Diff files: 1
+
+Repo : https://github.com/auldsyababua/BrainBot
+File : tests/performance/test_smart_rails_performance.py
+Diff files: 1
+
+Repo : https://github.com/auldsyababua/flrts-bmad
+File : tests/integration/test_document_storage.py
+Diff files: 1
+
+Repo : https://github.com/auldsyababua/flrts-bmad
+File : tests/integration/test_media_storage.py
+Diff files: 1
+
+Repo : https://github.com/auldsyababua/flrts-bmad
+File : tests/integration/test_rails_integration.py
+Diff files: 1
+
+Repo : https://github.com/auldsyababua/flrts-bmad
+File : tests/integration/test_s3_connection.py
+Diff files: 1
+
+Repo : https://github.com/auldsyababua/flrts-bmad
+File : tests/integration/test_storage_integrations.py
+Diff files: 1
+
+Repo : https://github.com/auldsyababua/flrts-bmad
+File : tests/performance/test_smart_rails_performance.py
+Diff files: 1
+
+Repo : https://github.com/joypaul162/sinaptik-ai-pandas-ai
+File : pandasai/__init__.py
+Diff files: 1
+
+Repo : https://github.com/joypaul162/sinaptik-ai-pandas-ai
+File : pandasai/agent/base.py
+Diff files: 1
+
+Repo : https://github.com/joypaul162/sinaptik-ai-pandas-ai
+File : pandasai/cli/main.py
+Diff files: 1
+
+Repo : https://github.com/joypaul162/sinaptik-ai-pandas-ai
+File : pandasai/data_loader/loader.py
+Diff files: 1
+
+Repo : https://github.com/joypaul162/sinaptik-ai-pandas-ai
+File : pandasai/data_loader/local_loader.py
+Diff files: 1
+
+Repo : https://github.com/joypaul162/sinaptik-ai-pandas-ai
+File : pandasai/data_loader/semantic_layer_schema.py
+Diff files: 1
+
+Repo : https://github.com/joypaul162/sinaptik-ai-pandas-ai
+File : pandasai/data_loader/sql_loader.py
+Diff files: 1
+
+Repo : https://github.com/joypaul162/sinaptik-ai-pandas-ai
+File : pandasai/data_loader/view_loader.py
+Diff files: 1
+
+Repo : https://github.com/joypaul162/sinaptik-ai-pandas-ai
+File : pandasai/dataframe/base.py
+Diff files: 1
+
+Repo : https://github.com/joypaul162/sinaptik-ai-pandas-ai
+File : pandasai/helpers/path.py
+Diff files: 1
+
+Repo : https://github.com/joypaul162/sinaptik-ai-pandas-ai
+File : pandasai/helpers/sql_sanitizer.py
+Diff files: 1
+
+Repo : https://github.com/joypaul162/sinaptik-ai-pandas-ai
+File : tests/unit_tests/conftest.py
+Diff files: 1
+
+Repo : https://github.com/joypaul162/sinaptik-ai-pandas-ai
+File : tests/unit_tests/data_loader/test_sql_loader.py
+Diff files: 1
+
+Repo : https://github.com/joypaul162/sinaptik-ai-pandas-ai
+File : tests/unit_tests/dataframe/test_semantic_layer_schema.py
+Diff files: 1
+
+Repo : https://github.com/joypaul162/sinaptik-ai-pandas-ai
+File : tests/unit_tests/helpers/test_dataframe_serializer.py
+Diff files: 1
+
+Repo : https://github.com/joypaul162/sinaptik-ai-pandas-ai
+File : tests/unit_tests/helpers/test_sql_sanitizer.py
+Diff files: 1
+
+Repo : https://github.com/joypaul162/sinaptik-ai-pandas-ai
+File : tests/unit_tests/prompts/test_sql_prompt.py
+Diff files: 1
+
+Repo : https://github.com/assistidemo/pandas-ai
+File : pandasai/__init__.py
+Diff files: 1
+
+Repo : https://github.com/assistidemo/pandas-ai
+File : pandasai/agent/base.py
+Diff files: 1
+
+Repo : https://github.com/assistidemo/pandas-ai
+File : pandasai/cli/main.py
+Diff files: 1
+
+Repo : https://github.com/assistidemo/pandas-ai
+File : pandasai/data_loader/loader.py
+Diff files: 1
+
+Repo : https://github.com/assistidemo/pandas-ai
+File : pandasai/data_loader/local_loader.py
+Diff files: 1
+
+Repo : https://github.com/assistidemo/pandas-ai
+File : pandasai/data_loader/semantic_layer_schema.py
+Diff files: 1
+
+Repo : https://github.com/assistidemo/pandas-ai
+File : pandasai/data_loader/sql_loader.py
+Diff files: 1
+
+Repo : https://github.com/assistidemo/pandas-ai
+File : pandasai/data_loader/view_loader.py
+Diff files: 1
+
+Repo : https://github.com/assistidemo/pandas-ai
+File : pandasai/dataframe/base.py
+Diff files: 1
+
+Repo : https://github.com/assistidemo/pandas-ai
+File : pandasai/helpers/path.py
+Diff files: 1
+
+Repo : https://github.com/assistidemo/pandas-ai
+File : pandasai/helpers/sql_sanitizer.py
+Diff files: 1
+
+Repo : https://github.com/assistidemo/pandas-ai
+File : tests/unit_tests/conftest.py
+Diff files: 1
+
+Repo : https://github.com/assistidemo/pandas-ai
+File : tests/unit_tests/data_loader/test_sql_loader.py
+Diff files: 1
+
+Repo : https://github.com/assistidemo/pandas-ai
+File : tests/unit_tests/dataframe/test_semantic_layer_schema.py
+Diff files: 1
+
+Repo : https://github.com/assistidemo/pandas-ai
+File : tests/unit_tests/helpers/test_dataframe_serializer.py
+Diff files: 1
+
+Repo : https://github.com/assistidemo/pandas-ai
+File : tests/unit_tests/helpers/test_sql_sanitizer.py
+Diff files: 1
+
+Repo : https://github.com/assistidemo/pandas-ai
+File : tests/unit_tests/prompts/test_sql_prompt.py
+Diff files: 1
+Skipping chatbot-pandasai (checkpoint not found)
+
+Repo : https://github.com/defog-ai/defog
+File : defog/generate_schema.py
+Diff files: 1
+
+Repo : https://github.com/defog-ai/defog
+File : defog/schema_documenter.py
+Diff files: 1
+Skipping gec (checkpoint not found)
+Skipping web (checkpoint not found)
+
+Repo : https://github.com/KPrince-coder/hih_dashboard_backend
+File : routers/provider.py
+Diff files: 1
+
+Repo : https://github.com/KPrince-coder/hih_dashboard_backend
+File : services/redshift_service.py
+Diff files: 1
+
+Repo : https://github.com/AidiJackson/codecompanion
+File : storage/runs.py
+Diff files: 1
+
+Repo : https://github.com/rrcakash/Peer_Review_secure_coding
+File : assignment1_code_sample.py
+Diff files: 1
+==================================================
+Dataset Loading Report
+==================================================
+Repositories total   : 87
+Repositories used    : 67
+Repositories skipped : 20
+Samples generated    : 470
+Total samples: 470
+Train: 329
+Val:   70
+Test:  71
+
+============================================================
+Processing: identity
+============================================================
+<src.pruners.identity_pruner.IdentityPruner object at 0x733dc19b8b50>
+<class 'src.pruners.identity_pruner.IdentityPruner'>
+IdentityPruner
+Train: (287, 200, 200) skipped: 0
+Val:   (62, 200, 200) skipped: 0
+Test:  (61, 200, 200) skipped: 0
+Saved: data/bilstm_data/identity.npz
+
+============================================================
+Processing: backward
+============================================================
+<src.pruners.backward_slice_pruner.BackwardSlicePruner object at 0x733ddc3fa390>
+<class 'src.pruners.backward_slice_pruner.BackwardSlicePruner'>
+BackwardSlicePruner
+[VECTORIZER SKIP] no usable Word2Vec tokens
+[VECTORIZER SKIP] no usable Word2Vec tokens
+[VECTORIZER SKIP] no usable Word2Vec tokens
+[VECTORIZER SKIP] no usable Word2Vec tokens
+Train: (284, 200, 200) skipped: 3
+Val:   (62, 200, 200) skipped: 0
+Test:  (60, 200, 200) skipped: 1
+Saved: data/bilstm_data/backward.npz
+
+============================================================
+Processing: forward
+============================================================
+<src.pruners.forward_slice_pruner.ForwardSlicePruner object at 0x733dc18ef7d0>
+<class 'src.pruners.forward_slice_pruner.ForwardSlicePruner'>
+ForwardSlicePruner
+Train: (287, 200, 200) skipped: 0
+Val:   (62, 200, 200) skipped: 0
+Test:  (61, 200, 200) skipped: 0
+Saved: data/bilstm_data/forward.npz
+
+============================================================
+Processing: neighborhood4
+============================================================
+<src.pruners.neighborhood_pruner.NeighborhoodPruner object at 0x733dc18ef790>
+<class 'src.pruners.neighborhood_pruner.NeighborhoodPruner'>
+NeighborhoodPruner
+Train: (287, 200, 200) skipped: 0
+Val:   (62, 200, 200) skipped: 0
+Test:  (61, 200, 200) skipped: 0
+Saved: data/bilstm_data/neighborhood4.npz
+
+============================================================
+LOCAL PREPROCESSING COMPLETE
+============================================================
+Expected output:
+  bilstm_data/identity.npz
+  bilstm_data/backward.npz
+  bilstm_data/forward.npz
+  bilstm_data/neighborhood4.npz

@@ -32,6 +32,13 @@ class BackwardSlicePruner(BasePruner):
             &
             set(function_nodes)
         )
+        if not valid_seeds:
+            print(
+                "[BACKWARD DEBUG]",
+                "seed_nodes =", seed_nodes,
+                "function_nodes =", function_nodes,
+                "cfg_nodes =", len(cfg["nodes"])
+            )
         
         keep = set(
             valid_seeds
@@ -61,5 +68,14 @@ class BackwardSlicePruner(BasePruner):
             cfg,
             keep
         )
+
+        if len(sample.pruned_cfg["nodes"]) == 0:
+            print(
+                "[BACKWARD EMPTY]",
+                "seed_nodes =", seed_nodes,
+                "function_nodes =", function_nodes,
+                "valid_seeds =", valid_seeds,
+                "cfg_nodes =", len(cfg["nodes"])
+            )
 
         return sample
