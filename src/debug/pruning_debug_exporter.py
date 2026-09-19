@@ -2,7 +2,7 @@ import csv
 import json
 import os
 
-from src import myutils
+from src.vocabulary import tokenize_code
 
 
 class PruningDebugExporter:
@@ -215,7 +215,7 @@ class PruningDebugExporter:
         if not code.strip():
             return []
 
-        return myutils.getTokens(
+        return tokenize_code(
             code
         )
 
