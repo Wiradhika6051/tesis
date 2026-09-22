@@ -9,9 +9,15 @@ class IdentityValidator(PruningValidator):
             record["cfg"]
         )
 
-        retained_nodes = self._node_ids(
-            record["pruned_cfg"]
+        original_to_pruned = record["pruned_cfg"].get(
+            "original_to_pruned",
+            {}
         )
+        
+        retained_nodes = {
+            int(original_id)
+            for original_id in original_to_pruned.keys()
+        }
 
         valid = (
             original_nodes == retained_nodes

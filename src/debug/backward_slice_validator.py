@@ -22,12 +22,14 @@ class BackwardSliceValidator:
             for node in cfg.get("nodes", [])
         }
 
+        original_to_pruned = sample.pruned_cfg.get(
+            "original_to_pruned",
+            {}
+        )
+        
         retained_nodes = {
-            node.node_id
-            for node in sample.pruned_cfg.get(
-                "nodes",
-                []
-            )
+            int(original_id)
+            for original_id in original_to_pruned.keys()
         }
 
         seed_nodes = set(

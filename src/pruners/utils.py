@@ -183,7 +183,59 @@ def find_target_nodes(
         set(target_nodes)
     )
 
-def prune_cfg(
+def prune_cfg(cfg, keep_nodes):
+
+    nodes = [
+        n for n in cfg["nodes"]
+        if n.node_id in keep_nodes
+    ]
+
+    edges = [
+        e for e in cfg["edges"]
+        if e[0] in keep_nodes
+        and e[1] in keep_nodes
+    ]
+
+    # Original node ID -> new pruned node ID
+    original_to_pruned = {}
+
+    new_nodes = []
+
+    for new_id, node in enumerate(nodes):
+
+        original_to_pruned[node.node_id] = new_id
+
+        new_node = CFGNode(
+            node_id=new_id,
+            lineno=node.lineno,
+            end_lineno=node.end_lineno,
+            node_type=node.node_type,
+            text=node.text
+        )
+
+        new_nodes.append(new_node)
+
+    new_edges = []
+
+    for src, dst in edges:
+
+        new_edges.append((
+            original_to_pruned[src],
+            original_to_pruned[dst]
+        ))
+
+    return {
+        **cfg,
+        "nodes": new_nodes,
+        "edges": new_edges,
+        "kept_lines": {
+            node.lineno
+            for node in nodes
+        },
+        "original_to_pruned": original_to_pruned
+    }
+
+def old_prune_cfg(
     cfg,
     keep_nodes
 ):

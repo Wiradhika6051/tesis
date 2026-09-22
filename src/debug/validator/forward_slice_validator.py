@@ -23,9 +23,15 @@ class ForwardSliceValidator(PruningValidator):
             function_nodes
         )
 
-        retained_nodes = self._node_ids(
-            record["pruned_cfg"]
+        original_to_pruned = record["pruned_cfg"].get(
+            "original_to_pruned",
+            {}
         )
+        
+        retained_nodes = {
+            int(original_id)
+            for original_id in original_to_pruned.keys()
+        }
 
         valid = (
             expected_nodes == retained_nodes
@@ -44,7 +50,7 @@ class ForwardSliceValidator(PruningValidator):
             reason=reason,
             expected_nodes=expected_nodes,
             retained_nodes=retained_nodes,
-            missing_seeds=seed_nodes - retained_nodes
+            missing_seeds=valid_seeds - retained_nodes
         )
 
     @staticmethod

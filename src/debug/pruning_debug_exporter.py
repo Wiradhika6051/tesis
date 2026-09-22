@@ -60,9 +60,18 @@ class PruningDebugExporter:
             pruned_cfg
         )
 
+        original_to_pruned = pruned_cfg.get(
+            "original_to_pruned",
+            {}
+        )
+        
+        nodes_after_original = list(
+            original_to_pruned.keys()
+        )
+        
         nodes_removed = self._get_removed_nodes(
             nodes_before,
-            nodes_after
+            nodes_after_original
         )
 
         return {
@@ -136,7 +145,15 @@ class PruningDebugExporter:
 
             "node_count_after": len(
                 nodes_after
-            )
+            ),
+            "original_to_pruned": {
+                str(original): pruned
+                for original, pruned
+                in pruned_cfg.get(
+                    "original_to_pruned",
+                    {}
+                ).items()
+            }
         }
 
     @staticmethod
@@ -229,7 +246,8 @@ class PruningDebugExporter:
             "text_before",
             "text_after",
             "node_count_before",
-            "node_count_after"
+            "node_count_after",
+            "original_to_pruned"
         ]
 
         with open(
