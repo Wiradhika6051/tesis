@@ -1,3 +1,4 @@
+from src.debug.pruning_validator import PruningValidator
 class IdentityValidator(PruningValidator):
 
     def validate(self, record):
