@@ -79,7 +79,14 @@ class PruningAuditExporter:
 
             "pruned_cfg": {
                 "nodes": self._serialize_nodes(pruned_cfg),
-                "edges": self._serialize_edges(pruned_cfg)
+                "edges": self._serialize_edges(pruned_cfg),
+                "original_to_pruned": {
+                    str(original): pruned
+                    for original, pruned in pruned_cfg.get(
+                        "original_to_pruned",
+                        {}
+                    ).items()
+                }
             }
         }
 
