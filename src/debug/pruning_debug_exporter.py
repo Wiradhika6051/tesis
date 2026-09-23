@@ -153,28 +153,35 @@ class PruningDebugExporter:
                     "original_to_pruned",
                     {}
                 ).items()
-            }
+            },
+            "function_start": getattr(
+                sample,
+                "function_start",
+                None
+            ),
+
+            "function_end": getattr(
+                sample,
+                "function_end",
+                None
+            ),
+
+            "function_name": getattr(
+                sample,
+                "function_name",
+                ""
+            ),
         }
 
     @staticmethod
     def _get_sample_id(sample):
 
-        return "{}:{}:{}".format(
-            getattr(
-                sample,
-                "repo",
-                ""
-            ),
-            getattr(
-                sample,
-                "commit",
-                ""
-            ),
-            getattr(
-                sample,
-                "file_path",
-                ""
-            )
+        return "{}:{}:{}:{}:{}".format(
+            getattr(sample, "repo", ""),
+            getattr(sample, "parent_commit", ""),
+            getattr(sample, "file_path", ""),
+            getattr(sample, "function_start", ""),
+            getattr(sample, "function_end", "")
         )
 
     @staticmethod
@@ -247,7 +254,10 @@ class PruningDebugExporter:
             "text_after",
             "node_count_before",
             "node_count_after",
-            "original_to_pruned"
+            "original_to_pruned",
+            "function_start",
+            "function_end",
+            "function_name"
         ]
 
         with open(
