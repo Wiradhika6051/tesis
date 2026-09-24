@@ -96,7 +96,10 @@ def build_cfg_vocab(samples):
 
     vocab = {
         "<PAD>": 0,
-        "<UNK>": 1
+        "<UNK>": 1,
+        "Try":2,
+        "Catch":3,
+        "FunctionDef":4,
     }
 
     for node in iter_cfg_nodes(samples):

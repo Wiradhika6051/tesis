@@ -38,7 +38,7 @@ class FeaturePreparationPipeline:
         #
         # Encode every sample.
         #
-        encoded_samples = []
+        encoded_samples = [4,5,6,8]
 
         for sample in samples:
 
