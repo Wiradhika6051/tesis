@@ -1,6 +1,5 @@
 from tqdm import tqdm
 
-from src.debug.pipeline_audit import PipelineAuditExporter
 from src.debug.pipeline_statistics import print_statistics
 
 
