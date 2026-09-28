@@ -96,7 +96,7 @@ class PipelineAuditExporter:
 
     def export_encoded(self, samples):
         self._export_jsonl(
-            "09_encoded_samples.jsonl",
+            "10_encoded_samples.jsonl",
             [
                 self._serialize_encoded(sample)
                 for sample in samples
@@ -388,3 +388,59 @@ class PipelineAuditExporter:
         )
 
         return path
+    
+    def export_embeddings(self, samples):
+        self._export_jsonl(
+            "09_embeddings.jsonl",
+            [
+                self._serialize_embeddings(sample)
+                for sample in samples
+                if hasattr(sample, "encoded")
+            ]
+        )
+
+
+    def _serialize_embeddings(self, sample):
+        result = {
+            "sample_id": self._sample_id(sample),
+            "tokens": list(getattr(sample, "tokens", [])),
+        }
+
+        tokens = list(getattr(sample, "tokens", []))
+
+        # Optional metadata populated by the encoder.
+        known_tokens = getattr(sample, "known_tokens", None)
+        oov_tokens = getattr(sample, "oov_tokens", None)
+
+        if known_tokens is not None:
+            result["known_tokens"] = list(known_tokens)
+
+        if oov_tokens is not None:
+            result["oov_tokens"] = list(oov_tokens)
+
+        encoded = getattr(sample, "encoded", None)
+
+        if encoded is not None:
+            try:
+                result["embedding_dim"] = (
+                    int(encoded.shape[-1])
+                    if len(encoded.shape) > 1
+                    else None
+                )
+
+                result["sequence_length_before_padding"] = len(
+                    known_tokens
+                    if known_tokens is not None
+                    else tokens
+                )
+
+                result["max_length"] = (
+                    int(encoded.shape[0])
+                    if len(encoded.shape) > 0
+                    else None
+                )
+
+            except AttributeError:
+                result["embedding_type"] = type(encoded).__name__
+
+        return result
