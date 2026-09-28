@@ -1,24 +1,37 @@
 from src.Encoder import Encoder
 
+
 class FeaturePreparationPipeline:
 
     def __init__(
         self,
         token_vocab_builder,
-        cfg_vocab_builder
+        cfg_vocab_builder,
+        audit_exporter=None
     ):
+
         self.encoder = None
-        self.token_vocab_builder = token_vocab_builder
-        self.cfg_vocab_builder = cfg_vocab_builder
+
+        self.token_vocab_builder = (
+            token_vocab_builder
+        )
+
+        self.cfg_vocab_builder = (
+            cfg_vocab_builder
+        )
+
+        self.audit_exporter = audit_exporter
+
 
     def prepare(
         self,
         samples
     ):
 
-        #
-        # Build vocabularies.
-        #
+        # ==================================================
+        # 1. Build vocabularies
+        # ==================================================
+
         token_vocab = self.token_vocab_builder(
             samples
         )
@@ -27,25 +40,60 @@ class FeaturePreparationPipeline:
             samples
         )
 
-        #
-        # Update encoder with the vocabularies.
-        #
+        # ==================================================
+        # 2. Export vocabularies
+        # ==================================================
+
+        if self.audit_exporter:
+
+            self.audit_exporter.export_vocabularies(
+                token_vocab,
+                cfg_vocab
+            )
+
+        # ==================================================
+        # 3. Create encoder
+        # ==================================================
+
         self.encoder = Encoder(
             token_vocab,
             cfg_vocab
         )
 
-        #
-        # Encode every sample.
-        #
+        # ==================================================
+        # 4. Export tokenization
+        # ==================================================
+
+        if self.audit_exporter:
+
+            self.audit_exporter.export_tokenization(
+                samples
+            )
+
+        # ==================================================
+        # 5. Encode samples
+        # ==================================================
+
         encoded_samples = []
 
         for sample in samples:
 
+            encoded_sample = (
+                self.encoder.encode(sample)
+            )
+
             encoded_samples.append(
-                self.encoder.encode(
-                    sample
-                )
+                encoded_sample
+            )
+
+        # ==================================================
+        # 6. Export encoded representation
+        # ==================================================
+
+        if self.audit_exporter:
+
+            self.audit_exporter.export_encoded(
+                encoded_samples
             )
 
         return (

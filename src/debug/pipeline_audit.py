@@ -1,7 +1,7 @@
 import json
 import os
 from dataclasses import asdict, is_dataclass
-
+from src.vocabulary import tokenize_code
 
 class PipelineAuditExporter:
 
@@ -444,3 +444,126 @@ class PipelineAuditExporter:
                 result["embedding_type"] = type(encoded).__name__
 
         return result
+
+    def export_tokenization(self, samples):
+        """
+        Export tokenization results for every node in each pruned CFG.
+        """
+
+        path = self.output_dir / "08_tokenization.jsonl"
+
+        with open(path, "w", encoding="utf-8") as f:
+            for sample in samples:
+            
+                for node in sample.pruned_cfg["nodes"]:
+                
+                    tokens = tokenize_code(node.text)
+
+                    record = {
+                        "sample_id": self._sample_id(sample),
+                        "node_id": node.node_id,
+                        "lineno": node.lineno,
+                        "end_lineno": node.end_lineno,
+                        "node_type": node.node_type,
+                        "text": node.text,
+                        "tokens": tokens,
+                    }
+
+                    f.write(
+                        json.dumps(
+                            record,
+                            ensure_ascii=False
+                        ) + "\n"
+                    )
+
+
+    def export_vocabularies(
+        self,
+        token_vocab,
+        cfg_vocab
+    ):
+        """
+        Export token and CFG node-type vocabularies.
+        """
+
+        token_path = self.output_dir / "09_token_vocab.json"
+        cfg_path = self.output_dir / "09_cfg_vocab.json"
+
+        with open(
+            token_path,
+            "w",
+            encoding="utf-8"
+        ) as f:
+
+            json.dump(
+                token_vocab,
+                f,
+                ensure_ascii=False,
+                indent=2
+            )
+
+        with open(
+            cfg_path,
+            "w",
+            encoding="utf-8"
+        ) as f:
+
+            json.dump(
+                cfg_vocab,
+                f,
+                ensure_ascii=False,
+                indent=2
+            )
+
+
+    def export_encoded(self, samples):
+        """
+        Export the encoded graph representation.
+
+        Does not serialize PyTorch tensors directly.
+        """
+
+        path = self.output_dir / "10_encoded_samples.jsonl"
+
+        with open(path, "w", encoding="utf-8") as f:
+        
+            for sample in samples:
+            
+                graph = sample.graph
+
+                record = {
+                    "sample_id": self._sample_id(sample),
+
+                    "repo": sample.repo,
+                    "parent_commit": sample.parent_commit,
+                    "file_path": sample.file_path,
+
+                    "label": sample.label,
+
+                    "node_count": len(
+                        graph.node_types
+                    ),
+
+                    "edge_count": int(
+                        graph.edge_index.shape[1]
+                    ),
+
+                    "node_tokens": graph.node_tokens,
+
+                    "node_types": (
+                        graph.node_types.tolist()
+                    ),
+
+                    "edges": (
+                        graph.edge_index
+                        .t()
+                        .tolist()
+                    ),
+                }
+
+                f.write(
+                    json.dumps(
+                        record,
+                        ensure_ascii=False
+                    ) + "\n"
+                )
