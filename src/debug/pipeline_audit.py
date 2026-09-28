@@ -1,13 +1,13 @@
 import json
 import os
-from dataclasses import asdict, is_dataclass
+from pathlib import Path
 from src.vocabulary import tokenize_code
 
 class PipelineAuditExporter:
 
     def __init__(self, output_dir):
-        self.output_dir = output_dir
-        os.makedirs(output_dir, exist_ok=True)
+        self.output_dir = Path(output_dir)
+        os.makedirs(self.output_dir, exist_ok=True)
 
     # ============================================================
     # Public API
