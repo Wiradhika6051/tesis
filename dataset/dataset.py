@@ -1,16 +1,20 @@
 # dataset.py
 
 import torch
+
+from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
-from torch_geometric.data import Data
+from torch_geometric.data import Batch
 
 
 class VulnerabilityDataset(Dataset):
 
     def __init__(self, samples):
+
         self.samples = samples
 
     def __len__(self):
+
         return len(self.samples)
 
     def __getitem__(self, idx):
@@ -27,8 +31,6 @@ class VulnerabilityDataset(Dataset):
                 dtype=torch.long
             )
         )
-
-from torch.utils.data import Dataset
 
 
 class PhpNetDataset(

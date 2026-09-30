@@ -1,27 +1,38 @@
-from src.Encoder import Encoder
+from src.encoding.vudenc_vectorizer import (
+    VUDENCVectorizer
+)
+
+from src.encoding.gcn_encoder import (
+    GCNEncoder
+)
 
 
 class FeaturePreparationPipeline:
 
     def __init__(
         self,
-        token_vocab_builder,
+        w2v_path,
         cfg_vocab_builder,
         audit_exporter=None
     ):
 
         self.encoder = None
 
-        self.token_vocab_builder = (
-            token_vocab_builder
-        )
+        self.w2v_path = w2v_path
 
         self.cfg_vocab_builder = (
             cfg_vocab_builder
         )
 
-        self.audit_exporter = audit_exporter
+        self.audit_exporter = (
+            audit_exporter
+        )
 
+        self.vudenc_vectorizer = (
+            VUDENCVectorizer(
+                w2v_path
+            )
+        )
 
     def prepare(
         self,
@@ -29,49 +40,35 @@ class FeaturePreparationPipeline:
     ):
 
         # ==================================================
-        # 1. Build vocabularies
+        # 1. Build CFG vocabulary
         # ==================================================
-
-        token_vocab = self.token_vocab_builder(
-            samples
-        )
 
         cfg_vocab = self.cfg_vocab_builder(
             samples
         )
 
         # ==================================================
-        # 2. Export vocabularies
+        # 2. Export CFG vocabulary
         # ==================================================
 
         if self.audit_exporter:
 
             self.audit_exporter.export_vocabularies(
-                token_vocab,
+                None,
                 cfg_vocab
             )
 
         # ==================================================
-        # 3. Create encoder
+        # 3. Create GCN encoder
         # ==================================================
 
-        self.encoder = Encoder(
-            token_vocab,
+        self.encoder = GCNEncoder(
+            self.vudenc_vectorizer,
             cfg_vocab
         )
 
         # ==================================================
-        # 4. Export tokenization
-        # ==================================================
-
-        if self.audit_exporter:
-
-            self.audit_exporter.export_tokenization(
-                samples
-            )
-
-        # ==================================================
-        # 5. Encode samples
+        # 4. Encode samples
         # ==================================================
 
         encoded_samples = []
@@ -79,7 +76,9 @@ class FeaturePreparationPipeline:
         for sample in samples:
 
             encoded_sample = (
-                self.encoder.encode(sample)
+                self.encoder.encode(
+                    sample
+                )
             )
 
             encoded_samples.append(
@@ -87,7 +86,7 @@ class FeaturePreparationPipeline:
             )
 
         # ==================================================
-        # 6. Export encoded representation
+        # 5. Export encoded representation
         # ==================================================
 
         if self.audit_exporter:
@@ -98,6 +97,6 @@ class FeaturePreparationPipeline:
 
         return (
             encoded_samples,
-            token_vocab,
+            None,
             cfg_vocab
         )
