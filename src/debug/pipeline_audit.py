@@ -1,13 +1,20 @@
+
 import json
 import os
 from pathlib import Path
-from src.vocabulary import tokenize_code
+
+import numpy as np
+
 
 class PipelineAuditExporter:
 
-    def __init__(self, output_dir):
+    def __init__(self, output_dir, include_vectors=False):
         self.output_dir = Path(output_dir)
-        os.makedirs(self.output_dir, exist_ok=True)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+
+        # False: export metadata and shapes only.
+        # True: include actual Word2Vec vectors in JSONL.
+        self.include_vectors = include_vectors
 
     # ============================================================
     # Public API
@@ -16,38 +23,32 @@ class PipelineAuditExporter:
     def export_raw_samples(self, samples):
         self._export_jsonl(
             "01_raw_samples.jsonl",
-            [
-                self._serialize_raw_sample(sample)
-                for sample in samples
-            ]
+            [self._serialize_raw_sample(s) for s in samples]
         )
 
     def export_diff_localized(self, samples):
         self._export_jsonl(
             "02_diff_localized.jsonl",
             [
-                self._serialize_diff_sample(sample)
-                for sample in samples
-                if getattr(sample, "seed_lines", None)
+                self._serialize_diff_sample(s)
+                for s in samples
+                if getattr(s, "seed_lines", None)
             ]
         )
 
     def export_function_samples(self, samples):
         self._export_jsonl(
             "03_function_samples.jsonl",
-            [
-                self._serialize_function_sample(sample)
-                for sample in samples
-            ]
+            [self._serialize_function_sample(s) for s in samples]
         )
 
     def export_cfg(self, samples):
         self._export_jsonl(
             "04_cfg.jsonl",
             [
-                self._serialize_cfg_sample(sample)
-                for sample in samples
-                if getattr(sample, "cfg", None)
+                self._serialize_cfg_sample(s)
+                for s in samples
+                if getattr(s, "cfg", None)
             ]
         )
 
@@ -55,19 +56,16 @@ class PipelineAuditExporter:
         self._export_jsonl(
             "05_seed_nodes.jsonl",
             [
-                self._serialize_localized_sample(sample)
-                for sample in samples
-                if getattr(sample, "cfg", None)
+                self._serialize_localized_sample(s)
+                for s in samples
+                if getattr(s, "cfg", None)
             ]
         )
 
     def export_function_scope(self, samples):
         self._export_jsonl(
             "06_function_scope.jsonl",
-            [
-                self._serialize_function_scope(sample)
-                for sample in samples
-            ]
+            [self._serialize_function_scope(s) for s in samples]
         )
 
     def export_pruned(self, samples, strategy_name):
@@ -78,9 +76,9 @@ class PipelineAuditExporter:
         self._export_jsonl(
             filename,
             [
-                self._serialize_pruned_sample(sample)
-                for sample in samples
-                if getattr(sample, "pruned_cfg", None)
+                self._serialize_pruned_sample(s)
+                for s in samples
+                if getattr(s, "pruned_cfg", None)
             ]
         )
 
@@ -88,23 +86,47 @@ class PipelineAuditExporter:
         self._export_jsonl(
             "08_tokens.jsonl",
             [
-                self._serialize_tokens(sample)
-                for sample in samples
-                if hasattr(sample, "tokens")
+                self._serialize_tokens(s)
+                for s in samples
+                if hasattr(s, "tokens")
             ]
         )
 
-    def export_encoded(self, samples):
+    def export_word2vec_vectors(self, samples, architecture="bilstm"):
+        """
+        Export vectorization metadata.
+
+        BiLSTM:
+            sample.encoded = [sequence_length, embedding_dim]
+
+        GCN:
+            sample.graph.node_token_vectors = list of
+            [tokens_in_node, embedding_dim] tensors.
+        """
+        records = []
+
+        for sample in samples:
+            if architecture.lower() == "gcn":
+                record = self._serialize_gcn_vectors(sample)
+            else:
+                record = self._serialize_bilstm_vectors(sample)
+
+            if record is not None:
+                records.append(record)
+
+        self._export_jsonl("09_word2vec_vectors.jsonl", records)
+
+    def export_encoded(self, samples, architecture="bilstm"):
         self._export_jsonl(
             "10_encoded_samples.jsonl",
             [
-                self._serialize_encoded(sample)
-                for sample in samples
+                self._serialize_encoded(s, architecture)
+                for s in samples
             ]
         )
 
     # ============================================================
-    # Serialization
+    # Serialization: Existing pipeline stages
     # ============================================================
 
     def _serialize_raw_sample(self, sample):
@@ -127,9 +149,7 @@ class PipelineAuditExporter:
             "commit": getattr(sample, "commit", ""),
             "file_path": getattr(sample, "file_path", ""),
             "label": getattr(sample, "label", None),
-            "seed_lines": list(
-                getattr(sample, "seed_lines", [])
-            ),
+            "seed_lines": list(getattr(sample, "seed_lines", [])),
         }
 
     def _serialize_function_sample(self, sample):
@@ -140,28 +160,10 @@ class PipelineAuditExporter:
             "commit": getattr(sample, "commit", ""),
             "file_path": getattr(sample, "file_path", ""),
             "label": getattr(sample, "label", None),
-
-            "function_name": getattr(
-                sample,
-                "function_name",
-                None
-            ),
-
-            "function_start": getattr(
-                sample,
-                "function_start",
-                None
-            ),
-
-            "function_end": getattr(
-                sample,
-                "function_end",
-                None
-            ),
-
-            "seed_lines": list(
-                getattr(sample, "seed_lines", [])
-            ),
+            "function_name": getattr(sample, "function_name", None),
+            "function_start": getattr(sample, "function_start", None),
+            "function_end": getattr(sample, "function_end", None),
+            "seed_lines": list(getattr(sample, "seed_lines", [])),
         }
 
     def _serialize_cfg_sample(self, sample):
@@ -169,21 +171,9 @@ class PipelineAuditExporter:
 
         return {
             "sample_id": self._sample_id(sample),
-            "function_name": getattr(
-                sample,
-                "function_name",
-                None
-            ),
-            "function_start": getattr(
-                sample,
-                "function_start",
-                None
-            ),
-            "function_end": getattr(
-                sample,
-                "function_end",
-                None
-            ),
+            "function_name": getattr(sample, "function_name", None),
+            "function_start": getattr(sample, "function_start", None),
+            "function_end": getattr(sample, "function_end", None),
             "nodes": self._serialize_nodes(cfg),
             "edges": self._serialize_edges(cfg),
         }
@@ -191,43 +181,19 @@ class PipelineAuditExporter:
     def _serialize_localized_sample(self, sample):
         return {
             "sample_id": self._sample_id(sample),
-            "seed_lines": list(
-                getattr(sample, "seed_lines", [])
-            ),
-            "seed_nodes": list(
-                getattr(sample, "seed_nodes", [])
-            ),
-            "line_to_node": getattr(
-                sample,
-                "line_to_node",
-                {}
-            ),
+            "seed_lines": list(getattr(sample, "seed_lines", [])),
+            "seed_nodes": list(getattr(sample, "seed_nodes", [])),
+            "line_to_node": getattr(sample, "line_to_node", {}),
         }
 
     def _serialize_function_scope(self, sample):
         return {
             "sample_id": self._sample_id(sample),
-            "function_name": getattr(
-                sample,
-                "function_name",
-                None
-            ),
-            "function_start": getattr(
-                sample,
-                "function_start",
-                None
-            ),
-            "function_end": getattr(
-                sample,
-                "function_end",
-                None
-            ),
-            "function_nodes": list(
-                getattr(sample, "function_nodes", [])
-            ),
-            "seed_nodes": list(
-                getattr(sample, "seed_nodes", [])
-            ),
+            "function_name": getattr(sample, "function_name", None),
+            "function_start": getattr(sample, "function_start", None),
+            "function_end": getattr(sample, "function_end", None),
+            "function_nodes": list(getattr(sample, "function_nodes", [])),
+            "seed_nodes": list(getattr(sample, "seed_nodes", [])),
         }
 
     def _serialize_pruned_sample(self, sample):
@@ -235,64 +201,178 @@ class PipelineAuditExporter:
 
         return {
             "sample_id": self._sample_id(sample),
-            "seed_lines": list(
-                getattr(sample, "seed_lines", [])
-            ),
-            "seed_nodes": list(
-                getattr(sample, "seed_nodes", [])
-            ),
-            "function_nodes": list(
-                getattr(sample, "function_nodes", [])
-            ),
+            "seed_lines": list(getattr(sample, "seed_lines", [])),
+            "seed_nodes": list(getattr(sample, "seed_nodes", [])),
+            "function_nodes": list(getattr(sample, "function_nodes", [])),
             "nodes": self._serialize_nodes(cfg),
             "edges": self._serialize_edges(cfg),
             "original_to_pruned": {
-                str(original): pruned
-                for original, pruned in cfg.get(
-                    "original_to_pruned",
-                    {}
-                ).items()
+                str(k): v
+                for k, v in cfg.get("original_to_pruned", {}).items()
             },
         }
 
+    # ============================================================
+    # Tokenization
+    # ============================================================
+
     def _serialize_tokens(self, sample):
+        tokens = list(getattr(sample, "tokens", []))
+
         return {
             "sample_id": self._sample_id(sample),
-            "tokens": list(
-                getattr(sample, "tokens", [])
+            "tokens": tokens,
+            "token_count": len(tokens),
+        }
+
+    # ============================================================
+    # Word2Vec vectorization
+    # ============================================================
+
+    def _serialize_bilstm_vectors(self, sample):
+        encoded = getattr(sample, "encoded", None)
+
+        if encoded is None:
+            return None
+
+        array = self._to_numpy(encoded)
+
+        if array is None:
+            return None
+
+        record = {
+            "sample_id": self._sample_id(sample),
+            "architecture": "bilstm",
+            "shape": list(array.shape),
+            "dtype": str(array.dtype),
+            "nonzero_vectors": int(np.any(array != 0, axis=-1).sum()),
+            "zero_vectors": int(np.all(array == 0, axis=-1).sum()),
+        }
+
+        if self.include_vectors:
+            record["vectors"] = array.tolist()
+
+        return record
+
+    def _serialize_gcn_vectors(self, sample):
+        graph = getattr(sample, "graph", None)
+
+        if graph is None:
+            return None
+
+        node_vectors = getattr(graph, "node_token_vectors", None)
+
+        if node_vectors is None:
+            return None
+
+        node_records = []
+
+        for index, tensor in enumerate(node_vectors):
+            array = self._to_numpy(tensor)
+
+            if array is None:
+                continue
+
+            node_record = {
+                "node_index": index,
+                "shape": list(array.shape),
+                "token_count": int(array.shape[0]) if array.ndim > 0 else 0,
+            }
+
+            if self.include_vectors:
+                node_record["vectors"] = array.tolist()
+
+            node_records.append(node_record)
+
+        edge_index = self._to_numpy(
+            getattr(graph, "edge_index", None)
+        )
+
+        node_types = self._to_numpy(
+            getattr(graph, "node_types", None)
+        )
+
+        return {
+            "sample_id": self._sample_id(sample),
+            "architecture": "gcn",
+            "node_count": len(node_vectors),
+            "edge_count": (
+                int(edge_index.shape[1])
+                if edge_index is not None and edge_index.ndim == 2
+                else 0
+            ),
+            "node_types": (
+                node_types.tolist()
+                if node_types is not None
+                else []
+            ),
+            "nodes": node_records,
+            "edges": (
+                edge_index.T.tolist()
+                if edge_index is not None and edge_index.ndim == 2
+                else []
             ),
         }
 
-    def _serialize_encoded(self, sample):
+    # ============================================================
+    # Encoded sample metadata
+    # ============================================================
+
+    def _serialize_encoded(self, sample, architecture):
         result = {
             "sample_id": self._sample_id(sample),
+            "architecture": architecture.lower(),
+            "label": getattr(sample, "label", None),
         }
 
-        # Don't dump huge tensors into JSON by default.
-        if hasattr(sample, "encoded"):
-            encoded = sample.encoded
+        if architecture.lower() == "gcn":
+            graph = getattr(sample, "graph", None)
 
-            try:
-                result["shape"] = list(encoded.shape)
-                result["dtype"] = str(encoded.dtype)
-            except AttributeError:
-                result["type"] = type(encoded).__name__
-
-        if hasattr(sample, "node_features"):
-            features = sample.node_features
-
-            try:
-                result["node_feature_shape"] = list(
-                    features.shape
+            if graph is not None:
+                node_vectors = getattr(
+                    graph,
+                    "node_token_vectors",
+                    []
                 )
-            except AttributeError:
-                pass
+
+                result["node_count"] = len(node_vectors)
+                result["node_type_shape"] = list(
+                    graph.node_types.shape
+                )
+                result["edge_index_shape"] = list(
+                    graph.edge_index.shape
+                )
+
+                result["node_token_shapes"] = [
+                    list(tensor.shape)
+                    for tensor in node_vectors
+                ]
+
+        else:
+            encoded = getattr(sample, "encoded", None)
+
+            if encoded is not None:
+                array = self._to_numpy(encoded)
+
+                if array is not None:
+                    result["shape"] = list(array.shape)
+                    result["dtype"] = str(array.dtype)
 
         return result
 
     # ============================================================
     # Helpers
     # ============================================================
+
+    @staticmethod
+    def _to_numpy(value):
+        if value is None:
+            return None
+
+        if hasattr(value, "detach"):
+            value = value.detach().cpu().numpy()
+
+        return np.asarray(value)
 
     @staticmethod
     def _serialize_nodes(cfg):
@@ -314,45 +394,27 @@ class PipelineAuditExporter:
 
     @staticmethod
     def _serialize_edges(cfg):
-        return [
-            list(edge)
-            for edge in cfg.get("edges", [])
-        ]
+        return [list(edge) for edge in cfg.get("edges", [])]
 
     @staticmethod
     def _sample_id(sample):
-        repo = getattr(sample, "repo", "")
-        commit = getattr(
-            sample,
-            "parent_commit",
-            getattr(sample, "commit", "")
-        )
-        file_path = getattr(sample, "file_path", "")
-        function_start = getattr(
-            sample,
-            "function_start",
-            None
-        )
-        function_end = getattr(
-            sample,
-            "function_end",
-            None
-        )
-        label = getattr(sample, "label", None)
-
         return "{}:{}:{}:{}:{}:{}".format(
-            repo,
-            commit,
-            file_path,
-            function_start,
-            function_end,
-            label,
+            getattr(sample, "repo", ""),
+            getattr(
+                sample,
+                "parent_commit",
+                getattr(sample, "commit", "")
+            ),
+            getattr(sample, "file_path", ""),
+            getattr(sample, "function_start", None),
+            getattr(sample, "function_end", None),
+            getattr(sample, "label", None),
         )
 
     @staticmethod
     def _safe_name(name):
         return (
-            name.lower()
+            str(name).lower()
             .replace(" ", "_")
             .replace("(", "")
             .replace(")", "")
@@ -360,24 +422,15 @@ class PipelineAuditExporter:
         )
 
     def _export_jsonl(self, filename, records):
-        path = os.path.join(
-            self.output_dir,
-            filename
-        )
+        path = self.output_dir / filename
 
-        with open(
-            path,
-            "w",
-            encoding="utf-8"
-        ) as f:
-
+        with path.open("w", encoding="utf-8") as f:
             for record in records:
                 f.write(
                     json.dumps(
                         record,
                         ensure_ascii=False
-                    )
-                    + "\n"
+                    ) + "\n"
                 )
 
         print(
@@ -387,183 +440,4 @@ class PipelineAuditExporter:
             )
         )
 
-        return path
-    
-    def export_embeddings(self, samples):
-        self._export_jsonl(
-            "09_embeddings.jsonl",
-            [
-                self._serialize_embeddings(sample)
-                for sample in samples
-                if hasattr(sample, "encoded")
-            ]
-        )
-
-
-    def _serialize_embeddings(self, sample):
-        result = {
-            "sample_id": self._sample_id(sample),
-            "tokens": list(getattr(sample, "tokens", [])),
-        }
-
-        tokens = list(getattr(sample, "tokens", []))
-
-        # Optional metadata populated by the encoder.
-        known_tokens = getattr(sample, "known_tokens", None)
-        oov_tokens = getattr(sample, "oov_tokens", None)
-
-        if known_tokens is not None:
-            result["known_tokens"] = list(known_tokens)
-
-        if oov_tokens is not None:
-            result["oov_tokens"] = list(oov_tokens)
-
-        encoded = getattr(sample, "encoded", None)
-
-        if encoded is not None:
-            try:
-                result["embedding_dim"] = (
-                    int(encoded.shape[-1])
-                    if len(encoded.shape) > 1
-                    else None
-                )
-
-                result["sequence_length_before_padding"] = len(
-                    known_tokens
-                    if known_tokens is not None
-                    else tokens
-                )
-
-                result["max_length"] = (
-                    int(encoded.shape[0])
-                    if len(encoded.shape) > 0
-                    else None
-                )
-
-            except AttributeError:
-                result["embedding_type"] = type(encoded).__name__
-
-        return result
-
-    def export_tokenization(self, samples):
-        """
-        Export tokenization results for every node in each pruned CFG.
-        """
-
-        path = self.output_dir / "08_tokenization.jsonl"
-
-        with open(path, "w", encoding="utf-8") as f:
-            for sample in samples:
-            
-                for node in sample.pruned_cfg["nodes"]:
-                
-                    tokens = tokenize_code(node.text)
-
-                    record = {
-                        "sample_id": self._sample_id(sample),
-                        "node_id": node.node_id,
-                        "lineno": node.lineno,
-                        "end_lineno": node.end_lineno,
-                        "node_type": node.node_type,
-                        "text": node.text,
-                        "tokens": tokens,
-                    }
-
-                    f.write(
-                        json.dumps(
-                            record,
-                            ensure_ascii=False
-                        ) + "\n"
-                    )
-
-
-    def export_vocabularies(
-        self,
-        token_vocab,
-        cfg_vocab
-    ):
-        """
-        Export token and CFG node-type vocabularies.
-        """
-
-        token_path = self.output_dir / "09_token_vocab.json"
-        cfg_path = self.output_dir / "09_cfg_vocab.json"
-
-        with open(
-            token_path,
-            "w",
-            encoding="utf-8"
-        ) as f:
-
-            json.dump(
-                token_vocab,
-                f,
-                ensure_ascii=False,
-                indent=2
-            )
-
-        with open(
-            cfg_path,
-            "w",
-            encoding="utf-8"
-        ) as f:
-
-            json.dump(
-                cfg_vocab,
-                f,
-                ensure_ascii=False,
-                indent=2
-            )
-
-
-    def export_encoded(self, samples):
-        """
-        Export the encoded graph representation.
-
-        Does not serialize PyTorch tensors directly.
-        """
-
-        path = self.output_dir / "10_encoded_samples.jsonl"
-
-        with open(path, "w", encoding="utf-8") as f:
-        
-            for sample in samples:
-            
-                graph = sample.graph
-
-                record = {
-                    "sample_id": self._sample_id(sample),
-
-                    "repo": sample.repo,
-                    "parent_commit": sample.parent_commit,
-                    "file_path": sample.file_path,
-
-                    "label": sample.label,
-
-                    "node_count": len(
-                        graph.node_types
-                    ),
-
-                    "edge_count": int(
-                        graph.edge_index.shape[1]
-                    ),
-
-                    "node_tokens": graph.node_tokens,
-
-                    "node_types": (
-                        graph.node_types.tolist()
-                    ),
-
-                    "edges": (
-                        graph.edge_index
-                        .t()
-                        .tolist()
-                    ),
-                }
-
-                f.write(
-                    json.dumps(
-                        record,
-                        ensure_ascii=False
-                    ) + "\n"
-                )
+        return str(path)
