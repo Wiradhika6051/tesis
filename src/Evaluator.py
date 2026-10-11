@@ -18,229 +18,111 @@ class Evaluator:
 
         self.device = device
 
+ 
     @torch.no_grad()
-    def evaluate(
-        self,
-        loader
-    ):
-
+    def evaluate(self, loader):
         self.model.eval()
 
         total_loss = 0.0
-
         total_samples = 0
 
         all_predictions = []
-
         all_labels = []
-
+        all_probabilities = []
         all_pair_ids = []
-
         all_sample_ids = []
 
         progress = tqdm(
-
             loader,
-
             total=len(loader),
-
-            desc="Validation"
-
+            desc="Evaluation",
         )
 
-        for (
+        for graph, labels, pair_ids, sample_ids in progress:
+            graph = graph.to(self.device)
+            labels = labels.to(self.device)
 
-            graph,
+            logits = self.model(graph)
+            loss = self.criterion(logits, labels)
 
-            labels,
+            probabilities = torch.softmax(logits, dim=1)
+            predictions = torch.argmax(logits, dim=1)
 
-            pair_ids,
+            batch_size = labels.size(0)
 
-            sample_ids
-
-        ) in progress:
-
-            graph = graph.to(
-                self.device
-            )
-
-            labels = labels.to(
-                self.device
-            )
-
-            #
-            # Forward pass.
-            #
-            logits = self.model(
-                graph
-            )
-
-            #
-            # Loss.
-            #
-            loss = self.criterion(
-
-                logits,
-
-                labels
-
-            )
-
-            #
-            # Predictions.
-            #
-            predictions = torch.argmax(
-
-                logits,
-
-                dim=1
-
-            )
-
-            #
-            # Batch statistics.
-            #
-            batch_size = labels.size(
-                0
-            )
-
-            total_loss += (
-
-                loss.item()
-
-                *
-                batch_size
-
-            )
-
+            total_loss += loss.item() * batch_size
             total_samples += batch_size
 
-            #
-            # Store results.
-            #
-            all_predictions.append(
+            all_predictions.append(predictions.cpu())
+            all_labels.append(labels.cpu())
+            all_probabilities.append(probabilities.cpu())
 
-                predictions.cpu()
+            all_pair_ids.extend(pair_ids)
+            all_sample_ids.extend(sample_ids)
 
-            )
+            progress.set_postfix(loss=f"{loss.item():.4f}")
 
-            all_labels.append(
-
-                labels.cpu()
-
-            )
-
-            #
-            # Metadata stays as Python objects.
-            #
-            all_pair_ids.extend(
-                pair_ids
-            )
-
-            all_sample_ids.extend(
-                sample_ids
-            )
-
-            progress.set_postfix(
-
-                loss=f"{loss.item():.4f}"
-
-            )
-
-        #
-        # Empty validation set.
-        #
         if total_samples == 0:
-
             return {
-
-                "loss":
-                    float("inf"),
-
-                "accuracy":
-                    0.0,
-
-                "predictions":
-                    torch.empty(
-                        0,
-                        dtype=torch.long
-                    ),
-
-                "labels":
-                    torch.empty(
-                        0,
-                        dtype=torch.long
-                    ),
-
-                "pair_ids":
-                    [],
-
-                "sample_ids":
-                    []
-
+                "loss": float("inf"),
+                "accuracy": 0.0,
+                "predictions": torch.empty(0, dtype=torch.long),
+                "labels": torch.empty(0, dtype=torch.long),
+                "probabilities": torch.empty((0, 2)),
+                "pair_ids": [],
+                "sample_ids": [],
+                "records": [],
             }
 
-        #
-        # Average loss.
-        #
-        average_loss = (
+        predictions = torch.cat(all_predictions)
+        labels = torch.cat(all_labels)
+        probabilities = torch.cat(all_probabilities)
 
-            total_loss
+        average_loss = total_loss / total_samples
+        accuracy = (predictions == labels).float().mean().item()
 
-            /
+        records = []
 
-            total_samples
+        for i in range(total_samples):
+            actual = int(labels[i].item())
+            predicted = int(predictions[i].item())
 
-        )
+            if actual == 1 and predicted == 1:
+                outcome = "TP"
+            elif actual == 0 and predicted == 0:
+                outcome = "TN"
+            elif actual == 0 and predicted == 1:
+                outcome = "FP"
+            else:
+                outcome = "FN"
 
-        predictions = torch.cat(
-            all_predictions
-        )
-
-        labels = torch.cat(
-            all_labels
-        )
-
-        accuracy = (
-
-            predictions == labels
-
-        ).float().mean().item()
-
-        #
-        # Restore training mode.
-        #
-        self.model.train()
+            records.append({
+                "sample_id": all_sample_ids[i],
+                "pair_id": all_pair_ids[i],
+                "label": actual,
+                "predicted": predicted,
+                "score_0": float(probabilities[i, 0].item()),
+                "score_1": float(probabilities[i, 1].item()),
+                "outcome": outcome,
+            })
 
         print(
-
-            f"Validation "
+            f"Evaluation "
             f"Loss={average_loss:.4f} "
             f"Accuracy={accuracy:.4f}"
-
         )
 
         return {
-
-            "loss":
-                average_loss,
-
-            "accuracy":
-                accuracy,
-
-            "predictions":
-                predictions,
-
-            "labels":
-                labels,
-
-            "pair_ids":
-                all_pair_ids,
-
-            "sample_ids":
-                all_sample_ids
-
+            "loss": average_loss,
+            "accuracy": accuracy,
+            "predictions": predictions,
+            "labels": labels,
+            "probabilities": probabilities,
+            "pair_ids": all_pair_ids,
+            "sample_ids": all_sample_ids,
+            "records": records,
         }
+
 
 
     @torch.no_grad()
