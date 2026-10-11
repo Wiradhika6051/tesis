@@ -263,3 +263,23 @@ class Trainer:
             dataset_file=dataset_file,
             config=config
         )
+
+    def load_best_model(self):
+        if not os.path.exists(self.best_model_path):
+            raise FileNotFoundError(
+                f"Best model checkpoint not found: "
+                f"{self.best_model_path}"
+            )
+
+        checkpoint = load_checkpoint(
+            self.best_model_path,
+            self.model,
+            self.optimizer,
+        )
+
+        print(
+            "Loaded best model checkpoint: "
+            f"{self.best_model_path}"
+        )
+
+        return checkpoint
