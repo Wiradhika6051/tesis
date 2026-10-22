@@ -56,7 +56,7 @@ class PruningAuditExporter:
         return {
             "sample_id": self._sample_id(sample),
             "repo": getattr(sample, "repo", ""),
-            "commit": getattr(sample, "commit", ""),
+            "commit": sample.commit_hash,
             "file_path": getattr(sample, "file_path", ""),
             "label": getattr(sample, "label", None),
 

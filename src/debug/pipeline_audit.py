@@ -134,7 +134,7 @@ class PipelineAuditExporter:
             "sample_id": self._sample_id(sample),
             "repo": getattr(sample, "repo", ""),
             "parent_commit": getattr(sample, "parent_commit", ""),
-            "commit": getattr(sample, "commit", ""),
+            "commit": sample.commit_hash,
             "file_path": getattr(sample, "file_path", ""),
             "label": getattr(sample, "label", None),
             "source": getattr(sample, "source", ""),
@@ -146,7 +146,7 @@ class PipelineAuditExporter:
             "sample_id": self._sample_id(sample),
             "repo": getattr(sample, "repo", ""),
             "parent_commit": getattr(sample, "parent_commit", ""),
-            "commit": getattr(sample, "commit", ""),
+            "commit": sample.commit_hash,
             "file_path": getattr(sample, "file_path", ""),
             "label": getattr(sample, "label", None),
             "seed_lines": list(getattr(sample, "seed_lines", [])),
@@ -157,7 +157,7 @@ class PipelineAuditExporter:
             "sample_id": self._sample_id(sample),
             "repo": getattr(sample, "repo", ""),
             "parent_commit": getattr(sample, "parent_commit", ""),
-            "commit": getattr(sample, "commit", ""),
+            "commit": sample.commit_hash,
             "file_path": getattr(sample, "file_path", ""),
             "label": getattr(sample, "label", None),
             "function_name": getattr(sample, "function_name", None),
@@ -400,11 +400,7 @@ class PipelineAuditExporter:
     def _sample_id(sample):
         return "{}:{}:{}:{}:{}:{}".format(
             getattr(sample, "repo", ""),
-            getattr(
-                sample,
-                "parent_commit",
-                getattr(sample, "commit", "")
-            ),
+            getattr(sample, "commit_hash", ""),
             getattr(sample, "file_path", ""),
             getattr(sample, "function_start", None),
             getattr(sample, "function_end", None),
