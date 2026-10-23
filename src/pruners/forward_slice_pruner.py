@@ -1,90 +1,21 @@
-from collections import deque
-
-from src.pruners.base_pruner import BasePruner
-from src.pruners.utils import prune_cfg
+from src.pruners.utils import prune_cfg_preserving_virtual_paths
+from dataset.pruners.base_pruner import BasePruner
+from src.pruners.cfg_traversal import traverse_cfg
 
 
 class ForwardSlicePruner(BasePruner):
 
-    def prune(
-        self,
-        sample
-    ):
-
-        cfg = sample.cfg
-        seed_nodes = sample.seed_nodes
-
-        #
-        # Build forward graph.
-        #
-        graph = {}
-
-        for src, dst in cfg["edges"]:
-
-            graph.setdefault(
-                src,
-                []
-            ).append(dst)
-
-        #
-        # Restrict traversal to the target function.
-        #
-        function_nodes = set(
-            sample.function_nodes
+    def prune(self, sample):
+        reachable = traverse_cfg(
+            cfg=sample.cfg,
+            seed_nodes=sample.seed_nodes,
+            function_nodes=sample.function_nodes,
+            direction="forward",
         )
 
-        #
-        # Start from vulnerability seed nodes.
-        #
-        valid_seeds = (
-            set(seed_nodes)
-            &
-            set(function_nodes)
-        )
-        
-        keep = set(
-            valid_seeds
-        )
-        
-        queue = deque(
-            valid_seeds
-        )
-
-        #
-        # Forward traversal.
-        #
-        while queue:
-
-            node = queue.popleft()
-
-            for child in graph.get(
-                node,
-                []
-            ):
-
-                #
-                # Stay inside the function.
-                #
-                if child not in function_nodes:
-                    continue
-
-                if child in keep:
-                    continue
-
-                keep.add(
-                    child
-                )
-
-                queue.append(
-                    child
-                )
-
-        #
-        # Build the pruned CFG.
-        #
-        sample.pruned_cfg = prune_cfg(
-            cfg,
-            keep
+        sample.pruned_cfg = prune_cfg_preserving_virtual_paths(
+            sample.cfg,
+            reachable,
         )
 
         return sample

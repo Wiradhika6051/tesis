@@ -333,3 +333,64 @@ def prune_source_by_lines(
     return "\n".join(
         result
     )
+
+
+def prune_cfg_preserving_virtual_paths(cfg, keep_nodes):
+    """
+    Retain selected AST nodes and reconnect paths through virtual nodes.
+
+    Paths are contracted only through virtual nodes. Removed AST nodes
+    are not traversed, so this does not invent paths through omitted code.
+    """
+    node_by_id = {
+        node.node_id: node
+        for node in cfg["nodes"]
+    }
+
+    keep_nodes = set(keep_nodes)
+
+    adjacency = {node_id: set() for node_id in node_by_id}
+
+    for src, dst in cfg["edges"]:
+        if src in node_by_id and dst in node_by_id:
+            adjacency[src].add(dst)
+
+    retained_edges = set()
+
+    for src in keep_nodes:
+        if src not in node_by_id:
+            continue
+
+        queue = deque(adjacency[src])
+        visited_virtual = set()
+
+        while queue:
+            current = queue.popleft()
+
+            if current in keep_nodes:
+                if current != src:
+                    retained_edges.add((src, current))
+                continue
+
+            node = node_by_id[current]
+
+            if node.lineno >= 1:
+                # Do not contract paths through omitted AST statements.
+                continue
+
+            if current in visited_virtual:
+                continue
+
+            visited_virtual.add(current)
+            queue.extend(adjacency[current])
+
+    retained_nodes = [
+        node
+        for node in cfg["nodes"]
+        if node.node_id in keep_nodes
+    ]
+
+    return {
+        "nodes": retained_nodes,
+        "edges": sorted(retained_edges),
+    }

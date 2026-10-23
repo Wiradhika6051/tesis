@@ -9,6 +9,8 @@ class CFGBuilder:
 
         self.nodes = []
         self.edges = []
+        self.function_exit_stack = []
+        self.loop_context_stack = []
 
         self.counter = 0
 
@@ -230,21 +232,38 @@ class CFGBuilder:
         return text
 
     def process_class(self, stmt):
-
         class_node = self.add_node(stmt)
 
         if stmt.body:
+            body_start, _ = self.process_block(stmt.body)
 
-            start, end = self.process_block(stmt.body)
+            if body_start is not None:
+                self.edges.append((class_node, body_start))
 
-            if start is not None:
-                self.edges.append((class_node, start))
-
-            return class_node, end
-
+        # Do not let class-body exits flow into the next module statement.
         return class_node, class_node
 
-    def process_block(
+    def process_block(self, statements):
+        first_entry = None
+        previous_exit = None
+
+        for stmt in statements:
+            entry, exit_node = self.process_stmt(stmt)
+
+            if entry is None:
+                continue
+
+            if first_entry is None:
+                first_entry = entry
+
+            if previous_exit is not None:
+                self.edges.append((previous_exit, entry))
+
+            previous_exit = exit_node
+
+        return first_entry, previous_exit
+    
+    def old_process_block(
         self,
         statements
     ):
@@ -273,8 +292,36 @@ class CFGBuilder:
             previous_exit = exit
         
         return first_entry, previous_exit
-    
-    def process_function(
+
+    def process_function(self, stmt):
+        function_node = self.add_node(stmt)
+
+        if not stmt.body:
+            return function_node, function_node
+
+        function_exit = self.add_virtual_node("FUNCTION_EXIT")
+
+        # Nested functions get their own exit target.
+        self.function_exit_stack.append(function_exit)
+
+        try:
+            body_start, body_end = self.process_block(stmt.body)
+
+            if body_start is not None:
+                self.edges.append((function_node, body_start))
+
+            # Normal fall-through exits the function.
+            if body_end is not None:
+                self.edges.append((body_end, function_exit))
+
+        finally:
+            self.function_exit_stack.pop()
+
+        # The enclosing module/class block must continue from the
+        # declaration node, not from the function body's last statement.
+        return function_node, function_node
+
+    def old_process_function(
         self,
         stmt
     ):
@@ -381,7 +428,46 @@ class CFGBuilder:
 
         return if_node, merge_node
 
-    def process_while(
+    def process_while(self, stmt):
+        loop_node = self.add_node(stmt)
+
+        normal_exit = self.add_virtual_node("LOOP_NORMAL_EXIT")
+        loop_exit = self.add_virtual_node("LOOP_EXIT")
+
+        # The condition can terminate the loop normally.
+        self.edges.append((loop_node, normal_exit))
+
+        self.loop_context_stack.append({
+            "break_target": loop_exit,
+            "continue_target": loop_node,
+        })
+
+        try:
+            if stmt.body:
+                body_start, body_end = self.process_block(stmt.body)
+
+                if body_start is not None:
+                    self.edges.append((loop_node, body_start))
+
+                if body_end is not None:
+                    self.edges.append((body_end, loop_node))
+
+            if stmt.orelse:
+                else_start, else_end = self.process_block(stmt.orelse)
+
+                self.edges.append((normal_exit, else_start))
+
+                if else_end is not None:
+                    self.edges.append((else_end, loop_exit))
+            else:
+                self.edges.append((normal_exit, loop_exit))
+
+        finally:
+            self.loop_context_stack.pop()
+
+        return loop_node, loop_exit
+
+    def old_process_while(
         self,
         stmt
     ):
@@ -416,7 +502,47 @@ class CFGBuilder:
             )
         )
         return while_node, exit_node
-    def process_for(
+    
+    def process_for(self, stmt):
+        loop_node = self.add_node(stmt)
+
+        normal_exit = self.add_virtual_node("LOOP_NORMAL_EXIT")
+        loop_exit = self.add_virtual_node("LOOP_EXIT")
+
+        # The iterator may be exhausted.
+        self.edges.append((loop_node, normal_exit))
+
+        self.loop_context_stack.append({
+            "break_target": loop_exit,
+            "continue_target": loop_node,
+        })
+
+        try:
+            if stmt.body:
+                body_start, body_end = self.process_block(stmt.body)
+
+                if body_start is not None:
+                    self.edges.append((loop_node, body_start))
+
+                if body_end is not None:
+                    self.edges.append((body_end, loop_node))
+
+            if stmt.orelse:
+                else_start, else_end = self.process_block(stmt.orelse)
+
+                self.edges.append((normal_exit, else_start))
+
+                if else_end is not None:
+                    self.edges.append((else_end, loop_exit))
+            else:
+                self.edges.append((normal_exit, loop_exit))
+
+        finally:
+            self.loop_context_stack.pop()
+
+        return loop_node, loop_exit
+    
+    def old_process_for(
         self,
         stmt
     ):
@@ -500,32 +626,42 @@ class CFGBuilder:
 
         return node, node
    
-    def process_return(
-        self,
-        stmt
-    ):
-
+    def process_return(self, stmt):
         node = self.add_node(stmt)
 
-        return node, node
+        if self.function_exit_stack:
+            self.edges.append(
+                (node, self.function_exit_stack[-1])
+            )
 
-    def process_break(
-        self,
-        stmt
-    ):
+        # No ordinary fall-through after return.
+        return node, None
 
+    def process_break(self, stmt):
         node = self.add_node(stmt)
 
-        return node, node
-    
-    def process_continue(
-        self,
-        stmt
-    ):
+        if not self.loop_context_stack:
+            # Invalid outside a loop
+            return node, None
 
+        loop_context = self.loop_context_stack[-1]
+        self.edges.append((node, loop_context["break_target"]))
+
+        # break bypasses the loop's else clause.
+        return node, None
+
+
+    def process_continue(self, stmt):
         node = self.add_node(stmt)
 
-        return node, node
+        if not self.loop_context_stack:
+            return node, None
+
+        loop_context = self.loop_context_stack[-1]
+        self.edges.append((node, loop_context["continue_target"]))
+
+        # continue transfers control to the next iteration.
+        return node, None
     
     def process_try(
         self,
@@ -616,6 +752,8 @@ class CFGBuilder:
         self.source = sample.source
         self.nodes = []
         self.edges = []
+        self.function_exit_stack = []
+        self.loop_context_stack = []
         self.counter = 0
         self.quality_stats["total_files"] += 1
         

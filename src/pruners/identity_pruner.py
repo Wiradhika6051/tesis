@@ -1,5 +1,5 @@
 from src.pruners.base_pruner import BasePruner
-from src.pruners.utils import prune_cfg
+from src.pruners.utils import prune_cfg_preserving_virtual_paths
 
 
 class IdentityPruner(BasePruner):
@@ -19,7 +19,7 @@ class IdentityPruner(BasePruner):
         #
         # Build the pruned CFG.
         #
-        sample.pruned_cfg = prune_cfg(
+        sample.pruned_cfg = prune_cfg_preserving_virtual_paths(
             sample.cfg,
             keep
         )
