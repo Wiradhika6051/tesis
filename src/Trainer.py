@@ -184,6 +184,14 @@ class Trainer:
             print(f"\n[DEBUG] Batch type: {type(batch)}")
             print(f"[DEBUG] Batch size: {len(batch)}")
             print(f"[DEBUG] Sample IDs: {sample_id if sample_id else 'Not provided'}")
+            print("Graph type:", type(graph))
+            print("Graph attributes:", graph)
+            print("Graph keys:", getattr(graph, "keys", lambda: [])())
+            print("Has x:", getattr(graph, "x", None) is not None)
+            print(
+                "Has edge_index:",
+                getattr(graph, "edge_index", None) is not None
+            )
 
             validate_graph(graph, sample_id=sample_id)
             logits = self.model(
