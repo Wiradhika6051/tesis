@@ -262,37 +262,7 @@ class CFGBuilder:
             previous_exit = exit_node
 
         return first_entry, previous_exit
-    
-    def old_process_block(
-        self,
-        statements
-    ):
-
-        first_entry = None
-        previous_exit = None
-        
-        for stmt in statements:
-        
-            entry, exit = self.process_stmt(stmt)
-        
-            if entry is None:
-                continue
-            
-            if first_entry is None:
-                first_entry = entry
-        
-            if previous_exit is not None:
-                self.edges.append(
-                    (
-                        previous_exit,
-                        entry
-                    )
-                )
-        
-            previous_exit = exit
-        
-        return first_entry, previous_exit
-
+  
     def process_function(self, stmt):
         function_node = self.add_node(stmt)
 
@@ -320,32 +290,6 @@ class CFGBuilder:
         # The enclosing module/class block must continue from the
         # declaration node, not from the function body's last statement.
         return function_node, function_node
-
-    def old_process_function(
-        self,
-        stmt
-    ):
-
-        function = self.add_node(stmt)
-
-        if stmt.body:
-
-            start, end = self.process_block(
-                stmt.body
-            )
-
-            if start is not None:
-
-                self.edges.append(
-                    (
-                        function,
-                        start
-                    )
-                )
-
-            return function, end
-
-        return function, function
         
     def process_if(
         self,
@@ -466,43 +410,7 @@ class CFGBuilder:
             self.loop_context_stack.pop()
 
         return loop_node, loop_exit
-
-    def old_process_while(
-        self,
-        stmt
-    ):
-        while_node = self.add_node(stmt)
-        exit_node = self.add_virtual_node(
-            "LOOP_EXIT"
-        )
-        if stmt.body:
-        
-            body_start, body_end = self.process_block(
-                stmt.body
-            )
-            self.edges.append(
-                (
-                    while_node,
-                    body_start
-                )
-            )
-            self.edges.append(
-                (
-                    body_end,
-                    while_node
-                )
-            )
-        #
-        # Loop exit
-        #
-        self.edges.append(
-            (
-                while_node,
-                exit_node
-            )
-        )
-        return while_node, exit_node
-    
+   
     def process_for(self, stmt):
         loop_node = self.add_node(stmt)
 
@@ -541,50 +449,7 @@ class CFGBuilder:
             self.loop_context_stack.pop()
 
         return loop_node, loop_exit
-    
-    def old_process_for(
-        self,
-        stmt
-    ):
-
-        loop = self.add_node(stmt)
-
-        exit_node = self.add_virtual_node(
-            "LOOP_EXIT"
-        )
-
-        if stmt.body:
-
-            start, end = self.process_block(
-                stmt.body
-            )
-
-            self.edges.append(
-                (
-                    loop,
-                    start
-                )
-            )
-
-            self.edges.append(
-                (
-                    end,
-                    loop
-                )
-            )
-
-        #
-        # loop exit
-        #
-        self.edges.append(
-            (
-                loop,
-                exit_node
-            )
-        )
-
-        return loop, exit_node
-   
+     
     def process_stmt(
         self,
         stmt

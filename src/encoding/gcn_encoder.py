@@ -84,19 +84,75 @@ class GCNEncoder:
         #
         # Encode CFG edges.
         #
-        if edges:
+        nodes = sample.pruned_cfg.get("nodes", [])
+        edges = sample.pruned_cfg.get("edges", [])
 
+        # Original CFG node ID -> row index in node features
+        node_to_idx = {
+            node.node_id: idx
+            for idx, node in enumerate(nodes)
+        }
+
+        edge_pairs = [
+            (node_to_idx[src], node_to_idx[dst])
+            for src, dst in edges
+            if src in node_to_idx and dst in node_to_idx
+        ]
+        # debug
+        # Original CFG node IDs, in the order used to create node features
+        node_ids = [node.node_id for node in nodes]
+        node_id_set = set(node_ids)
+        num_nodes = len(nodes)
+
+        # Check whether node IDs match feature-row positions: 0, 1, ..., N-1
+        ids_are_contiguous = node_ids == list(range(num_nodes))
+
+        # Check whether every edge references a retained node
+        invalid_endpoints = [
+            (src, dst)
+            for src, dst in edges
+            if src not in node_id_set or dst not in node_id_set
+        ]
+
+        # Check whether raw edge IDs are valid feature-row indices
+        out_of_range_edges = [
+            (src, dst)
+            for src, dst in edges
+            if src < 0 or dst < 0 or src >= num_nodes or dst >= num_nodes
+        ]
+
+        print("\n=== Pruned CFG Node-ID Diagnostic ===")
+        print(f"Number of nodes: {num_nodes}")
+        print(f"Number of edges: {len(edges)}")
+        print(f"Node IDs contiguous and ordered: {ids_are_contiguous}")
+        print(f"First 20 node IDs: {node_ids[:20]}")
+        print(f"Edges referencing missing nodes: {invalid_endpoints[:10]}")
+        print(f"Edges with out-of-range indices: {out_of_range_edges[:10]}")
+        print("=====================================\n")
+        # debug end
+        if edge_pairs:
             edge_index = torch.tensor(
-                edges,
-                dtype=torch.long
+                edge_pairs,
+                dtype=torch.long,
             ).t().contiguous()
-
         else:
-
             edge_index = torch.empty(
                 (2, 0),
-                dtype=torch.long
+                dtype=torch.long,
             )
+        # if edges:
+
+        #     edge_index = torch.tensor(
+        #         edges,
+        #         dtype=torch.long
+        #     ).t().contiguous()
+
+        # else:
+
+        #     edge_index = torch.empty(
+        #         (2, 0),
+        #         dtype=torch.long
+        #     )
 
         #
         # Construct PyG graph.
