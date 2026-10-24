@@ -181,6 +181,10 @@ class Trainer:
             #
             # Forward pass
             #
+            print(f"\n[DEBUG] Batch type: {type(batch)}")
+            print(f"[DEBUG] Batch size: {len(batch)}")
+            print(f"[DEBUG] Sample IDs: {sample_id if sample_id else 'Not provided'}")
+
             validate_graph(graph, sample_id=sample_id)
             logits = self.model(
                 graph
