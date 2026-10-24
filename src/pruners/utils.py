@@ -1,5 +1,5 @@
 import re
-import copy
+from collections import deque
 
 from dataset.cfg.cfg_node import CFGNode
 CFG_STATS = {
