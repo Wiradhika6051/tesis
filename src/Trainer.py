@@ -162,6 +162,8 @@ class Trainer:
             graph = batch[0]
     
             labels = batch[1]
+
+            sample_id = batch[3]
     
             graph = graph.to(
                 self.device
@@ -179,6 +181,7 @@ class Trainer:
             #
             # Forward pass
             #
+            validate_graph(graph, sample_id=sample_id)
             logits = self.model(
                 graph
             )
@@ -283,3 +286,64 @@ class Trainer:
         )
 
         return checkpoint
+        
+import torch
+
+def validate_graph(graph, sample_id=None):
+    x = graph.x
+    edge_index = graph.edge_index
+
+    prefix = f"[GRAPH VALIDATION] sample={sample_id}"
+
+    assert x is not None, f"{prefix}: x is None"
+    assert edge_index is not None, f"{prefix}: edge_index is None"
+
+    assert x.ndim == 2, (
+        f"{prefix}: x must be 2D, got {tuple(x.shape)}"
+    )
+
+    num_nodes = x.size(0)
+
+    assert edge_index.ndim == 2, (
+        f"{prefix}: edge_index must be 2D, "
+        f"got {tuple(edge_index.shape)}"
+    )
+    assert edge_index.size(0) == 2, (
+        f"{prefix}: expected edge_index shape [2, E], "
+        f"got {tuple(edge_index.shape)}"
+    )
+    assert edge_index.dtype == torch.long, (
+        f"{prefix}: edge_index must be torch.long, "
+        f"got {edge_index.dtype}"
+    )
+
+    # Inspect indices on CPU to avoid hiding the original error
+    # behind another CUDA operation.
+    edges = edge_index.detach().cpu()
+
+    if edges.numel() > 0:
+        min_idx = edges.min().item()
+        max_idx = edges.max().item()
+
+        assert min_idx >= 0, (
+            f"{prefix}: negative node index {min_idx}"
+        )
+        assert max_idx < num_nodes, (
+            f"{prefix}: edge index {max_idx} exceeds "
+            f"num_nodes={num_nodes}"
+        )
+
+    # Check feature values on CPU too.
+    features = x.detach().cpu()
+
+    assert torch.isfinite(features).all().item(), (
+        f"{prefix}: x contains NaN or Inf"
+    )
+
+    print(
+        f"{prefix}: OK | "
+        f"nodes={num_nodes}, "
+        f"edges={edge_index.size(1)}, "
+        f"features={tuple(x.shape)}, "
+        f"device={x.device}"
+    )
