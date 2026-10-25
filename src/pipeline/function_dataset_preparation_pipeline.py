@@ -1,4 +1,5 @@
 
+import copy
 from collections import Counter, defaultdict
 from tqdm import tqdm
 
@@ -91,11 +92,13 @@ class FunctionDatasetPreparationPipeline:
         sample=None,
         pair_id=None,
         details=None,
+        event_type="sample_failure",
     ):
-        """Record a sample-level or pair-level audit event."""
+        """Record a sample-level failure or explicit exclusion event."""
         metadata = self._sample_metadata(sample)
 
         event = {
+            "event_type": event_type,
             "stage": stage,
             "reason": reason,
             **metadata,
@@ -128,7 +131,13 @@ class FunctionDatasetPreparationPipeline:
         })
 
     def _record_stage(self, stage_name, samples):
-        """Record sample and pair counts for a preparation stage."""
+        """Record counts for the exact collection supplied to this method.
+
+        Stage snapshots in the existing pipeline describe the collection
+        retained at that stage boundary. For pair-validation stages, a
+        separate ``*_before_pair_validation`` snapshot records the input
+        collection before incomplete pairs are removed.
+        """
         samples = list(samples)
 
         labels = Counter(
@@ -139,6 +148,10 @@ class FunctionDatasetPreparationPipeline:
         self.audit["stages"][stage_name] = {
             "sample_count": len(samples),
             "pair_count": self._unique_pair_count(samples),
+            "missing_pair_id_count": sum(
+                1 for sample in samples
+                if getattr(sample, "function_pair_id", None) is None
+            ),
             "positive_count": labels.get(1, 0),
             "negative_count": labels.get(0, 0),
             "other_label_count": sum(
@@ -211,6 +224,7 @@ class FunctionDatasetPreparationPipeline:
                     stage=stage_name,
                     reason="missing_pair_id",
                     sample=sample,
+                    event_type="sample_exclusion",
                 )
                 continue
 
@@ -257,6 +271,7 @@ class FunctionDatasetPreparationPipeline:
                         for member in members
                     ],
                 },
+                event_type="pair_exclusion",
             )
 
         self.audit["counts"][
@@ -264,6 +279,10 @@ class FunctionDatasetPreparationPipeline:
         ] = dropped_pair_count
 
         return retained
+
+    def audit_snapshot(self):
+        """Return an independent audit snapshot for the current split."""
+        return copy.deepcopy(self.audit)
 
     # ==========================================================
     # 4. PIPELINE
@@ -349,6 +368,10 @@ class FunctionDatasetPreparationPipeline:
             )
         )
 
+        self._record_stage(
+            "pairing_before_pair_validation",
+            paired_function_samples,
+        )
         paired_function_samples = self._retain_complete_pairs(
             paired_function_samples,
             "pairing",
@@ -411,6 +434,10 @@ class FunctionDatasetPreparationPipeline:
 
             cfg_samples.append(sample)
 
+        self._record_stage(
+            "cfg_construction_before_pair_validation",
+            cfg_samples,
+        )
         cfg_samples = self._retain_complete_pairs(
             cfg_samples,
             "cfg_construction",
@@ -459,6 +486,10 @@ class FunctionDatasetPreparationPipeline:
 
             localized_samples.append(sample)
 
+        self._record_stage(
+            "cfg_localization_before_pair_validation",
+            localized_samples,
+        )
         localized_samples = self._retain_complete_pairs(
             localized_samples,
             "cfg_localization",
@@ -521,6 +552,10 @@ class FunctionDatasetPreparationPipeline:
             sample.seed_nodes = sorted(valid_seeds)
             scoped_samples.append(sample)
 
+        self._record_stage(
+            "function_scope_before_pair_validation",
+            scoped_samples,
+        )
         scoped_samples = self._retain_complete_pairs(
             scoped_samples,
             "function_scope",
@@ -570,6 +605,10 @@ class FunctionDatasetPreparationPipeline:
 
             prepared_samples.append(sample)
 
+        self._record_stage(
+            "pruning_before_pair_validation",
+            prepared_samples,
+        )
         prepared_samples = self._retain_complete_pairs(
             prepared_samples,
             "pruning",

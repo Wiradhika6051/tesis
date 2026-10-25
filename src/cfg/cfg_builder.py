@@ -210,10 +210,11 @@ class CFGBuilder:
         #
         # Normal statements.
         #
-        text = ast.get_source_segment(
-            self.source,
-            ast_node
-        )
+        # text = ast.get_source_segment(
+        #     self.source,
+        #     ast_node
+        # )
+        text = self.get_source_segment_compat(ast_node)
 
         if not text:
             return type(ast_node).__name__
@@ -1072,10 +1073,7 @@ class CFGBuilder:
         max_chars=512
     ):
 
-        text = ast.get_source_segment(
-            self.source,
-            expression
-        )
+        text = self.get_source_segment_compat(expression)
 
         if not text:
 
@@ -1140,6 +1138,38 @@ class CFGBuilder:
             with_node,
             with_node
         )
+    def get_source_segment_compat(self, ast_node):
+        """Get source text for an AST node, compatible with Python 3.7+."""
+        if hasattr(ast, "get_source_segment"):
+            return ast.get_source_segment(self.source, ast_node)
+
+        if not hasattr(ast_node, "lineno"):
+            return ""
+
+        lines = self.source.splitlines(keepends=True)
+
+        start_line = ast_node.lineno - 1
+        end_line = getattr(ast_node, "end_lineno", None)
+
+        if end_line is None:
+            # Python 3.7 AST nodes do not generally expose end_lineno.
+            # Fall back to the source line containing the node.
+            return lines[start_line].strip() if start_line < len(lines) else ""
+
+        start_col = getattr(ast_node, "col_offset", 0)
+        end_col = getattr(ast_node, "end_col_offset", 0)
+
+        if start_line >= len(lines) or end_line > len(lines):
+            return ""
+
+        if start_line == end_line - 1:
+            return lines[start_line][start_col:end_col]
+
+        result = [lines[start_line][start_col:]]
+        result.extend(lines[start_line + 1:end_line - 1])
+        result.append(lines[end_line - 1][:end_col])
+
+        return "".join(result).strip()
     
 if __name__ == "__main__":
 
