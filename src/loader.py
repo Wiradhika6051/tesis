@@ -175,50 +175,34 @@ def load_samples(
     return samples
 
 
-def build_samples(
-    change: GitChange
-) -> List[Sample]:
+def build_samples(change: GitChange) -> List[Sample]:
+    fix_commit_hash = change.commit_hash
 
     vulnerable = Sample(
-
         repo=change.repo,
-
         parent_commit=change.parent_commit,
-
         commit_hash=change.parent_commit,
-
         file_path=change.file_path,
-
         source=change.previous_source,
-
         diff=change.diff,
-
         label=1,
-
+        fix_commit_hash=fix_commit_hash,
+        revision="vulnerable",
     )
 
     fixed = Sample(
-
         repo=change.repo,
-
         parent_commit=change.parent_commit,
-
         commit_hash=change.commit_hash,
-
         file_path=change.file_path,
-
         source=change.current_source,
-
         diff=change.diff,
-
         label=0,
-
+        fix_commit_hash=fix_commit_hash,
+        revision="fixed",
     )
 
-    return [
-        vulnerable,
-        fixed
-    ]
+    return [vulnerable, fixed]
 
 def extract_file_diff(
     commit_diff,
