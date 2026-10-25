@@ -39,7 +39,7 @@ import torch.nn.functional as F
 
 from src.encoding.gcn_encoder import GCNEncoder
 from src.encoding.vudenc_vectorizer import VUDENCVectorizer
-from vocabulary import build_cfg_vocab
+from src.vocabulary import build_cfg_vocab
 
 
 # ---------------------------------------------------------------------------
