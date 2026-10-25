@@ -473,7 +473,7 @@ def run_phase4_smoke_test(
     The test split is prepared and encoded for compatibility checks but is not
     used for training or validation metrics.
     """
-    from PhpNetGraph import PhpNetGraph
+    from src.model.PhpNetGraph import PhpNetGraph
 
     set_seed(seed)
     output_dir = Path(output_dir)
