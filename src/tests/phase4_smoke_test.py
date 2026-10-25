@@ -37,8 +37,8 @@ from typing import Callable, Optional
 import torch
 import torch.nn.functional as F
 
-from gcn_encoder import GCNEncoder
-from vudenc_vectorizer import VUDENCVectorizer
+from src.encoding.gcn_encoder import GCNEncoder
+from src.encoding.vudenc_vectorizer import VUDENCVectorizer
 from vocabulary import build_cfg_vocab
 
 
