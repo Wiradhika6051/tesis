@@ -36,15 +36,24 @@ class PipelineAuditExporter:
             ]
         )
 
+    def export_paired_function_samples(self, samples):
+        self._export_jsonl(
+            "03_paired_function_samples.jsonl",
+            [
+                self._serialize_function_sample(sample)
+                for sample in samples
+            ],
+        )
+
     def export_function_samples(self, samples):
         self._export_jsonl(
-            "03_function_samples.jsonl",
+            "04_function_samples.jsonl",
             [self._serialize_function_sample(s) for s in samples]
         )
 
     def export_cfg(self, samples):
         self._export_jsonl(
-            "04_cfg.jsonl",
+            "05_cfg.jsonl",
             [
                 self._serialize_cfg_sample(s)
                 for s in samples
@@ -54,7 +63,7 @@ class PipelineAuditExporter:
 
     def export_localized(self, samples):
         self._export_jsonl(
-            "05_seed_nodes.jsonl",
+            "06_seed_nodes.jsonl",
             [
                 self._serialize_localized_sample(s)
                 for s in samples
@@ -64,12 +73,12 @@ class PipelineAuditExporter:
 
     def export_function_scope(self, samples):
         self._export_jsonl(
-            "06_function_scope.jsonl",
+            "07_function_scope.jsonl",
             [self._serialize_function_scope(s) for s in samples]
         )
 
     def export_pruned(self, samples, strategy_name):
-        filename = "07_pruned_cfg_{}.jsonl".format(
+        filename = "08_pruned_cfg_{}.jsonl".format(
             self._safe_name(strategy_name)
         )
 
@@ -84,7 +93,7 @@ class PipelineAuditExporter:
 
     def export_tokens(self, samples):
         self._export_jsonl(
-            "08_tokens.jsonl",
+            "09_tokens.jsonl",
             [
                 self._serialize_tokens(s)
                 for s in samples
@@ -114,11 +123,11 @@ class PipelineAuditExporter:
             if record is not None:
                 records.append(record)
 
-        self._export_jsonl("09_word2vec_vectors.jsonl", records)
+        self._export_jsonl("10_word2vec_vectors.jsonl", records)
 
     def export_encoded(self, samples, architecture="bilstm"):
         self._export_jsonl(
-            "10_encoded_samples.jsonl",
+            "11_encoded_samples.jsonl",
             [
                 self._serialize_encoded(s, architecture)
                 for s in samples
