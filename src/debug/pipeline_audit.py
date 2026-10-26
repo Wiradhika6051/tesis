@@ -169,6 +169,8 @@ class PipelineAuditExporter:
             "commit": sample.commit_hash,
             "file_path": getattr(sample, "file_path", ""),
             "label": getattr(sample, "label", None),
+            "function_pair_id": getattr(sample, "function_pair_id", None),
+            "pair_role": getattr(sample, "pair_role", None),
             "function_name": getattr(sample, "function_name", None),
             "function_start": getattr(sample, "function_start", None),
             "function_end": getattr(sample, "function_end", None),
