@@ -420,7 +420,7 @@ def _limit_base_samples(samples, limit: Optional[int], split_name: str):
 def _check_no_commit_leakage(base_splits):
     """Fail if the same identifiable fixing change occurs in multiple splits."""
     def keys(samples):
-        return {key for sample in samples if (key := _commit_key(sample)) is not None}
+        return {_commit_key(sample) for sample in samples if (_commit_key(sample)) is not None}
 
     split_names = list(base_splits)
     overlaps = []

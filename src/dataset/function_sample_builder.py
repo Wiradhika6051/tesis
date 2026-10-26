@@ -1,6 +1,8 @@
 import ast
 import copy
 
+from src.cfg.cfg_builder import CFGBuilder
+
 
 class FunctionSampleBuilder:
 
@@ -13,7 +15,16 @@ class FunctionSampleBuilder:
         functions = self._find_functions(tree, sample.source)
         changed_seed_lines = set(sample.seed_lines or [])
         function_samples = []
-
+        print("SOURCE:\n", sample.source)
+        print("SAMPLE SEED LINES:", sample.seed_lines)
+        print("FUNCTIONS:")
+        for function in functions:
+            print(
+                function["qualified_name"],
+                function["start"],
+                function["end"],
+                function["body_lines"],
+            )
         for function in functions:
             changed_lines = sorted(
                 changed_seed_lines & function["body_lines"]
@@ -49,7 +60,15 @@ class FunctionSampleBuilder:
 
                 if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     start = child.lineno
-                    end = getattr(child, "end_lineno", start)
+                    
+                    end = max(
+                        (
+                            getattr(descendant, "lineno", start)
+                            for descendant in ast.walk(child)
+                            if hasattr(descendant, "lineno")
+                        ),
+                        default=start,
+                    )
 
                     nested_spans = []
 
@@ -79,14 +98,16 @@ class FunctionSampleBuilder:
                         body_lines.difference_update(
                             range(nested_start, nested_end + 1)
                         )
-
+                    builder = CFGBuilder()
+                    builder.source = source
                     functions.append({
                         "name": child.name,
                         "qualified_name": ".".join(scope + [child.name]),
                         "start": start,
                         "end": end,
                         "body_lines": body_lines,
-                        "source": ast.get_source_segment(source, child) or "",
+                        # "source": ast.get_source_segment_(source, child) or "",
+                        "source": builder.get_source_segment_compat(child) or "",
                         "is_async": isinstance(child, ast.AsyncFunctionDef),
                     })
 
