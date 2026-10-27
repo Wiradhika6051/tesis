@@ -369,3 +369,13 @@ def test_scope_boundary_blocks_path_to_other_function():
     assert result == {1, 2}
     assert 3 not in result
     assert 4 not in result
+
+
+@pytest.mark.parametrize("hops", [-1, 1.5, "2"])
+def test_invalid_hop_budget_is_rejected(
+    cfg, function_nodes, hops
+):
+    with pytest.raises(ValueError):
+        traverse(
+            cfg, [3], function_nodes, "forward", hops=hops
+        )

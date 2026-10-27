@@ -51,10 +51,19 @@ class GCNEncoder:
             node_types.append(node_type_id)
 
         # Map original CFG node IDs to feature-row indices.
-        node_to_idx = {
-            node.node_id: idx
-            for idx, node in enumerate(nodes)
-        }
+        # Build a one-to-one mapping from original CFG node IDs
+        # to contiguous tensor indices: 0, 1, 2, ...
+        node_to_idx = {}
+
+        for idx, node in enumerate(nodes):
+            node_id = node.node_id
+
+            if node_id in node_to_idx:
+                raise ValueError(
+                    f"Pruned CFG contains duplicate node ID: {node_id}"
+                )
+
+            node_to_idx[node_id] = idx
 
         # Verify that every edge references a retained node.
         invalid_edges = [
@@ -88,6 +97,9 @@ class GCNEncoder:
 
         # Construct PyG graph.
         graph = Data(edge_index=edge_index)
+        # Explicitly preserve the number of nodes, including isolated nodes
+        # and empty graphs. PyG cannot reliably infer this from edge_index.
+        graph.num_nodes = len(nodes)
 
         # Variable-length Word2Vec sequence for each CFG node.
         graph.node_token_vectors = node_token_vectors
