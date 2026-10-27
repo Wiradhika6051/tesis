@@ -161,6 +161,44 @@ class FunctionDatasetPreparationPipeline:
             ),
         }
 
+    def _record_localization_summary(self, samples):
+        """Record localization outcomes, including excluded samples.
+
+        ``samples`` must contain every sample that entered CFG localization,
+        before any localization-based exclusion or pair validation.
+        """
+        samples = list(samples)
+        statuses = Counter(
+            getattr(sample, "localization_status", None)
+            for sample in samples
+        )
+
+        total = len(samples)
+        failed = statuses.get("failed", 0)
+        partial = statuses.get("partial", 0)
+        no_changed_lines = statuses.get("no_changed_lines", 0)
+        success = statuses.get("success", 0)
+        unmatched_line_count = sum(
+            len(getattr(sample, "unmatched_seed_lines", None) or [])
+            for sample in samples
+        )
+
+        self.audit["stages"]["cfg_localization_outcomes"] = {
+            "sample_count": total,
+            "success_count": success,
+            "partial_count": partial,
+            "failed_count": failed,
+            "no_changed_lines_count": no_changed_lines,
+            "unknown_status_count": total - success - partial - failed - no_changed_lines,
+            "excluded_count": failed + no_changed_lines,
+            "unmatched_changed_line_count": unmatched_line_count,
+            "failure_rate": failed / float(total) if total else 0.0,
+            "partial_rate": partial / float(total) if total else 0.0,
+            "no_changed_lines_rate": (
+                no_changed_lines / float(total) if total else 0.0
+            ),
+        }
+
     # ==========================================================
     # 3. COMPLETE-PAIR VALIDATION
     # ==========================================================
@@ -458,33 +496,135 @@ class FunctionDatasetPreparationPipeline:
         # ------------------------------------------------------
 
         localized_samples = []
+        localization_outcomes = []
 
         for sample in tqdm(
             cfg_samples,
             desc="CFG localization",
         ):
             sample = self.cfg_localizer.localize(sample)
+            localization_outcomes.append(sample)
 
-            if not getattr(sample, "seed_nodes", None):
+            status = getattr(sample, "localization_status", None)
+            unmatched_lines = list(
+                getattr(sample, "unmatched_seed_lines", None) or []
+            )
+            seed_lines = list(getattr(sample, "seed_lines", None) or [])
+            seed_nodes = list(getattr(sample, "seed_nodes", None) or [])
+            exclusion_reason = getattr(sample, "exclusion_reason", None)
+
+            # Record every localization outcome before excluding anything.
+            if status == "partial":
                 self._record_event(
                     stage="cfg_localization",
-                    reason="no_seed_nodes",
+                    reason="unmatched_changed_lines",
                     sample=sample,
                     details={
-                        "seed_lines": list(
-                            getattr(sample, "seed_lines", None)
-                            or []
-                        ),
+                        "unmatched_seed_lines": unmatched_lines,
+                        "seed_line_count": len(set(seed_lines)),
+                        "valid_seed_node_count": len(seed_nodes),
+                    },
+                    event_type="localization_warning",
+                )
+
+            elif status == "failed":
+                self._record_event(
+                    stage="cfg_localization",
+                    reason="no_valid_seed_nodes",
+                    sample=sample,
+                    details={
+                        "unmatched_seed_lines": unmatched_lines,
+                        "seed_lines": seed_lines,
                         "cfg_node_count": len(
                             (getattr(sample, "cfg", None) or {}).get(
                                 "nodes", []
                             )
                         ),
                     },
+                    event_type="sample_exclusion",
+                )
+                continue
+
+            elif status == "no_changed_lines":
+                self._record_event(
+                    stage="cfg_localization",
+                    reason="no_changed_lines",
+                    sample=sample,
+                    details={"seed_lines": seed_lines},
+                    event_type="sample_exclusion",
+                )
+                continue
+
+            # Backward compatibility with a localizer that exposes only
+            # exclusion_reason / seed_nodes and has no status metadata.
+            elif status is None:
+                if exclusion_reason is not None:
+                    self._record_event(
+                        stage="cfg_localization",
+                        reason=str(exclusion_reason),
+                        sample=sample,
+                        details={
+                            "seed_lines": seed_lines,
+                            "seed_node_count": len(seed_nodes),
+                        },
+                        event_type="sample_exclusion",
+                    )
+                    continue
+
+                if not seed_nodes:
+                    self._record_event(
+                        stage="cfg_localization",
+                        reason="no_seed_nodes",
+                        sample=sample,
+                        details={
+                            "seed_lines": seed_lines,
+                            "cfg_node_count": len(
+                                (getattr(sample, "cfg", None) or {}).get(
+                                    "nodes", []
+                                )
+                            ),
+                        },
+                        event_type="sample_exclusion",
+                    )
+                    continue
+
+            # Respect explicit exclusions even if a custom localizer also
+            # provides a status field.
+            if exclusion_reason is not None:
+                self._record_event(
+                    stage="cfg_localization",
+                    reason=str(exclusion_reason),
+                    sample=sample,
+                    details={
+                        "localization_status": status,
+                        "seed_lines": seed_lines,
+                        "seed_node_count": len(seed_nodes),
+                    },
+                    event_type="sample_exclusion",
+                )
+                continue
+
+            if not seed_nodes:
+                self._record_event(
+                    stage="cfg_localization",
+                    reason="no_seed_nodes",
+                    sample=sample,
+                    details={
+                        "localization_status": status,
+                        "seed_lines": seed_lines,
+                        "cfg_node_count": len(
+                            (getattr(sample, "cfg", None) or {}).get(
+                                "nodes", []
+                            )
+                        ),
+                    },
+                    event_type="sample_exclusion",
                 )
                 continue
 
             localized_samples.append(sample)
+
+        self._record_localization_summary(localization_outcomes)
 
         self._record_stage(
             "cfg_localization_before_pair_validation",
@@ -636,8 +776,8 @@ class FunctionDatasetPreparationPipeline:
         for stage, metrics in self.audit["stages"].items():
             print(
                 f"  {stage}: "
-                f"samples={metrics['sample_count']}, "
-                f"pairs={metrics['pair_count']}"
+                f"samples={metrics.get('sample_count', 0)}, "
+                f"pairs={metrics.get('pair_count', 0)}"
             )
 
         print("Pipeline exclusion summary:")

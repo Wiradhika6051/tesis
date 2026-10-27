@@ -52,18 +52,19 @@ def make_sample(seed_lines, nodes, function_start, function_end):
     )
 
 
-def test_seed_line_maps_to_smallest_matching_node():
+def test_seed_line_maps_to_every_matching_node():
     nodes = [
         make_node(0, 1, 5, "FunctionDef"),
         make_node(1, 2, 2, "Assign"),
         make_node(2, 3, 3, "Return"),
     ]
+
     sample = make_sample([2], nodes, 1, 5)
 
     result = LineCFGLocalizer().localize(sample)
 
-    assert result.line_to_node == {2: [1]}
-    assert result.seed_nodes == [1]
+    assert result.line_to_node == {2: [0, 1]}
+    assert result.seed_nodes == [0, 1]
 
 
 def test_virtual_nodes_are_not_selected():
@@ -109,3 +110,100 @@ def test_seed_with_no_matching_cfg_node_is_empty():
 
     assert result.line_to_node == {2: []}
     assert result.seed_nodes == []
+
+
+
+def test_seed_line_maps_to_every_matching_node():
+    nodes = [
+        make_node(0, 1, 5, "FunctionDef"),
+        make_node(1, 2, 2, "Assign"),
+        make_node(2, 3, 3, "Return"),
+    ]
+
+    sample = make_sample([2], nodes, 1, 5)
+
+    result = LineCFGLocalizer().localize(sample)
+
+    assert result.line_to_node == {2: [0, 1]}
+    assert result.seed_nodes == [0, 1]
+
+
+
+def test_seed_nodes_are_deduplicated_across_changed_lines():
+    nodes = [
+        make_node(0, 1, 5, "FunctionDef"),
+        make_node(1, 2, 3, "If"),
+        make_node(2, 2, 2, "Assign"),
+        make_node(3, 3, 3, "Assign"),
+    ]
+
+    sample = make_sample([2, 3, 2], nodes, 1, 5)
+
+    result = LineCFGLocalizer().localize(sample)
+
+    assert result.line_to_node == {
+        2: [0, 1, 2],
+        3: [0, 1, 3],
+    }
+    assert result.seed_nodes == [0, 1, 2, 3]
+
+
+def test_virtual_and_invalid_span_nodes_are_excluded():
+    nodes = [
+        make_node(0, -1, -1, "ENTRY"),
+        make_node(1, 4, 3, "Invalid"),
+        make_node(2, 2, 4, "If"),
+        make_node(3, 2, 2, "Assign"),
+    ]
+
+    sample = make_sample([2], nodes, 1, 5)
+
+    result = LineCFGLocalizer().localize(sample)
+
+    assert result.line_to_node == {2: [2, 3]}
+    assert result.seed_nodes == [2, 3]
+
+def test_partial_localization_records_unmatched_lines():
+    nodes = [
+        make_node(0, 1, 5, "FunctionDef"),
+        make_node(1, 2, 2, "Assign"),
+    ]
+    sample = make_sample([2, 99], nodes, 1, 5)
+
+    result = LineCFGLocalizer().localize(sample)
+
+    assert result.line_to_node == {
+        2: [0, 1],
+        99: [],
+    }
+    assert result.seed_nodes == [0, 1]
+    assert result.unmatched_seed_lines == [99]
+    assert result.localization_status == "partial"
+    assert result.exclusion_reason is None
+
+
+def test_no_valid_seeds_marks_sample_as_failed():
+    nodes = [
+        make_node(0, -1, -1, "ENTRY"),
+        make_node(1, 4, 3, "Invalid"),
+    ]
+    sample = make_sample([2, 3], nodes, 1, 5)
+
+    result = LineCFGLocalizer().localize(sample)
+
+    assert result.seed_nodes == []
+    assert result.unmatched_seed_lines == [2, 3]
+    assert result.localization_status == "failed"
+    assert result.exclusion_reason == "no_valid_seed_nodes"
+
+
+def test_no_changed_lines_are_recorded_separately():
+    nodes = [make_node(0, 1, 5, "FunctionDef")]
+    sample = make_sample([], nodes, 1, 5)
+
+    result = LineCFGLocalizer().localize(sample)
+
+    assert result.seed_nodes == []
+    assert result.unmatched_seed_lines == []
+    assert result.localization_status == "no_changed_lines"
+    assert result.exclusion_reason == "no_changed_lines"

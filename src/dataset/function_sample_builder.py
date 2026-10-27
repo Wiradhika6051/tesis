@@ -41,6 +41,7 @@ class FunctionSampleBuilder:
             function_sample.function_end = function["end"]
             function_sample.function_source = function["source"]
             function_sample.function_is_async = function["is_async"]
+            function_sample.function_body_lines = sorted(function["body_lines"])
 
             function_sample.parent_sample_id = self._sample_id(sample)
             function_sample.sample_id = self._function_sample_id(
@@ -70,6 +71,7 @@ class FunctionSampleBuilder:
                         default=start,
                     )
 
+
                     nested_spans = []
 
                     for descendant in ast.walk(child):
@@ -84,13 +86,20 @@ class FunctionSampleBuilder:
                                 ast.ClassDef,
                             ),
                         ):
+                            nested_end = max(
+                                (
+                                    getattr(node, "lineno", descendant.lineno)
+                                    for node in ast.walk(descendant)
+                                    if hasattr(node, "lineno")
+                                ),
+                                default=descendant.lineno,
+                            )
+
                             nested_spans.append((
                                 descendant.lineno,
-                                getattr(
-                                    descendant, "end_lineno",
-                                    descendant.lineno,
-                                ),
+                                nested_end,
                             ))
+
 
                     body_lines = set(range(start, end + 1))
 
