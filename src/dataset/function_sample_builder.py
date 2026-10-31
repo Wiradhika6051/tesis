@@ -15,7 +15,7 @@ class FunctionSampleBuilder:
         functions = self._find_functions(tree, sample.source)
         changed_seed_lines = set(sample.seed_lines or [])
         function_samples = []
-        print("SOURCE:\n", sample.source)
+        # print("SOURCE:\n", sample.source)
         print("SAMPLE SEED LINES:", sample.seed_lines)
         print("FUNCTIONS:")
         for function in functions:
