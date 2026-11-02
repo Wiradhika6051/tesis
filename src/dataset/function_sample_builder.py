@@ -16,15 +16,15 @@ class FunctionSampleBuilder:
         changed_seed_lines = set(sample.seed_lines or [])
         function_samples = []
         # print("SOURCE:\n", sample.source)
-        print("SAMPLE SEED LINES:", sample.seed_lines)
-        print("FUNCTIONS:")
-        for function in functions:
-            print(
-                function["qualified_name"],
-                function["start"],
-                function["end"],
-                function["body_lines"],
-            )
+        # print("SAMPLE SEED LINES:", sample.seed_lines)
+        # print("FUNCTIONS:")
+        # for function in functions:
+        #     print(
+        #         function["qualified_name"],
+        #         function["start"],
+        #         function["end"],
+        #         function["body_lines"],
+        #     )
         for function in functions:
             changed_lines = sorted(
                 changed_seed_lines & function["body_lines"]
