@@ -69,18 +69,11 @@ class Trainer:
         dataset_file="",
         config="",
     ):
-        """Train the model.
-
-        Args:
-            train_loader: Training DataLoader.
-            val_loader: Validation DataLoader.
-            epochs: Total target epoch count, not additional epochs.
-            resume: Set on Trainer construction. False (default) means fresh run.
-        """
+        """Train for up to `epochs` total epochs."""
         if len(train_loader) == 0:
-            raise ValueError("train_loader is empty; cannot train the model.")
+            raise ValueError("train_loader is empty.")
         if len(val_loader) == 0:
-            raise ValueError("val_loader is empty; cannot select a best checkpoint.")
+            raise ValueError("val_loader is empty.")
         if epochs <= 0:
             raise ValueError(f"epochs must be positive, got {epochs}.")
 
@@ -94,3 +87,120 @@ class Trainer:
                 f"Checkpoint already reached epoch {self.start_epoch}; "
                 f"target epochs={epochs}. No training epochs remain."
             )
+            return
+
+        for epoch in range(self.start_epoch, epochs):
+            train_loss = self._train_epoch(
+                epoch, epochs, train_loader
+            )
+
+            result = self.evaluator.evaluate(val_loader)
+            val_loss = result["loss"]
+
+            print(
+                f"Epoch {epoch + 1}/{epochs} "
+                f"Train={train_loss:.4f} Val={val_loss:.4f}"
+            )
+
+            self._save_checkpoint(
+                epoch, train_loss, val_loss,
+                self.checkpoint_path,
+                split_file, vocab_file, dataset_file, config,
+            )
+
+            if val_loss < self.best_val_loss:
+                self.best_val_loss = val_loss
+                self.patience_counter = 0
+
+                self._save_checkpoint(
+                    epoch, train_loss, val_loss,
+                    self.best_model_path,
+                    split_file, vocab_file, dataset_file, config,
+                )
+                print(f"New best model (val={val_loss:.4f})")
+            else:
+                self.patience_counter += 1
+                print(
+                    f"No improvement "
+                    f"({self.patience_counter}/{self.patience})"
+                )
+
+            if self.patience_counter >= self.patience:
+                print(f"Early stopping at epoch {epoch + 1}")
+                break
+
+
+    def _resume(self):
+        """Resume from the latest checkpoint when explicitly requested."""
+        if not os.path.exists(self.checkpoint_path):
+            print("No latest checkpoint found; starting fresh.")
+            return
+
+        checkpoint = load_checkpoint(
+            self.checkpoint_path, self.model, self.optimizer
+        )
+
+        self.start_epoch = int(checkpoint["epoch"]) + 1
+        self.best_val_loss = float(checkpoint["val_loss"])
+
+        print(
+            f"Resuming from epoch {self.start_epoch}; "
+            f"checkpoint={self.checkpoint_path}"
+        )
+
+
+    def _start_fresh_run(self):
+        """Reset training state and remove stale checkpoints."""
+        self._reset_training_state()
+
+        if self.clean_checkpoints_on_fresh_start:
+            for path in (self.checkpoint_path, self.best_model_path):
+                if os.path.exists(path):
+                    os.remove(path)
+                    print(f"Removed old checkpoint: {path}")
+
+        print("Starting fresh training run.")
+
+
+    def _save_checkpoint(
+        self,
+        epoch,
+        train_loss,
+        val_loss,
+        checkpoint_file,
+        split_file,
+        vocab_file,
+        dataset_file,
+        config,
+    ):
+        os.makedirs(os.path.dirname(checkpoint_file) or ".", exist_ok=True)
+
+        save_checkpoint(
+            model=self.model,
+            optimizer=self.optimizer,
+            epoch=epoch,
+            train_loss=train_loss,
+            val_loss=val_loss,
+            checkpoint_file=checkpoint_file,
+            split_file=split_file,
+            vocab_file=vocab_file,
+            dataset_file=dataset_file,
+            config=config,
+        )
+
+
+    def load_best_model(self):
+        """Restore the best validation checkpoint before testing."""
+        if not os.path.exists(self.best_model_path):
+            raise FileNotFoundError(
+                f"Best model checkpoint not found: {self.best_model_path}"
+            )
+
+        checkpoint = load_checkpoint(
+            self.best_model_path,
+            self.model,
+            self.optimizer,
+        )
+
+        print(f"Loaded best model: {self.best_model_path}")
+        return checkpoint   
