@@ -1,55 +1,33 @@
+
+"""Checkpoint serialization helpers for model training."""
+
 import hashlib
 import os
 
 import torch
 
 
-def calculate_dataset_hash(
-    dataset_file
-):
-    """
-    Generate MD5 hash for reproducibility.
+def calculate_dataset_hash(dataset_file):
+    """Return the dataset's MD5 hash, or None if no path is supplied."""
 
-    Returns:
-        str | None:
-            MD5 hash if dataset_file exists,
-            otherwise None when no dataset file is provided.
-    """
-
-    #
-    # No dataset file was provided.
-    #
     if not dataset_file:
         return None
 
-    #
-    # A path was provided, but the file does not exist.
-    #
     if not os.path.isfile(dataset_file):
         raise FileNotFoundError(
             f"Dataset file does not exist: {dataset_file}"
         )
 
-    #
-    # Calculate hash.
-    #
-    md5 = hashlib.md5()
+    digest = hashlib.md5()
 
-    with open(
-        dataset_file,
-        "rb"
-    ) as f:
-
+    with open(dataset_file, "rb") as file:
         for chunk in iter(
-            lambda: f.read(1024 * 1024),
-            b""
+            lambda: file.read(1024 * 1024),
+            b"",
         ):
+            digest.update(chunk)
 
-            md5.update(
-                chunk
-            )
-
-    return md5.hexdigest()
+    return digest.hexdigest()
 
 
 def save_checkpoint(
@@ -62,105 +40,63 @@ def save_checkpoint(
     split_file="",
     vocab_file="",
     dataset_file="",
-    config=""
+    config="",
+    trainer_state=None,
 ):
-    """
-    Save training checkpoint.
-    """
+    """Save model, optimizer, metadata, and optional trainer state."""
 
     checkpoint = {
-
-        "epoch":
-            epoch,
-
-        "model_state_dict":
-            model.state_dict(),
-
-        "optimizer_state_dict":
-            optimizer.state_dict(),
-
-        "train_loss":
-            train_loss,
-
-        "val_loss":
-            val_loss,
-
-        "split_file":
-            split_file,
-
-        "vocab_file":
-            vocab_file,
-
-        "dataset_hash":
-            calculate_dataset_hash(
-                dataset_file
-            ),
-
-        "config":
-            config
+        "epoch": epoch,
+        "model_state_dict": model.state_dict(),
+        "optimizer_state_dict": (
+            optimizer.state_dict()
+            if optimizer is not None
+            else None
+        ),
+        "train_loss": train_loss,
+        "val_loss": val_loss,
+        "split_file": split_file,
+        "vocab_file": vocab_file,
+        "dataset_hash": calculate_dataset_hash(dataset_file),
+        "config": config,
     }
 
-    #
-    # Make sure checkpoint directory exists.
-    #
+    if trainer_state:
+        checkpoint.update(trainer_state)
+
     checkpoint_dir = os.path.dirname(
-        checkpoint_file
+        os.fspath(checkpoint_file)
     )
 
     if checkpoint_dir:
-        os.makedirs(
-            checkpoint_dir,
-            exist_ok=True
-        )
+        os.makedirs(checkpoint_dir, exist_ok=True)
 
-    torch.save(
-        checkpoint,
-        checkpoint_file
-    )
+    torch.save(checkpoint, checkpoint_file)
 
-    print(
-        f"Checkpoint saved: "
-        f"{checkpoint_file}"
-    )
+    print(f"Checkpoint saved: {checkpoint_file}")
 
 
-def load_checkpoint(
-    checkpoint_file,
-    model,
-    optimizer=None
-):
-    """
-    Restore model and optionally optimizer state.
-    """
+def load_checkpoint(checkpoint_file, model, optimizer=None):
+    """Restore model weights and optionally optimizer state."""
 
     checkpoint = torch.load(
         checkpoint_file,
-        map_location="cpu"
+        map_location="cpu",
     )
 
     model.load_state_dict(
-        checkpoint[
-            "model_state_dict"
-        ]
+        checkpoint["model_state_dict"]
     )
 
-    if (
-        optimizer is not None
-        and
+    optimizer_state = checkpoint.get(
         "optimizer_state_dict"
-        in checkpoint
-    ):
+    )
 
-        optimizer.load_state_dict(
-            checkpoint[
-                "optimizer_state_dict"
-            ]
-        )
+    if optimizer is not None and optimizer_state is not None:
+        optimizer.load_state_dict(optimizer_state)
 
     print(
-        f"Loaded checkpoint "
-        f"from epoch "
-        f"{checkpoint['epoch']}"
+        f"Loaded checkpoint from epoch {checkpoint['epoch']}"
     )
 
     return checkpoint
