@@ -1,16 +1,26 @@
+"""Trainer with explicit fresh-training vs checkpoint-resume behavior.
+
+Default behavior is a fresh run: stale checkpoints are removed before training,
+and existing checkpoints are never resumed implicitly.
+
+To resume deliberately, instantiate Trainer(..., resume=True) and call fit().
+This implementation preserves the checkpoint helper API used by the original code:
+    save_checkpoint(model=..., optimizer=..., epoch=..., train_loss=...,
+                    val_loss=..., checkpoint_file=..., split_file=...,
+                    vocab_file=..., dataset_file=..., config=...)
+    load_checkpoint(path, model, optimizer)
+"""
+
 import os
+from pathlib import Path
 
 from tqdm import tqdm
 
-from src.checkpoint import (
-    save_checkpoint,
-    load_checkpoint
-)
+from src.checkpoint import save_checkpoint, load_checkpoint
 from src.Evaluator import Evaluator
 
 
 class Trainer:
-
     def __init__(
         self,
         model,
@@ -19,23 +29,32 @@ class Trainer:
         device,
         checkpoint_path,
         best_model_path,
-        patience=10
+        patience=10,
+        resume=False,
+        clean_checkpoints_on_fresh_start=True,
     ):
-
         self.model = model
         self.optimizer = optimizer
         self.criterion = criterion
         self.device = device
 
-        self.checkpoint_path = checkpoint_path
-        self.best_model_path = best_model_path
+        self.checkpoint_path = str(checkpoint_path)
+        self.best_model_path = str(best_model_path)
+        self.patience = int(patience)
+        self.resume = bool(resume)
+        self.clean_checkpoints_on_fresh_start = bool(
+            clean_checkpoints_on_fresh_start
+        )
 
-        self.patience = patience
         self.evaluator = Evaluator(
             model=self.model,
             criterion=self.criterion,
-            device=self.device
+            device=self.device,
         )
+
+        self._reset_training_state()
+
+    def _reset_training_state(self):
         self.start_epoch = 0
         self.best_val_loss = float("inf")
         self.patience_counter = 0
@@ -48,298 +67,30 @@ class Trainer:
         split_file="",
         vocab_file="",
         dataset_file="",
-        config=""
+        config="",
     ):
+        """Train the model.
 
-        self._resume()
+        Args:
+            train_loader: Training DataLoader.
+            val_loader: Validation DataLoader.
+            epochs: Total target epoch count, not additional epochs.
+            resume: Set on Trainer construction. False (default) means fresh run.
+        """
+        if len(train_loader) == 0:
+            raise ValueError("train_loader is empty; cannot train the model.")
+        if len(val_loader) == 0:
+            raise ValueError("val_loader is empty; cannot select a best checkpoint.")
+        if epochs <= 0:
+            raise ValueError(f"epochs must be positive, got {epochs}.")
 
-        for epoch in range(
-            self.start_epoch,
-            epochs
-        ):
+        if self.resume:
+            self._resume()
+        else:
+            self._start_fresh_run()
 
-            train_loss = self._train_epoch(
-                epoch,
-                epochs,
-                train_loader
-            )
-
-            result = self.evaluator.evaluate(
-                val_loader
-            )
-
-            val_loss = result["loss"]
-
+        if self.start_epoch >= epochs:
             print(
-                f"Epoch {epoch + 1} "
-                f"Train={train_loss:.4f} "
-                f"Val={val_loss:.4f}"
+                f"Checkpoint already reached epoch {self.start_epoch}; "
+                f"target epochs={epochs}. No training epochs remain."
             )
-
-            self._save_checkpoint(
-                epoch,
-                train_loss,
-                val_loss,
-                self.checkpoint_path,
-                split_file,
-                vocab_file,
-                dataset_file,
-                config
-            )
-
-            improved = (
-                val_loss < self.best_val_loss
-            )
-
-            if improved:
-
-                self.best_val_loss = val_loss
-
-                self.patience_counter = 0
-
-                self._save_checkpoint(
-                    epoch,
-                    train_loss,
-                    val_loss,
-                    self.best_model_path,
-                    split_file,
-                    vocab_file,
-                    dataset_file,
-                    config
-                )
-
-                print(
-                    f"✓ New best model "
-                    f"(val={val_loss:.4f})"
-                )
-
-            else:
-
-                self.patience_counter += 1
-
-                print(
-                    f"No improvement "
-                    f"({self.patience_counter}/"
-                    f"{self.patience})"
-                )
-
-            if (
-                self.patience_counter
-                >=
-                self.patience
-            ):
-
-                print(
-                    f"Early stopping "
-                    f"at epoch {epoch+1}"
-                )
-
-                break
-
-    def _train_epoch(
-        self,
-        epoch,
-        epochs,
-        loader
-    ):
-    
-        self.model.train()
-    
-        total_loss = 0
-    
-        progress = tqdm(
-            loader,
-            total=len(loader),
-            desc=f"Epoch {epoch+1}/{epochs}"
-        )
-    
-        for batch in progress:
-        
-            #
-            # First two elements are always
-            # graph and labels.
-            #
-            graph = batch[0]
-    
-            labels = batch[1]
-
-            sample_id = batch[3]
-    
-            graph = graph.to(
-                self.device
-            )
-    
-            labels = labels.to(
-                self.device
-            )
-    
-            #
-            # Reset gradients
-            #
-            self.optimizer.zero_grad()
-    
-            #
-            # Forward pass
-            #
-            # print(f"\n[DEBUG] Batch type: {type(batch)}")
-            # print(f"[DEBUG] Batch size: {len(batch)}")
-            # print(f"[DEBUG] Sample IDs: {sample_id if sample_id else 'Not provided'}")
-            # print("Graph type:", type(graph))
-            # print("Graph attributes:", graph)
-            # print("Graph keys:", getattr(graph, "keys", lambda: [])())
-            # print("Has x:", getattr(graph, "x", None) is not None)
-            # print(
-            #     "Has edge_index:",
-            #     getattr(graph, "edge_index", None) is not None
-            # )
-
-            validate_graph(graph, sample_id=sample_id)
-            logits = self.model(
-                graph
-            )
-    
-            #
-            # Compute loss
-            #
-            loss = self.criterion(
-                logits,
-                labels
-            )
-    
-            #
-            # Backpropagation
-            #
-            loss.backward()
-    
-            #
-            # Update parameters
-            #
-            self.optimizer.step()
-    
-            total_loss += loss.item()
-    
-            progress.set_postfix(
-                loss=f"{loss.item():.4f}"
-            )
-    
-        return (
-            total_loss
-            /
-            len(loader)
-        )
-
-    def _resume(self):
-
-        if not os.path.exists(
-            self.checkpoint_path
-        ):
-            return
-
-        checkpoint = load_checkpoint(
-            self.checkpoint_path,
-            self.model,
-            self.optimizer
-        )
-
-        self.start_epoch = (
-            checkpoint["epoch"] + 1
-        )
-
-        self.best_val_loss = (
-            checkpoint["val_loss"]
-        )
-
-        print(
-            f"Resume from epoch "
-            f"{self.start_epoch}"
-        )
-
-    def _save_checkpoint(
-        self,
-        epoch,
-        train_loss,
-        val_loss,
-        checkpoint_file,
-        split_file,
-        vocab_file,
-        dataset_file,
-        config
-    ):
-
-        save_checkpoint(
-            model=self.model,
-            optimizer=self.optimizer,
-            epoch=epoch,
-            train_loss=train_loss,
-            val_loss=val_loss,
-            checkpoint_file=checkpoint_file,
-            split_file=split_file,
-            vocab_file=vocab_file,
-            dataset_file=dataset_file,
-            config=config
-        )
-
-    def load_best_model(self):
-        if not os.path.exists(self.best_model_path):
-            raise FileNotFoundError(
-                f"Best model checkpoint not found: "
-                f"{self.best_model_path}"
-            )
-
-        checkpoint = load_checkpoint(
-            self.best_model_path,
-            self.model,
-            self.optimizer,
-        )
-
-        print(
-            "Loaded best model checkpoint: "
-            f"{self.best_model_path}"
-        )
-
-        return checkpoint
-
-def validate_graph(graph, sample_id=None):
-    prefix = f"[GRAPH VALIDATION] sample={sample_id}"
-
-    edge_index = getattr(graph, "edge_index", None)
-    node_types = getattr(graph, "node_types", None)
-    node_token_vectors = getattr(
-        graph, "node_token_vectors", None
-    )
-
-    assert edge_index is not None, (
-        f"{prefix}: edge_index is None"
-    )
-    assert node_types is not None, (
-        f"{prefix}: node_types is None"
-    )
-    assert node_token_vectors is not None, (
-        f"{prefix}: node_token_vectors is None"
-    )
-
-    num_nodes = len(node_token_vectors)
-
-    assert node_types.numel() == num_nodes, (
-        f"{prefix}: node_types has {node_types.numel()} "
-        f"entries, but node_token_vectors has {num_nodes}"
-    )
-
-    assert edge_index.dim() == 2 and edge_index.size(0) == 2, (
-        f"{prefix}: edge_index must have shape [2, num_edges], "
-        f"got {tuple(edge_index.shape)}"
-    )
-
-    if edge_index.numel() > 0:
-        min_idx = edge_index.min().item()
-        max_idx = edge_index.max().item()
-
-        assert min_idx >= 0, (
-            f"{prefix}: negative edge index {min_idx}"
-        )
-        assert max_idx < num_nodes, (
-            f"{prefix}: edge index {max_idx} exceeds "
-            f"valid node range [0, {num_nodes - 1}]"
-        )
-
-    return True
