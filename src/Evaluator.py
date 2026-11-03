@@ -81,6 +81,7 @@ class Evaluator:
             predictions == labels
         ).float().mean().item()
 
+
         records = []
 
         for i, metadata in enumerate(all_metadata):
@@ -96,10 +97,16 @@ class Evaluator:
             else:
                 outcome = "FN"
 
+            pair_id = all_pair_ids[i]
+
+            # Preserve the ID's original meaning and structure.
+            if isinstance(pair_id, tuple):
+                pair_id = list(pair_id)
+
             record = dict(metadata)
             record.update({
                 "sample_uid": all_sample_uids[i],
-                "pair_id": list(all_pair_ids[i]),
+                "pair_id": pair_id,
                 "label": actual,
                 "predicted": predicted,
                 "score_0": float(probabilities[i, 0].item()),
@@ -108,6 +115,7 @@ class Evaluator:
             })
 
             records.append(record)
+
 
         self.model.train(was_training)
 

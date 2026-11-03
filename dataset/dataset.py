@@ -192,6 +192,19 @@ class PhpNetDataset(Dataset):
         function_start = getattr(sample, "function_start", None)
         function_end = getattr(sample, "function_end", None)
 
+        # Warn if the function identity is incomplete.
+        if function_start is None or function_end is None:
+            print(
+                "WARNING: Missing function boundaries:",
+                {
+                    "repo": repo,
+                    "parent_commit": parent_commit,
+                    "file_path": file_path,
+                    "function_start": function_start,
+                    "function_end": function_end,
+                },
+            )
+
         # Include function boundaries to distinguish functions in the same file.
         identity = [
             repo,
