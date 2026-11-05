@@ -27,7 +27,7 @@ class FunctionSampleBuilder:
         #     )
         for function in functions:
             changed_lines = sorted(
-                changed_seed_lines & function["body_lines"]
+                changed_seed_lines & function["region_lines"]
             )
 
             function_sample = copy.deepcopy(sample)
@@ -101,8 +101,14 @@ class FunctionSampleBuilder:
                             ))
 
 
-                    body_lines = set(range(start, end + 1))
+                    # The complete function region, including the def declaration.
+                    region_lines = set(range(start, end + 1))
 
+                    # The function body excludes the def declaration itself.
+                    body_lines = region_lines.copy()
+                    body_lines.discard(start)
+
+                    # Exclude nested functions and classes from the outer function body.
                     for nested_start, nested_end in nested_spans:
                         body_lines.difference_update(
                             range(nested_start, nested_end + 1)
@@ -114,8 +120,9 @@ class FunctionSampleBuilder:
                         "qualified_name": ".".join(scope + [child.name]),
                         "start": start,
                         "end": end,
+                        "region_lines": region_lines,
                         "body_lines": body_lines,
-                        # "source": ast.get_source_segment_(source, child) or "",
+                        # "source": ast.get_source_segment(source, child) or "",
                         "source": builder.get_source_segment_compat(child) or "",
                         "is_async": isinstance(child, ast.AsyncFunctionDef),
                     })

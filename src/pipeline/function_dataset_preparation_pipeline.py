@@ -83,6 +83,33 @@ class FunctionDatasetPreparationPipeline:
             "qualified_name": getattr(
                 sample, "qualified_name", None
             ),
+            # Localization diagnostics are retained in audit events so that
+            # exclusions can be traced back to their changed lines and seeds.
+            "localization_status": getattr(
+                sample, "localization_status", None
+            ),
+            "exclusion_reason": getattr(
+                sample, "exclusion_reason", None
+            ),
+            "unmatched_seed_lines": list(
+                getattr(sample, "unmatched_seed_lines", None) or []
+            ),
+            "container_only_seed_lines": list(
+                getattr(sample, "container_only_seed_lines", None) or []
+            ),
+            "seed_nodes": list(
+                getattr(sample, "seed_nodes", None) or []
+            ),
+            "line_to_node": getattr(sample, "line_to_node", None) or {},
+            "function_scope_status": getattr(
+                sample, "function_scope_status", None
+            ),
+            "function_scope_reason": getattr(
+                sample, "function_scope_reason", None
+            ),
+            "function_nodes": list(
+                getattr(sample, "function_nodes", None) or []
+            ),
         }
 
     def _record_event(
@@ -182,6 +209,14 @@ class FunctionDatasetPreparationPipeline:
             len(getattr(sample, "unmatched_seed_lines", None) or [])
             for sample in samples
         )
+        container_only_line_count = sum(
+            len(getattr(sample, "container_only_seed_lines", None) or [])
+            for sample in samples
+        )
+        zero_seed_count = sum(
+            not (getattr(sample, "seed_nodes", None) or [])
+            for sample in samples
+        )
 
         self.audit["stages"]["cfg_localization_outcomes"] = {
             "sample_count": total,
@@ -192,6 +227,8 @@ class FunctionDatasetPreparationPipeline:
             "unknown_status_count": total - success - partial - failed - no_changed_lines,
             "excluded_count": failed + no_changed_lines,
             "unmatched_changed_line_count": unmatched_line_count,
+            "container_only_changed_line_count": container_only_line_count,
+            "zero_seed_node_sample_count": zero_seed_count,
             "failure_rate": failed / float(total) if total else 0.0,
             "partial_rate": partial / float(total) if total else 0.0,
             "no_changed_lines_rate": (
@@ -509,18 +546,24 @@ class FunctionDatasetPreparationPipeline:
             unmatched_lines = list(
                 getattr(sample, "unmatched_seed_lines", None) or []
             )
+            container_only_lines = list(
+                getattr(sample, "container_only_seed_lines", None) or []
+            )
             seed_lines = list(getattr(sample, "seed_lines", None) or [])
             seed_nodes = list(getattr(sample, "seed_nodes", None) or [])
+            line_to_node = getattr(sample, "line_to_node", None) or {}
             exclusion_reason = getattr(sample, "exclusion_reason", None)
 
             # Record every localization outcome before excluding anything.
             if status == "partial":
                 self._record_event(
                     stage="cfg_localization",
-                    reason="unmatched_changed_lines",
+                    reason="partial_localization",
                     sample=sample,
                     details={
                         "unmatched_seed_lines": unmatched_lines,
+                        "container_only_seed_lines": container_only_lines,
+                        "line_to_node": line_to_node,
                         "seed_line_count": len(set(seed_lines)),
                         "valid_seed_node_count": len(seed_nodes),
                     },
@@ -534,7 +577,10 @@ class FunctionDatasetPreparationPipeline:
                     sample=sample,
                     details={
                         "unmatched_seed_lines": unmatched_lines,
+                        "container_only_seed_lines": container_only_lines,
+                        "line_to_node": line_to_node,
                         "seed_lines": seed_lines,
+                        "seed_nodes": seed_nodes,
                         "cfg_node_count": len(
                             (getattr(sample, "cfg", None) or {}).get(
                                 "nodes", []
@@ -598,6 +644,10 @@ class FunctionDatasetPreparationPipeline:
                     details={
                         "localization_status": status,
                         "seed_lines": seed_lines,
+                        "seed_nodes": seed_nodes,
+                        "unmatched_seed_lines": unmatched_lines,
+                        "container_only_seed_lines": container_only_lines,
+                        "line_to_node": line_to_node,
                         "seed_node_count": len(seed_nodes),
                     },
                     event_type="sample_exclusion",
@@ -672,20 +722,41 @@ class FunctionDatasetPreparationPipeline:
             )
 
             if not valid_seeds:
+                scope_reason = getattr(
+                    sample, "function_scope_reason", None
+                ) or "no_valid_function_seed_nodes"
+
                 self._record_event(
                     stage="function_scope",
-                    reason="no_valid_function_seed_nodes",
+                    reason=scope_reason,
                     sample=sample,
                     details={
-                        "seed_node_count": len(
-                            getattr(sample, "seed_nodes", None)
-                            or []
+                        "function_scope_status": getattr(
+                            sample, "function_scope_status", None
+                        ),
+                        "function_scope_reason": getattr(
+                            sample, "function_scope_reason", None
+                        ),
+                        "localization_status": getattr(
+                            sample, "localization_status", None
+                        ),
+                        "seed_lines": list(
+                            getattr(sample, "seed_lines", None) or []
+                        ),
+                        "seed_nodes_after_scope": list(
+                            getattr(sample, "seed_nodes", None) or []
                         ),
                         "function_node_count": len(
-                            getattr(sample, "function_nodes", None)
-                            or []
+                            getattr(sample, "function_nodes", None) or []
+                        ),
+                        "unmatched_seed_lines": list(
+                            getattr(sample, "unmatched_seed_lines", None) or []
+                        ),
+                        "container_only_seed_lines": list(
+                            getattr(sample, "container_only_seed_lines", None) or []
                         ),
                     },
+                    event_type="sample_exclusion",
                 )
                 continue
 
