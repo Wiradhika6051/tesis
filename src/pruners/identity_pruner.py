@@ -3,7 +3,8 @@ from src.pruners.utils import prune_cfg_preserving_virtual_paths
 
 
 class IdentityPruner(BasePruner):
-
+    def __init__(self):
+        self.export_name = "identity"
     def prune(
         self,
         sample

@@ -826,11 +826,17 @@ class FunctionDatasetPreparationPipeline:
         )
 
         self._record_stage("pruning", prepared_samples)
-
+        
         if self.audit_exporter:
+            export_name = getattr(
+                self.pruner,
+                "export_name",
+                self.pruner.__class__.__name__,
+            )
+
             self.audit_exporter.export_pruned(
                 prepared_samples,
-                self.pruner.__class__.__name__,
+                export_name,
             )
 
         print_statistics(

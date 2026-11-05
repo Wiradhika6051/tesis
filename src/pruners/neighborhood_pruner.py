@@ -7,6 +7,7 @@ class NeighborhoodPruner(BasePruner):
 
     def __init__(self, hops=2):
         self.hops = hops
+        self.export_name = f"neighborhood_{hops}hop"
 
     def prune(self, sample):
         reachable = traverse_cfg(

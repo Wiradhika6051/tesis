@@ -4,7 +4,8 @@ from src.pruners.utils import prune_cfg_preserving_virtual_paths
 from src.pruners.cfg_traversal import traverse_cfg
 
 class BackwardSlicePruner(BasePruner):
-
+    def __init__(self):
+        self.export_name = "backward_slicing"
     def prune(self, sample):
         reachable = traverse_cfg(
             cfg=sample.cfg,

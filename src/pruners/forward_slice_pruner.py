@@ -4,6 +4,8 @@ from src.pruners.cfg_traversal import traverse_cfg
 
 
 class ForwardSlicePruner(BasePruner):
+    def __init__(self):
+        self.export_name = "forward_slicing"
 
     def prune(self, sample):
         reachable = traverse_cfg(
