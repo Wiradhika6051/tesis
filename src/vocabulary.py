@@ -3,6 +3,8 @@ import ast
 import json
 import sys
 from pathlib import Path
+import tokenize
+import io
 
 SPECIAL_TOKENS = [
     "<PAD>",
@@ -84,3 +86,34 @@ def load_cfg_vocab(storage_dir, filename="cfg_vocab.json"):
     save_cfg_vocab(vocab, vocab_path)
 
     return vocab
+
+def tokenize_code(code):
+    """
+    Tokenize Python source code into lexical tokens.
+
+    Returns:
+        list[str]: Lexical tokens, excluding structural whitespace tokens.
+
+    Raises:
+        tokenize.TokenError: If tokenization fails.
+        IndentationError: If indentation is invalid.
+    """
+    tokens = []
+
+    for tok in tokenize.generate_tokens(
+        io.StringIO(code).readline
+    ):
+        tok_type = tokenize.tok_name[tok.type]
+
+        if tok_type in {
+            "NL",
+            "NEWLINE",
+            "INDENT",
+            "DEDENT",
+            "ENDMARKER",
+        }:
+            continue
+
+        tokens.append(tok.string)
+
+    return tokens
