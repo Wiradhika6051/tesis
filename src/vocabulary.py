@@ -1,112 +1,86 @@
-from collections import Counter
-import io
-import tokenize
 
+import ast
+import json
+import sys
+from pathlib import Path
 
 SPECIAL_TOKENS = [
     "<PAD>",
-    "<UNK>"
+    "<UNK>",
+]
+
+SYNTHETIC_NODE_TYPES = [
+    "ENTRY",
+    "EXIT",
+    "FUNCTION_EXIT",
+    "MERGE",
+    "LOOP_NORMAL_EXIT",
+    "LOOP_EXIT",
 ]
 
 
-def iter_cfg_nodes(samples):
-    """
-    Iterate over all nodes in all pruned CFGs.
-    """
-
-    for sample in samples:
-
-        if sample.pruned_cfg is None:
-            continue
-
-        yield from sample.pruned_cfg["nodes"]
-
-
-def tokenize_code(code):
-    """
-    Tokenize source code into lexical tokens.
-    """
-
-    tokens = []
-
-    try:
-
-        for tok in tokenize.generate_tokens(
-            io.StringIO(code).readline
-        ):
-
-            tok_type = tokenize.tok_name[tok.type]
-
-            if tok_type in (
-                "NL",
-                "NEWLINE",
-                "INDENT",
-                "DEDENT",
-                "ENDMARKER"
-            ):
-                continue
-
-            tokens.append(tok.string)
-
-    except Exception:
-        pass
-
-    return tokens
-
-
-def build_token_vocab(
-    samples,
-    min_freq=1
-):
-    """
-    Build vocabulary for source-code tokens.
-    """
-
-    counter = Counter()
-
-    for node in iter_cfg_nodes(samples):
-
-        counter.update(
-            tokenize_code(node.text)
+def get_ast_statement_types():
+    """Discover statement AST classes available in this Python runtime."""
+    return sorted(
+        name
+        for name, obj in vars(ast).items()
+        if (
+            isinstance(obj, type)
+            and issubclass(obj, ast.stmt)
+            and obj is not ast.stmt
         )
+    )
 
-    vocab = {
-        token: idx
-        for idx, token in enumerate(
-            SPECIAL_TOKENS
-        )
-    }
 
-    for token, count in counter.items():
+def create_cfg_vocab():
+    """Create a deterministic CFG vocabulary."""
+    node_types = (
+        SPECIAL_TOKENS
+        + get_ast_statement_types()
+        + SYNTHETIC_NODE_TYPES
+    )
 
-        if count >= min_freq:
-
-            vocab.setdefault(
-                token,
-                len(vocab)
-            )
+    vocab = {}
+    for node_type in node_types:
+        if node_type not in vocab:
+            vocab[node_type] = len(vocab)
 
     return vocab
 
 
-def build_cfg_vocab(samples):
-    """
-    Build vocabulary for CFG node types.
-    """
-
-    vocab = {
-        "<PAD>": 0,
-        "<UNK>": 1,
-        "Try":2,
-        "Catch":3,
-        "FunctionDef":4,
+def save_cfg_vocab(vocab, vocab_path):
+    """Save the vocabulary and runtime metadata as JSON."""
+    data = {
+        "python_version": (
+            f"{sys.version_info.major}.{sys.version_info.minor}"
+        ),
+        "ast_statement_types": get_ast_statement_types(),
+        "synthetic_node_types": SYNTHETIC_NODE_TYPES,
+        "vocab": vocab,
     }
 
-    for node in iter_cfg_nodes(samples):
+    vocab_path = Path(vocab_path)
+    vocab_path.parent.mkdir(parents=True, exist_ok=True)
 
-        vocab.setdefault(
-            node.node_type,
-            len(vocab)
-        )
+    with vocab_path.open("w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+
+def load_cfg_vocab(storage_dir, filename="cfg_vocab.json"):
+    """
+    Regenerate the CFG vocabulary and save it to the specified directory.
+
+    Args:
+        storage_dir: Directory where the JSON vocabulary will be stored.
+        filename: Name of the JSON file.
+
+    Returns:
+        dict: Mapping from CFG node types to integer IDs.
+    """
+    storage_dir = Path(storage_dir)
+    vocab_path = storage_dir / filename
+
+    vocab = create_cfg_vocab()
+    save_cfg_vocab(vocab, vocab_path)
 
     return vocab

@@ -1,0 +1,3183 @@
+selection_reason,sample_uid,true_label,repo,parent_commit,commit_hash,file_path,function_start,function_end,strategy,transition,identity_outcome,strategy_outcome,identity_nodes,strategy_nodes,nodes_removed_vs_identity,edges_removed_vs_identity,node_retention_vs_identity,edge_retention_vs_identity,identity_score_1,strategy_score_1,source,diff,What Changed?
+FN→TP: backward slice,"[""https://github.com/Hellkryptonium/skills-secure-code-game"",""489ffcbd1d5c6b0ffb6e55ed4e2f99df99b480ce"",""Season-1/Level-4/code.py"",155,184]",1,https://github.com/Hellkryptonium/skills-secure-code-game,489ffcbd1d5c6b0ffb6e55ed4e2f99df99b480ce,489ffcbd1d5c6b0ffb6e55ed4e2f99df99b480ce,Season-1/Level-4/code.py,155,184,Backward Slice,FN -> TP,FN,TP,19,13,6,7,0.6842105263157895,0.65,0.4973296523094177,0.5018316507339478,"'''
+Please note:
+
+The first file that you should run in this level is tests.py for database creation, with all tests passing.
+Remember that running the hack.py will change the state of the database, causing some tests inside tests.py
+to fail.
+
+If you like to return to the initial state of the database, please delete the database (level-4.db) and run 
+the tests.py again to recreate it.
+'''
+
+import sqlite3
+import os
+from flask import Flask, request
+
+### Unrelated to the exercise -- Starts here -- Please ignore
+app = Flask(__name__)
+@app.route(""/"")
+def source():
+    DB_CRUD_ops().get_stock_info(request.args[""input""])
+    DB_CRUD_ops().get_stock_price(request.args[""input""])
+    DB_CRUD_ops().update_stock_price(request.args[""input""])
+    DB_CRUD_ops().exec_multi_query(request.args[""input""])
+    DB_CRUD_ops().exec_user_script(request.args[""input""])
+### Unrelated to the exercise -- Ends here -- Please ignore
+
+class Connect(object):
+
+    # helper function creating database with the connection
+    def create_connection(self, path):
+        connection = None
+        try:
+            connection = sqlite3.connect(path)
+        except sqlite3.Error as e:
+            print(f""ERROR: {e}"")
+        return connection
+
+class Create(object):
+
+    def __init__(self):
+        con = Connect()
+        try:
+            # creates a dummy database inside the folder of this challenge
+            path = os.path.dirname(os.path.abspath(__file__))
+            db_path = os.path.join(path, 'level-4.db')
+            db_con = con.create_connection(db_path)
+            cur = db_con.cursor()
+
+            # checks if tables already exist, which will happen when re-running code
+            table_fetch = cur.execute(
+                '''
+                SELECT name 
+                FROM sqlite_master 
+                WHERE type='table'AND name='stocks';
+                ''').fetchall()
+
+            # if tables do not exist, create them and insert dummy data
+            if table_fetch == []:
+                cur.execute(
+                    '''
+                    CREATE TABLE stocks
+                    (date text, symbol text, price real)
+                    ''')
+
+                # inserts dummy data to the 'stocks' table, representing average price on date
+                cur.execute(
+                    ""INSERT INTO stocks VALUES ('2022-01-06', 'MSFT', 300.00)"")
+                db_con.commit()
+
+        except sqlite3.Error as e:
+            print(f""ERROR: {e}"")
+
+        finally:
+            db_con.close()
+
+class DB_CRUD_ops(object):
+
+    # retrieves all info about a stock symbol from the stocks table
+    # Example: get_stock_info('MSFT') will result into executing
+    # SELECT * FROM stocks WHERE symbol = 'MSFT'
+    def get_stock_info(self, stock_symbol):
+        # building database from scratch as it is more suitable for the purpose of the lab
+        db = Create()
+        con = Connect()
+        try:
+            path = os.path.dirname(os.path.abspath(__file__))
+            db_path = os.path.join(path, 'level-4.db')
+            db_con = con.create_connection(db_path)
+            cur = db_con.cursor()
+
+            res = ""[METHOD EXECUTED] get_stock_info\n""
+            query = ""SELECT * FROM stocks WHERE symbol = '{0}'"".format(stock_symbol)
+            res += ""[QUERY] "" + query + ""\n""
+
+            # a block list (aka restricted characters) that should not exist in user-supplied input
+            restricted_chars = "";%&^!#-""
+            # checks if input contains characters from the block list
+            has_restricted_char = any([char in query for char in restricted_chars])
+            # checks if input contains a wrong number of single quotes against SQL injection
+            correct_number_of_single_quotes = query.count(""'"") == 2
+
+            # performs the checks for good cyber security and safe software against SQL injection
+            if has_restricted_char or not correct_number_of_single_quotes:
+                # in case you want to sanitize user input, please uncomment the following 2 lines
+                # sanitized_query = query.translate({ord(char):None for char in restricted_chars})
+                # res += ""[SANITIZED_QUERY]"" + sanitized_query + ""\n""
+                res += ""CONFIRM THAT THE ABOVE QUERY IS NOT MALICIOUS TO EXECUTE""
+            else:
+                cur.execute(query)
+
+                query_outcome = cur.fetchall()
+                for result in query_outcome:
+                    res += ""[RESULT] "" + str(result)
+            return res
+
+        except sqlite3.Error as e:
+            print(f""ERROR: {e}"")
+
+        finally:
+            db_con.close()
+
+    # retrieves the price of a stock symbol from the stocks table
+    # Example: get_stock_price('MSFT') will result into executing
+    # SELECT price FROM stocks WHERE symbol = 'MSFT'
+    def get_stock_price(self, stock_symbol):
+        # building database from scratch as it is more suitable for the purpose of the lab
+        db = Create()
+        con = Connect()
+        try:
+            path = os.path.dirname(os.path.abspath(__file__))
+            db_path = os.path.join(path, 'level-4.db')
+            db_con = con.create_connection(db_path)
+            cur = db_con.cursor()
+
+            res = ""[METHOD EXECUTED] get_stock_price\n""
+            query = ""SELECT price FROM stocks WHERE symbol = '"" + stock_symbol + ""'""
+            res += ""[QUERY] "" + query + ""\n""
+            if ';' in query:
+                res += ""[SCRIPT EXECUTION]\n""
+                cur.executescript(query)
+            else:
+                cur.execute(query)
+                query_outcome = cur.fetchall()
+                for result in query_outcome:
+                    res += ""[RESULT] "" + str(result) + ""\n""
+            return res
+
+        except sqlite3.Error as e:
+            print(f""ERROR: {e}"")
+
+        finally:
+            db_con.close()
+
+    # updates stock price
+    def update_stock_price(self, stock_symbol, price):
+        # building database from scratch as it is more suitable for the purpose of the lab
+        db = Create()
+        con = Connect()
+        try:
+            path = os.path.dirname(os.path.abspath(__file__))
+            db_path = os.path.join(path, 'level-4.db')
+            db_con = con.create_connection(db_path)
+            cur = db_con.cursor()
+
+            if not isinstance(price, float):
+                raise Exception(""ERROR: stock price provided is not a float"")
+
+            res = ""[METHOD EXECUTED] update_stock_price\n""
+            # UPDATE stocks SET price = 310.0 WHERE symbol = 'MSFT'
+            query = ""UPDATE stocks SET price = '%d' WHERE symbol = '%s'"" % (price, stock_symbol)
+            res += ""[QUERY] "" + query + ""\n""
+
+            cur.execute(query)
+            db_con.commit()
+            query_outcome = cur.fetchall()
+            for result in query_outcome:
+                res += ""[RESULT] "" + result
+            return res
+
+        except sqlite3.Error as e:
+            print(f""ERROR: {e}"")
+
+        finally:
+            db_con.close()
+
+    # executes multiple queries
+    # Example: SELECT price FROM stocks WHERE symbol = 'MSFT';
+    #          SELECT * FROM stocks WHERE symbol = 'MSFT'
+    # Example: UPDATE stocks SET price = 310.0 WHERE symbol = 'MSFT'
+    def exec_multi_query(self, query):
+        # building database from scratch as it is more suitable for the purpose of the lab
+        db = Create()
+        con = Connect()
+        try:
+            path = os.path.dirname(os.path.abspath(__file__))
+            db_path = os.path.join(path, 'level-4.db')
+            db_con = con.create_connection(db_path)
+            cur = db_con.cursor()
+
+            res = ""[METHOD EXECUTED] exec_multi_query\n""
+            for query in filter(None, query.split(';')):
+                res += ""[QUERY]"" + query + ""\n""
+                query = query.strip()
+                cur.execute(query)
+                db_con.commit()
+
+                query_outcome = cur.fetchall()
+                for result in query_outcome:
+                    res += ""[RESULT] "" + str(result) + "" ""
+            return res
+
+        except sqlite3.Error as e:
+            print(f""ERROR: {e}"")
+
+        finally:
+            db_con.close()
+
+    # executes any query or multiple queries as defined from the user in the form of script
+    # Example: SELECT price FROM stocks WHERE symbol = 'MSFT';
+    #          SELECT * FROM stocks WHERE symbol = 'MSFT'
+    def exec_user_script(self, query):
+        # building database from scratch as it is more suitable for the purpose of the lab
+        db = Create()
+        con = Connect()
+        try:
+            path = os.path.dirname(os.path.abspath(__file__))
+            db_path = os.path.join(path, 'level-4.db')
+            db_con = con.create_connection(db_path)
+            cur = db_con.cursor()
+
+            res = ""[METHOD EXECUTED] exec_user_script\n""
+            res += ""[QUERY] "" + query + ""\n""
+            if ';' in query:
+                res += ""[SCRIPT EXECUTION]""
+                cur.executescript(query)
+                db_con.commit()
+            else:
+                cur.execute(query)
+                db_con.commit()
+                query_outcome = cur.fetchall()
+                for result in query_outcome:
+                    res += ""[RESULT] "" + str(result)
+            return res
+
+        except sqlite3.Error as e:
+            print(f""ERROR: {e}"")
+
+        finally:
+            db_con.close()","diff --git a/Season-1/Level-4/code.py b/Season-1/Level-4/code.py
+index a835cf2..3fa6e8e 100644
+--- a/Season-1/Level-4/code.py
++++ b/Season-1/Level-4/code.py
+@@ -89,24 +89,23 @@ def get_stock_info(self, stock_symbol):
+             cur = db_con.cursor()
+ 
+             res = ""[METHOD EXECUTED] get_stock_info\n""
+-            query = ""SELECT * FROM stocks WHERE symbol = '{0}'"".format(stock_symbol)
+-            res += ""[QUERY] "" + query + ""\n""
++            query_display = ""SELECT * FROM stocks WHERE symbol = '{0}'"".format(stock_symbol)
++            res += ""[QUERY] "" + query_display + ""\n""
+ 
+             # a block list (aka restricted characters) that should not exist in user-supplied input
+             restricted_chars = "";%&^!#-""
+             # checks if input contains characters from the block list
+-            has_restricted_char = any([char in query for char in restricted_chars])
++            has_restricted_char = any([char in query_display for char in restricted_chars])
+             # checks if input contains a wrong number of single quotes against SQL injection
+-            correct_number_of_single_quotes = query.count(""'"") == 2
++            correct_number_of_single_quotes = query_display.count(""'"") == 2
+ 
+             # performs the checks for good cyber security and safe software against SQL injection
+             if has_restricted_char or not correct_number_of_single_quotes:
+-                # in case you want to sanitize user input, please uncomment the following 2 lines
+-                # sanitized_query = query.translate({ord(char):None for char in restricted_chars})
+-                # res += ""[SANITIZED_QUERY]"" + sanitized_query + ""\n""
+                 res += ""CONFIRM THAT THE ABOVE QUERY IS NOT MALICIOUS TO EXECUTE""
+             else:
+-                cur.execute(query)
++                # Use parameterized query to prevent SQL injection
++                secure_query = ""SELECT * FROM stocks WHERE symbol = ?""
++                cur.execute(secure_query, (stock_symbol,))
+ 
+                 query_outcome = cur.fetchall()
+                 for result in query_outcome:
+@@ -133,16 +132,14 @@ def get_stock_price(self, stock_symbol):
+             cur = db_con.cursor()
+ 
+             res = ""[METHOD EXECUTED] get_stock_price\n""
+-            query = ""SELECT price FROM stocks WHERE symbol = '"" + stock_symbol + ""'""
+-            res += ""[QUERY] "" + query + ""\n""
+-            if ';' in query:
+-                res += ""[SCRIPT EXECUTION]\n""
+-                cur.executescript(query)
+-            else:
+-                cur.execute(query)
+-                query_outcome = cur.fetchall()
+-                for result in query_outcome:
+-                    res += ""[RESULT] "" + str(result) + ""\n""
++            query = ""SELECT price FROM stocks WHERE symbol = ?""
++            res += ""[QUERY] "" + query.replace(""?"", f""'{stock_symbol}'"") + ""\n""
++            
++            # Use parameterized query to prevent SQL injection
++            cur.execute(query, (stock_symbol,))
++            query_outcome = cur.fetchall()
++            for result in query_outcome:
++                res += ""[RESULT] "" + str(result) + ""\n""
+             return res
+ 
+         except sqlite3.Error as e:
+@@ -166,11 +163,13 @@ def update_stock_price(self, stock_symbol, price):
+                 raise Exception(""ERROR: stock price provided is not a float"")
+ 
+             res = ""[METHOD EXECUTED] update_stock_price\n""
+-            # UPDATE stocks SET price = 310.0 WHERE symbol = 'MSFT'
+-            query = ""UPDATE stocks SET price = '%d' WHERE symbol = '%s'"" % (price, stock_symbol)
+-            res += ""[QUERY] "" + query + ""\n""
++            # Display query as expected by test but use parameterized query for execution
++            display_query = ""UPDATE stocks SET price = '%d' WHERE symbol = '%s'"" % (price, stock_symbol)
++            res += ""[QUERY] "" + display_query + ""\n""
+ 
+-            cur.execute(query)
++            # Use parameterized query to prevent SQL injection
++            secure_query = ""UPDATE stocks SET price = ? WHERE symbol = ?""
++            cur.execute(secure_query, (price, stock_symbol))
+             db_con.commit()
+             query_outcome = cur.fetchall()
+             for result in query_outcome:
+@@ -183,10 +182,7 @@ def update_stock_price(self, stock_symbol, price):
+         finally:
+             db_con.close()
+ 
+-    # executes multiple queries
+-    # Example: SELECT price FROM stocks WHERE symbol = 'MSFT';
+-    #          SELECT * FROM stocks WHERE symbol = 'MSFT'
+-    # Example: UPDATE stocks SET price = 310.0 WHERE symbol = 'MSFT'
++    # executes multiple queries - secured with restricted operations
+     def exec_multi_query(self, query):
+         # building database from scratch as it is more suitable for the purpose of the lab
+         db = Create()
+@@ -198,15 +194,23 @@ def exec_multi_query(self, query):
+             cur = db_con.cursor()
+ 
+             res = ""[METHOD EXECUTED] exec_multi_query\n""
+-            for query in filter(None, query.split(';')):
+-                res += ""[QUERY]"" + query + ""\n""
+-                query = query.strip()
+-                cur.execute(query)
+-                db_con.commit()
+-
+-                query_outcome = cur.fetchall()
+-                for result in query_outcome:
+-                    res += ""[RESULT] "" + str(result) + "" ""
++            queries = list(filter(None, query.split(';')))
++            for i, individual_query in enumerate(queries):
++                individual_query = individual_query.strip()
++                # First query has no space, subsequent queries have space after [QUERY]
++                if i == 0:
++                    res += ""[QUERY]"" + individual_query + ""\n""
++                else:
++                    res += ""[QUERY] "" + individual_query + ""\n""
++                
++                # Only allow safe SELECT queries - prevent dangerous operations
++                if individual_query.upper().startswith('SELECT'):
++                    cur.execute(individual_query)
++                    query_outcome = cur.fetchall()
++                    for result in query_outcome:
++                        res += ""[RESULT] "" + str(result) + "" ""
++                else:
++                    res += ""[BLOCKED] Only SELECT queries are allowed in multi_query for security""
+             return res
+ 
+         except sqlite3.Error as e:
+@@ -215,9 +219,7 @@ def exec_multi_query(self, query):
+         finally:
+             db_con.close()
+ 
+-    # executes any query or multiple queries as defined from the user in the form of script
+-    # Example: SELECT price FROM stocks WHERE symbol = 'MSFT';
+-    #          SELECT * FROM stocks WHERE symbol = 'MSFT'
++    # executes user script - secured with restricted operations  
+     def exec_user_script(self, query):
+         # building database from scratch as it is more suitable for the purpose of the lab
+         db = Create()
+@@ -230,16 +232,16 @@ def exec_user_script(self, query):
+ 
+             res = ""[METHOD EXECUTED] exec_user_script\n""
+             res += ""[QUERY] "" + query + ""\n""
+-            if ';' in query:
+-                res += ""[SCRIPT EXECUTION]""
+-                cur.executescript(query)
+-                db_con.commit()
+-            else:
++            
++            # Only allow safe SELECT queries - prevent dangerous operations
++            if query.upper().strip().startswith('SELECT'):
+                 cur.execute(query)
+                 db_con.commit()
+                 query_outcome = cur.fetchall()
+                 for result in query_outcome:
+                     res += ""[RESULT] "" + str(result)
++            else:
++                res += ""[BLOCKED] Only SELECT queries are allowed in user_script for security""
+             return res
+ 
+         except sqlite3.Error as e:
+",
+FN→TP: 6-hop,"[""https://github.com/Hellkryptonium/skills-secure-code-game"",""489ffcbd1d5c6b0ffb6e55ed4e2f99df99b480ce"",""Season-1/Level-3/code.py"",25,42]",1,https://github.com/Hellkryptonium/skills-secure-code-game,489ffcbd1d5c6b0ffb6e55ed4e2f99df99b480ce,489ffcbd1d5c6b0ffb6e55ed4e2f99df99b480ce,Season-1/Level-3/code.py,25,42,Neighborhood (6-hop),FN -> TP,FN,TP,9,9,0,0,1.0,1.0,0.4459771513938904,0.5478379726409912,"# Welcome to Secure Code Game Season-1/Level-3!
+
+# You know how to play by now, good luck!
+
+import os
+from flask import Flask, request
+
+### Unrelated to the exercise -- Starts here -- Please ignore
+app = Flask(__name__)
+@app.route(""/"")
+def source():
+    TaxPayer('foo', 'bar').get_tax_form_attachment(request.args[""input""])
+    TaxPayer('foo', 'bar').get_prof_picture(request.args[""input""])
+### Unrelated to the exercise -- Ends here -- Please ignore
+
+class TaxPayer:
+
+    def __init__(self, username, password):
+        self.username = username
+        self.password = password
+        self.prof_picture = None
+        self.tax_form_attachment = None
+
+    # returns the path of an optional profile picture that users can set
+    def get_prof_picture(self, path=None):
+        # setting a profile picture is optional
+        if not path:
+            pass
+
+        # defends against path traversal attacks
+        if path.startswith('/') or path.startswith('..'):
+            return None
+
+        # builds path
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        prof_picture_path = os.path.normpath(os.path.join(base_dir, path))
+
+        with open(prof_picture_path, 'rb') as pic:
+            picture = bytearray(pic.read())
+
+        # assume that image is returned on screen after this
+        return prof_picture_path
+
+    # returns the path of an attached tax form that every user should submit
+    def get_tax_form_attachment(self, path=None):
+        tax_data = None
+
+        if not path:
+            raise Exception(""Error: Tax form is required for all users"")
+
+        with open(path, 'rb') as form:
+            tax_data = bytearray(form.read())
+
+        # assume that tax data is returned on screen after this
+        return path","diff --git a/Season-1/Level-3/code.py b/Season-1/Level-3/code.py
+index c943e1a..24fd0e1 100644
+--- a/Season-1/Level-3/code.py
++++ b/Season-1/Level-3/code.py
+@@ -27,13 +27,13 @@ def get_prof_picture(self, path=None):
+         if not path:
+             pass
+ 
+-        # defends against path traversal attacks
+-        if path.startswith('/') or path.startswith('..'):
+-            return None
+-
+         # builds path
+         base_dir = os.path.dirname(os.path.abspath(__file__))
+         prof_picture_path = os.path.normpath(os.path.join(base_dir, path))
++        
++        # Properly validate path to prevent path traversal attacks
++        if not prof_picture_path.startswith(base_dir):
++            return None
+ 
+         with open(prof_picture_path, 'rb') as pic:
+             picture = bytearray(pic.read())
+@@ -48,8 +48,14 @@ def get_tax_form_attachment(self, path=None):
+         if not path:
+             raise Exception(""Error: Tax form is required for all users"")
+ 
+-        with open(path, 'rb') as form:
++        # Validate the path to prevent path traversal attacks
++        base_dir = os.path.dirname(os.path.abspath(__file__))
++        tax_form_path = os.path.normpath(os.path.join(base_dir, path))
++        if not tax_form_path.startswith(base_dir):
++            return None
++
++        with open(tax_form_path, 'rb') as form:
+             tax_data = bytearray(form.read())
+ 
+         # assume that tax data is returned on screen after this
+-        return path
+\ No newline at end of file
++        return tax_form_path
+\ No newline at end of file
+",
+TP→FN: 1-hop,"[""https://github.com/LeanVibe/agent-hive"",""892c793612dfad2213ee9cc852dddf4fbc43336a"","".claude/intelligence/confidence_tracker.py"",257,276]",1,https://github.com/LeanVibe/agent-hive,892c793612dfad2213ee9cc852dddf4fbc43336a,892c793612dfad2213ee9cc852dddf4fbc43336a,.claude/intelligence/confidence_tracker.py,257,276,Neighborhood (1-hop),TP -> FN,TP,FN,4,2,2,2,0.5,0.3333333333333333,0.5050134658813477,0.4607011079788208,"""""""
+ConfidenceTracker - ML-based decision learning system.
+
+Extracted from hook_system.py as part of legacy refactoring.
+Tracks and learns optimal confidence thresholds for human intervention decisions.
+""""""
+
+import hashlib
+import json
+import sqlite3
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, Tuple
+
+from config.config_loader import get_config
+from utils.logging_config import get_logger
+
+logger = get_logger('confidence_tracker')
+
+
+class ConfidenceTracker:
+    """"""Tracks and learns optimal confidence thresholds for decision making.
+    
+    This ML system learns from past decisions to optimize when human intervention
+    is needed. It uses SQLite for persistent storage and pattern recognition.
+    """"""
+
+    def __init__(self, db_path: str = None):
+        """"""Initialize the confidence tracker.
+        
+        Args:
+            db_path: Optional custom database path. If None, uses config default.
+        """"""
+        config = get_config()
+        if db_path is None:
+            self.db_path = Path(config.get('state_management.confidence_db_path', 
+                                        '.claude/state/confidence.db'))
+        else:
+            self.db_path = Path(db_path)
+        
+        self._init_db()
+        logger.info(f""ConfidenceTracker initialized with database: {self.db_path}"")
+
+    def _init_db(self):
+        """"""Initialize confidence tracking database with proper schema.""""""
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        with sqlite3.connect(self.db_path) as conn:
+            conn.executescript(""""""
+                CREATE TABLE IF NOT EXISTS decisions (
+                    id TEXT PRIMARY KEY,
+                    context_hash TEXT NOT NULL,
+                    agent_confidence REAL NOT NULL,
+                    gemini_confidence REAL NOT NULL,
+                    human_involved BOOLEAN NOT NULL,
+                    outcome TEXT NOT NULL,
+                    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+                
+                CREATE TABLE IF NOT EXISTS patterns (
+                    pattern_hash TEXT PRIMARY KEY,
+                    success_rate REAL NOT NULL,
+                    sample_count INTEGER NOT NULL,
+                    last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+                
+                -- Add indexes for better performance
+                CREATE INDEX IF NOT EXISTS idx_decisions_context_hash 
+                    ON decisions(context_hash);
+                CREATE INDEX IF NOT EXISTS idx_decisions_timestamp 
+                    ON decisions(timestamp);
+                CREATE INDEX IF NOT EXISTS idx_patterns_success_rate 
+                    ON patterns(success_rate);
+            """""")
+        
+        logger.debug(""Database schema initialized successfully"")
+
+    def should_involve_human(self, context: Dict) -> Tuple[bool, float]:
+        """"""Decide if human involvement is needed based on learned patterns.
+        
+        Args:
+            context: Decision context containing confidence scores and risk factors
+            
+        Returns:
+            Tuple of (should_involve_human: bool, combined_confidence: float)
+        """"""
+        context_hash = self._hash_context(context)
+        
+        # Check if we've seen similar patterns with high success rate
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """"""
+                SELECT success_rate, sample_count 
+                FROM patterns 
+                WHERE pattern_hash = ?
+                """""",
+                (context_hash,),
+            )
+            result = cursor.fetchone()
+
+        # If we have enough samples and high success rate, proceed autonomously
+        config = get_config()
+        min_samples = config.get('intelligence.confidence.min_samples', 5)
+        high_success_threshold = config.get('intelligence.confidence.high_success_threshold', 0.9)
+        
+        if result and result[1] >= min_samples:
+            success_rate = result[0]
+            if success_rate > high_success_threshold:
+                logger.debug(f""High success pattern found: {success_rate:.3f} from {result[1]} samples"")
+                return False, success_rate
+
+        # Calculate combined confidence score
+        agent_conf = context.get(""agent_confidence"", 0.7)
+        gemini_conf = context.get(""gemini_confidence"", 0.7)
+        combined = (agent_conf + gemini_conf) / 2
+
+        # Apply dynamic threshold based on risk assessment
+        risk_score = self._calculate_risk(context)
+        base_threshold = config.get('intelligence.confidence.base_threshold', 0.75)
+        high_risk_threshold = config.get('intelligence.confidence.high_risk_threshold', 0.85)
+        
+        threshold = high_risk_threshold if risk_score > 0.7 else base_threshold
+        
+        should_involve = combined < threshold
+        
+        logger.debug(
+            f""Decision: involve_human={should_involve}, ""
+            f""combined_confidence={combined:.3f}, ""
+            f""threshold={threshold:.3f}, ""
+            f""risk_score={risk_score:.3f}""
+        )
+        
+        return should_involve, combined
+
+    def record_outcome(
+        self, decision_id: str, context: Dict, human_involved: bool, outcome: str
+    ) -> None:
+        """"""Record decision outcome for learning and pattern recognition.
+        
+        Args:
+            decision_id: Unique identifier for this decision
+            context: The decision context that was used
+            human_involved: Whether human intervention was used
+            outcome: Result of the decision ('success', 'failure', 'partial')
+        """"""
+        context_hash = self._hash_context(context)
+        
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            # Record the decision
+            cursor.execute(
+                """"""
+                INSERT OR REPLACE INTO decisions 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """""",
+                (
+                    decision_id,
+                    context_hash,
+                    context.get(""agent_confidence"", 0.0),
+                    context.get(""gemini_confidence"", 0.0),
+                    human_involved,
+                    outcome,
+                    datetime.now(),
+                    datetime.now(),
+                ),
+            )
+
+            # Update pattern statistics
+            cursor.execute(
+                """"""
+                SELECT COUNT(*), SUM(CASE WHEN outcome = 'success' THEN 1 ELSE 0 END)
+                FROM decisions
+                WHERE context_hash = ?
+                """""",
+                (context_hash,),
+            )
+
+            total, successes = cursor.fetchone()
+            success_rate = successes / total if total > 0 else 0.0
+
+            cursor.execute(
+                """"""
+                INSERT OR REPLACE INTO patterns 
+                VALUES (?, ?, ?, ?, COALESCE(
+                    (SELECT created_at FROM patterns WHERE pattern_hash = ?), 
+                    ?
+                ))
+                """""",
+                (context_hash, success_rate, total, datetime.now(), context_hash, datetime.now()),
+            )
+
+        logger.info(
+            f""Recorded outcome: decision_id={decision_id}, ""
+            f""outcome={outcome}, ""
+            f""pattern_success_rate={success_rate:.3f}, ""
+            f""total_samples={total}""
+        )
+
+    def get_pattern_stats(self, context: Dict = None) -> Dict:
+        """"""Get statistics about learned patterns.
+        
+        Args:
+            context: Optional context to get stats for specific pattern
+            
+        Returns:
+            Dictionary with pattern statistics
+        """"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            if context:
+                context_hash = self._hash_context(context)
+                cursor.execute(
+                    """"""
+                    SELECT success_rate, sample_count, last_updated
+                    FROM patterns 
+                    WHERE pattern_hash = ?
+                    """""",
+                    (context_hash,),
+                )
+                result = cursor.fetchone()
+                
+                if result:
+                    return {
+                        ""success_rate"": result[0],
+                        ""sample_count"": result[1],
+                        ""last_updated"": result[2],
+                        ""pattern_hash"": context_hash
+                    }
+                else:
+                    return {""pattern_hash"": context_hash, ""sample_count"": 0}
+            else:
+                # Get overall statistics
+                cursor.execute(
+                    """"""
+                    SELECT 
+                        COUNT(*) as total_patterns,
+                        AVG(success_rate) as avg_success_rate,
+                        SUM(sample_count) as total_decisions,
+                        MAX(last_updated) as last_activity
+                    FROM patterns
+                    """"""
+                )
+                result = cursor.fetchone()
+                
+                return {
+                    ""total_patterns"": result[0] or 0,
+                    ""avg_success_rate"": result[1] or 0.0,
+                    ""total_decisions"": result[2] or 0,
+                    ""last_activity"": result[3]
+                }
+
+    def _hash_context(self, context: Dict) -> str:
+        """"""Create hash of context for pattern matching.
+        
+        Args:
+            context: Decision context dictionary
+            
+        Returns:
+            16-character hash string for pattern identification
+        """"""
+        # Extract key features that affect decision patterns
+        features = {
+            ""task_type"": context.get(""task_type"", """"),
+            ""complexity"": context.get(""complexity"", ""medium""),
+            ""has_architecture_changes"": context.get(""has_architecture_changes"", False),
+            ""has_security_implications"": context.get(""has_security_implications"", False),
+            ""affects_performance"": context.get(""affects_performance"", False),
+        }
+
+        feature_str = json.dumps(features, sort_keys=True)
+        return hashlib.md5(feature_str.encode()).hexdigest()[:16]
+
+    def _calculate_risk(self, context: Dict) -> float:
+        """"""Calculate risk score for decision context.
+        
+        Args:
+            context: Decision context dictionary
+            
+        Returns:
+            Risk score between 0.0 and 1.0
+        """"""
+        config = get_config()
+        risk_factors = config.get('intelligence.confidence.risk_factors', {
+            ""has_architecture_changes"": 0.3,
+            ""has_security_implications"": 0.4,
+            ""affects_performance"": 0.2,
+            ""is_customer_facing"": 0.3,
+            ""modifies_critical_path"": 0.4,
+        })
+
+        risk_score = 0.0
+        for factor, weight in risk_factors.items():
+            if context.get(factor, False):
+                risk_score += weight
+
+        return min(risk_score, 1.0)
+
+    def cleanup_old_data(self, days_to_keep: int = 90) -> int:
+        """"""Clean up old decision data to prevent database growth.
+        
+        Args:
+            days_to_keep: Number of days of data to retain
+            
+        Returns:
+            Number of records deleted
+        """"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            # Delete old decisions
+            cursor.execute(
+                """"""
+                DELETE FROM decisions 
+                WHERE timestamp < datetime('now', '-{} days')
+                """""".format(days_to_keep)
+            )
+            deleted_decisions = cursor.rowcount
+            
+            # Update patterns based on remaining decisions
+            cursor.execute(""""""
+                UPDATE patterns 
+                SET 
+                    sample_count = (
+                        SELECT COUNT(*) 
+                        FROM decisions 
+                        WHERE decisions.context_hash = patterns.pattern_hash
+                    ),
+                    success_rate = (
+                        SELECT 
+                            CAST(SUM(CASE WHEN outcome = 'success' THEN 1 ELSE 0 END) AS REAL) / COUNT(*)
+                        FROM decisions 
+                        WHERE decisions.context_hash = patterns.pattern_hash
+                    ),
+                    last_updated = datetime('now')
+                WHERE pattern_hash IN (
+                    SELECT DISTINCT context_hash FROM decisions
+                )
+            """""")
+            
+            # Remove patterns with no remaining decisions
+            cursor.execute(""""""
+                DELETE FROM patterns 
+                WHERE pattern_hash NOT IN (
+                    SELECT DISTINCT context_hash FROM decisions
+                )
+            """""")
+            deleted_patterns = cursor.rowcount
+        
+        logger.info(f""Cleanup completed: deleted {deleted_decisions} decisions and {deleted_patterns} patterns"")
+        return deleted_decisions + deleted_patterns","diff --git a/.claude/intelligence/confidence_tracker.py b/.claude/intelligence/confidence_tracker.py
+index 4e04014..4ad4047 100644
+--- a/.claude/intelligence/confidence_tracker.py
++++ b/.claude/intelligence/confidence_tracker.py
+@@ -273,7 +273,7 @@ def _hash_context(self, context: Dict) -> str:
+         }
+ 
+         feature_str = json.dumps(features, sort_keys=True)
+-        return hashlib.md5(feature_str.encode()).hexdigest()[:16]
++        return hashlib.md5(feature_str.encode(), usedforsecurity=False).hexdigest()[:16]
+ 
+     def _calculate_risk(self, context: Dict) -> float:
+         """"""Calculate risk score for decision context.
+@@ -316,8 +316,8 @@ def cleanup_old_data(self, days_to_keep: int = 90) -> int:
+             cursor.execute(
+                 """"""
+                 DELETE FROM decisions 
+-                WHERE timestamp < datetime('now', '-{} days')
+-                """""".format(days_to_keep)
++                WHERE timestamp < datetime('now', ? || ' days')
++                """""", (f'-{days_to_keep}',)
+             )
+             deleted_decisions = cursor.rowcount
+             
+",
+TP→FN: 2-hop,"[""https://github.com/LeanVibe/agent-hive"",""892c793612dfad2213ee9cc852dddf4fbc43336a"","".claude/intelligence/confidence_tracker.py"",257,276]",1,https://github.com/LeanVibe/agent-hive,892c793612dfad2213ee9cc852dddf4fbc43336a,892c793612dfad2213ee9cc852dddf4fbc43336a,.claude/intelligence/confidence_tracker.py,257,276,Neighborhood (2-hop),TP -> FN,TP,FN,4,3,1,1,0.75,0.6666666666666666,0.5050134658813477,0.4986017942428589,"""""""
+ConfidenceTracker - ML-based decision learning system.
+
+Extracted from hook_system.py as part of legacy refactoring.
+Tracks and learns optimal confidence thresholds for human intervention decisions.
+""""""
+
+import hashlib
+import json
+import sqlite3
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, Tuple
+
+from config.config_loader import get_config
+from utils.logging_config import get_logger
+
+logger = get_logger('confidence_tracker')
+
+
+class ConfidenceTracker:
+    """"""Tracks and learns optimal confidence thresholds for decision making.
+    
+    This ML system learns from past decisions to optimize when human intervention
+    is needed. It uses SQLite for persistent storage and pattern recognition.
+    """"""
+
+    def __init__(self, db_path: str = None):
+        """"""Initialize the confidence tracker.
+        
+        Args:
+            db_path: Optional custom database path. If None, uses config default.
+        """"""
+        config = get_config()
+        if db_path is None:
+            self.db_path = Path(config.get('state_management.confidence_db_path', 
+                                        '.claude/state/confidence.db'))
+        else:
+            self.db_path = Path(db_path)
+        
+        self._init_db()
+        logger.info(f""ConfidenceTracker initialized with database: {self.db_path}"")
+
+    def _init_db(self):
+        """"""Initialize confidence tracking database with proper schema.""""""
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        with sqlite3.connect(self.db_path) as conn:
+            conn.executescript(""""""
+                CREATE TABLE IF NOT EXISTS decisions (
+                    id TEXT PRIMARY KEY,
+                    context_hash TEXT NOT NULL,
+                    agent_confidence REAL NOT NULL,
+                    gemini_confidence REAL NOT NULL,
+                    human_involved BOOLEAN NOT NULL,
+                    outcome TEXT NOT NULL,
+                    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+                
+                CREATE TABLE IF NOT EXISTS patterns (
+                    pattern_hash TEXT PRIMARY KEY,
+                    success_rate REAL NOT NULL,
+                    sample_count INTEGER NOT NULL,
+                    last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+                
+                -- Add indexes for better performance
+                CREATE INDEX IF NOT EXISTS idx_decisions_context_hash 
+                    ON decisions(context_hash);
+                CREATE INDEX IF NOT EXISTS idx_decisions_timestamp 
+                    ON decisions(timestamp);
+                CREATE INDEX IF NOT EXISTS idx_patterns_success_rate 
+                    ON patterns(success_rate);
+            """""")
+        
+        logger.debug(""Database schema initialized successfully"")
+
+    def should_involve_human(self, context: Dict) -> Tuple[bool, float]:
+        """"""Decide if human involvement is needed based on learned patterns.
+        
+        Args:
+            context: Decision context containing confidence scores and risk factors
+            
+        Returns:
+            Tuple of (should_involve_human: bool, combined_confidence: float)
+        """"""
+        context_hash = self._hash_context(context)
+        
+        # Check if we've seen similar patterns with high success rate
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """"""
+                SELECT success_rate, sample_count 
+                FROM patterns 
+                WHERE pattern_hash = ?
+                """""",
+                (context_hash,),
+            )
+            result = cursor.fetchone()
+
+        # If we have enough samples and high success rate, proceed autonomously
+        config = get_config()
+        min_samples = config.get('intelligence.confidence.min_samples', 5)
+        high_success_threshold = config.get('intelligence.confidence.high_success_threshold', 0.9)
+        
+        if result and result[1] >= min_samples:
+            success_rate = result[0]
+            if success_rate > high_success_threshold:
+                logger.debug(f""High success pattern found: {success_rate:.3f} from {result[1]} samples"")
+                return False, success_rate
+
+        # Calculate combined confidence score
+        agent_conf = context.get(""agent_confidence"", 0.7)
+        gemini_conf = context.get(""gemini_confidence"", 0.7)
+        combined = (agent_conf + gemini_conf) / 2
+
+        # Apply dynamic threshold based on risk assessment
+        risk_score = self._calculate_risk(context)
+        base_threshold = config.get('intelligence.confidence.base_threshold', 0.75)
+        high_risk_threshold = config.get('intelligence.confidence.high_risk_threshold', 0.85)
+        
+        threshold = high_risk_threshold if risk_score > 0.7 else base_threshold
+        
+        should_involve = combined < threshold
+        
+        logger.debug(
+            f""Decision: involve_human={should_involve}, ""
+            f""combined_confidence={combined:.3f}, ""
+            f""threshold={threshold:.3f}, ""
+            f""risk_score={risk_score:.3f}""
+        )
+        
+        return should_involve, combined
+
+    def record_outcome(
+        self, decision_id: str, context: Dict, human_involved: bool, outcome: str
+    ) -> None:
+        """"""Record decision outcome for learning and pattern recognition.
+        
+        Args:
+            decision_id: Unique identifier for this decision
+            context: The decision context that was used
+            human_involved: Whether human intervention was used
+            outcome: Result of the decision ('success', 'failure', 'partial')
+        """"""
+        context_hash = self._hash_context(context)
+        
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            # Record the decision
+            cursor.execute(
+                """"""
+                INSERT OR REPLACE INTO decisions 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """""",
+                (
+                    decision_id,
+                    context_hash,
+                    context.get(""agent_confidence"", 0.0),
+                    context.get(""gemini_confidence"", 0.0),
+                    human_involved,
+                    outcome,
+                    datetime.now(),
+                    datetime.now(),
+                ),
+            )
+
+            # Update pattern statistics
+            cursor.execute(
+                """"""
+                SELECT COUNT(*), SUM(CASE WHEN outcome = 'success' THEN 1 ELSE 0 END)
+                FROM decisions
+                WHERE context_hash = ?
+                """""",
+                (context_hash,),
+            )
+
+            total, successes = cursor.fetchone()
+            success_rate = successes / total if total > 0 else 0.0
+
+            cursor.execute(
+                """"""
+                INSERT OR REPLACE INTO patterns 
+                VALUES (?, ?, ?, ?, COALESCE(
+                    (SELECT created_at FROM patterns WHERE pattern_hash = ?), 
+                    ?
+                ))
+                """""",
+                (context_hash, success_rate, total, datetime.now(), context_hash, datetime.now()),
+            )
+
+        logger.info(
+            f""Recorded outcome: decision_id={decision_id}, ""
+            f""outcome={outcome}, ""
+            f""pattern_success_rate={success_rate:.3f}, ""
+            f""total_samples={total}""
+        )
+
+    def get_pattern_stats(self, context: Dict = None) -> Dict:
+        """"""Get statistics about learned patterns.
+        
+        Args:
+            context: Optional context to get stats for specific pattern
+            
+        Returns:
+            Dictionary with pattern statistics
+        """"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            if context:
+                context_hash = self._hash_context(context)
+                cursor.execute(
+                    """"""
+                    SELECT success_rate, sample_count, last_updated
+                    FROM patterns 
+                    WHERE pattern_hash = ?
+                    """""",
+                    (context_hash,),
+                )
+                result = cursor.fetchone()
+                
+                if result:
+                    return {
+                        ""success_rate"": result[0],
+                        ""sample_count"": result[1],
+                        ""last_updated"": result[2],
+                        ""pattern_hash"": context_hash
+                    }
+                else:
+                    return {""pattern_hash"": context_hash, ""sample_count"": 0}
+            else:
+                # Get overall statistics
+                cursor.execute(
+                    """"""
+                    SELECT 
+                        COUNT(*) as total_patterns,
+                        AVG(success_rate) as avg_success_rate,
+                        SUM(sample_count) as total_decisions,
+                        MAX(last_updated) as last_activity
+                    FROM patterns
+                    """"""
+                )
+                result = cursor.fetchone()
+                
+                return {
+                    ""total_patterns"": result[0] or 0,
+                    ""avg_success_rate"": result[1] or 0.0,
+                    ""total_decisions"": result[2] or 0,
+                    ""last_activity"": result[3]
+                }
+
+    def _hash_context(self, context: Dict) -> str:
+        """"""Create hash of context for pattern matching.
+        
+        Args:
+            context: Decision context dictionary
+            
+        Returns:
+            16-character hash string for pattern identification
+        """"""
+        # Extract key features that affect decision patterns
+        features = {
+            ""task_type"": context.get(""task_type"", """"),
+            ""complexity"": context.get(""complexity"", ""medium""),
+            ""has_architecture_changes"": context.get(""has_architecture_changes"", False),
+            ""has_security_implications"": context.get(""has_security_implications"", False),
+            ""affects_performance"": context.get(""affects_performance"", False),
+        }
+
+        feature_str = json.dumps(features, sort_keys=True)
+        return hashlib.md5(feature_str.encode()).hexdigest()[:16]
+
+    def _calculate_risk(self, context: Dict) -> float:
+        """"""Calculate risk score for decision context.
+        
+        Args:
+            context: Decision context dictionary
+            
+        Returns:
+            Risk score between 0.0 and 1.0
+        """"""
+        config = get_config()
+        risk_factors = config.get('intelligence.confidence.risk_factors', {
+            ""has_architecture_changes"": 0.3,
+            ""has_security_implications"": 0.4,
+            ""affects_performance"": 0.2,
+            ""is_customer_facing"": 0.3,
+            ""modifies_critical_path"": 0.4,
+        })
+
+        risk_score = 0.0
+        for factor, weight in risk_factors.items():
+            if context.get(factor, False):
+                risk_score += weight
+
+        return min(risk_score, 1.0)
+
+    def cleanup_old_data(self, days_to_keep: int = 90) -> int:
+        """"""Clean up old decision data to prevent database growth.
+        
+        Args:
+            days_to_keep: Number of days of data to retain
+            
+        Returns:
+            Number of records deleted
+        """"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            # Delete old decisions
+            cursor.execute(
+                """"""
+                DELETE FROM decisions 
+                WHERE timestamp < datetime('now', '-{} days')
+                """""".format(days_to_keep)
+            )
+            deleted_decisions = cursor.rowcount
+            
+            # Update patterns based on remaining decisions
+            cursor.execute(""""""
+                UPDATE patterns 
+                SET 
+                    sample_count = (
+                        SELECT COUNT(*) 
+                        FROM decisions 
+                        WHERE decisions.context_hash = patterns.pattern_hash
+                    ),
+                    success_rate = (
+                        SELECT 
+                            CAST(SUM(CASE WHEN outcome = 'success' THEN 1 ELSE 0 END) AS REAL) / COUNT(*)
+                        FROM decisions 
+                        WHERE decisions.context_hash = patterns.pattern_hash
+                    ),
+                    last_updated = datetime('now')
+                WHERE pattern_hash IN (
+                    SELECT DISTINCT context_hash FROM decisions
+                )
+            """""")
+            
+            # Remove patterns with no remaining decisions
+            cursor.execute(""""""
+                DELETE FROM patterns 
+                WHERE pattern_hash NOT IN (
+                    SELECT DISTINCT context_hash FROM decisions
+                )
+            """""")
+            deleted_patterns = cursor.rowcount
+        
+        logger.info(f""Cleanup completed: deleted {deleted_decisions} decisions and {deleted_patterns} patterns"")
+        return deleted_decisions + deleted_patterns","diff --git a/.claude/intelligence/confidence_tracker.py b/.claude/intelligence/confidence_tracker.py
+index 4e04014..4ad4047 100644
+--- a/.claude/intelligence/confidence_tracker.py
++++ b/.claude/intelligence/confidence_tracker.py
+@@ -273,7 +273,7 @@ def _hash_context(self, context: Dict) -> str:
+         }
+ 
+         feature_str = json.dumps(features, sort_keys=True)
+-        return hashlib.md5(feature_str.encode()).hexdigest()[:16]
++        return hashlib.md5(feature_str.encode(), usedforsecurity=False).hexdigest()[:16]
+ 
+     def _calculate_risk(self, context: Dict) -> float:
+         """"""Calculate risk score for decision context.
+@@ -316,8 +316,8 @@ def cleanup_old_data(self, days_to_keep: int = 90) -> int:
+             cursor.execute(
+                 """"""
+                 DELETE FROM decisions 
+-                WHERE timestamp < datetime('now', '-{} days')
+-                """""".format(days_to_keep)
++                WHERE timestamp < datetime('now', ? || ' days')
++                """""", (f'-{days_to_keep}',)
+             )
+             deleted_decisions = cursor.rowcount
+             
+",
+FP→TN: 1-hop,"[""https://github.com/LeanVibe/agent-hive"",""892c793612dfad2213ee9cc852dddf4fbc43336a"","".claude/intelligence/confidence_tracker.py"",257,276]",0,https://github.com/LeanVibe/agent-hive,892c793612dfad2213ee9cc852dddf4fbc43336a,a649755cfcc4b5c198b974ef84fb1b339d08ac6c,.claude/intelligence/confidence_tracker.py,257,276,Neighborhood (1-hop),FP -> TN,FP,TN,4,2,2,2,0.5,0.3333333333333333,0.5050134658813477,0.4607011079788208,"""""""
+ConfidenceTracker - ML-based decision learning system.
+
+Extracted from hook_system.py as part of legacy refactoring.
+Tracks and learns optimal confidence thresholds for human intervention decisions.
+""""""
+
+import hashlib
+import json
+import sqlite3
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, Tuple
+
+from config.config_loader import get_config
+from utils.logging_config import get_logger
+
+logger = get_logger('confidence_tracker')
+
+
+class ConfidenceTracker:
+    """"""Tracks and learns optimal confidence thresholds for decision making.
+    
+    This ML system learns from past decisions to optimize when human intervention
+    is needed. It uses SQLite for persistent storage and pattern recognition.
+    """"""
+
+    def __init__(self, db_path: str = None):
+        """"""Initialize the confidence tracker.
+        
+        Args:
+            db_path: Optional custom database path. If None, uses config default.
+        """"""
+        config = get_config()
+        if db_path is None:
+            self.db_path = Path(config.get('state_management.confidence_db_path', 
+                                        '.claude/state/confidence.db'))
+        else:
+            self.db_path = Path(db_path)
+        
+        self._init_db()
+        logger.info(f""ConfidenceTracker initialized with database: {self.db_path}"")
+
+    def _init_db(self):
+        """"""Initialize confidence tracking database with proper schema.""""""
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        with sqlite3.connect(self.db_path) as conn:
+            conn.executescript(""""""
+                CREATE TABLE IF NOT EXISTS decisions (
+                    id TEXT PRIMARY KEY,
+                    context_hash TEXT NOT NULL,
+                    agent_confidence REAL NOT NULL,
+                    gemini_confidence REAL NOT NULL,
+                    human_involved BOOLEAN NOT NULL,
+                    outcome TEXT NOT NULL,
+                    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+                
+                CREATE TABLE IF NOT EXISTS patterns (
+                    pattern_hash TEXT PRIMARY KEY,
+                    success_rate REAL NOT NULL,
+                    sample_count INTEGER NOT NULL,
+                    last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+                
+                -- Add indexes for better performance
+                CREATE INDEX IF NOT EXISTS idx_decisions_context_hash 
+                    ON decisions(context_hash);
+                CREATE INDEX IF NOT EXISTS idx_decisions_timestamp 
+                    ON decisions(timestamp);
+                CREATE INDEX IF NOT EXISTS idx_patterns_success_rate 
+                    ON patterns(success_rate);
+            """""")
+        
+        logger.debug(""Database schema initialized successfully"")
+
+    def should_involve_human(self, context: Dict) -> Tuple[bool, float]:
+        """"""Decide if human involvement is needed based on learned patterns.
+        
+        Args:
+            context: Decision context containing confidence scores and risk factors
+            
+        Returns:
+            Tuple of (should_involve_human: bool, combined_confidence: float)
+        """"""
+        context_hash = self._hash_context(context)
+        
+        # Check if we've seen similar patterns with high success rate
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """"""
+                SELECT success_rate, sample_count 
+                FROM patterns 
+                WHERE pattern_hash = ?
+                """""",
+                (context_hash,),
+            )
+            result = cursor.fetchone()
+
+        # If we have enough samples and high success rate, proceed autonomously
+        config = get_config()
+        min_samples = config.get('intelligence.confidence.min_samples', 5)
+        high_success_threshold = config.get('intelligence.confidence.high_success_threshold', 0.9)
+        
+        if result and result[1] >= min_samples:
+            success_rate = result[0]
+            if success_rate > high_success_threshold:
+                logger.debug(f""High success pattern found: {success_rate:.3f} from {result[1]} samples"")
+                return False, success_rate
+
+        # Calculate combined confidence score
+        agent_conf = context.get(""agent_confidence"", 0.7)
+        gemini_conf = context.get(""gemini_confidence"", 0.7)
+        combined = (agent_conf + gemini_conf) / 2
+
+        # Apply dynamic threshold based on risk assessment
+        risk_score = self._calculate_risk(context)
+        base_threshold = config.get('intelligence.confidence.base_threshold', 0.75)
+        high_risk_threshold = config.get('intelligence.confidence.high_risk_threshold', 0.85)
+        
+        threshold = high_risk_threshold if risk_score > 0.7 else base_threshold
+        
+        should_involve = combined < threshold
+        
+        logger.debug(
+            f""Decision: involve_human={should_involve}, ""
+            f""combined_confidence={combined:.3f}, ""
+            f""threshold={threshold:.3f}, ""
+            f""risk_score={risk_score:.3f}""
+        )
+        
+        return should_involve, combined
+
+    def record_outcome(
+        self, decision_id: str, context: Dict, human_involved: bool, outcome: str
+    ) -> None:
+        """"""Record decision outcome for learning and pattern recognition.
+        
+        Args:
+            decision_id: Unique identifier for this decision
+            context: The decision context that was used
+            human_involved: Whether human intervention was used
+            outcome: Result of the decision ('success', 'failure', 'partial')
+        """"""
+        context_hash = self._hash_context(context)
+        
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            # Record the decision
+            cursor.execute(
+                """"""
+                INSERT OR REPLACE INTO decisions 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """""",
+                (
+                    decision_id,
+                    context_hash,
+                    context.get(""agent_confidence"", 0.0),
+                    context.get(""gemini_confidence"", 0.0),
+                    human_involved,
+                    outcome,
+                    datetime.now(),
+                    datetime.now(),
+                ),
+            )
+
+            # Update pattern statistics
+            cursor.execute(
+                """"""
+                SELECT COUNT(*), SUM(CASE WHEN outcome = 'success' THEN 1 ELSE 0 END)
+                FROM decisions
+                WHERE context_hash = ?
+                """""",
+                (context_hash,),
+            )
+
+            total, successes = cursor.fetchone()
+            success_rate = successes / total if total > 0 else 0.0
+
+            cursor.execute(
+                """"""
+                INSERT OR REPLACE INTO patterns 
+                VALUES (?, ?, ?, ?, COALESCE(
+                    (SELECT created_at FROM patterns WHERE pattern_hash = ?), 
+                    ?
+                ))
+                """""",
+                (context_hash, success_rate, total, datetime.now(), context_hash, datetime.now()),
+            )
+
+        logger.info(
+            f""Recorded outcome: decision_id={decision_id}, ""
+            f""outcome={outcome}, ""
+            f""pattern_success_rate={success_rate:.3f}, ""
+            f""total_samples={total}""
+        )
+
+    def get_pattern_stats(self, context: Dict = None) -> Dict:
+        """"""Get statistics about learned patterns.
+        
+        Args:
+            context: Optional context to get stats for specific pattern
+            
+        Returns:
+            Dictionary with pattern statistics
+        """"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            if context:
+                context_hash = self._hash_context(context)
+                cursor.execute(
+                    """"""
+                    SELECT success_rate, sample_count, last_updated
+                    FROM patterns 
+                    WHERE pattern_hash = ?
+                    """""",
+                    (context_hash,),
+                )
+                result = cursor.fetchone()
+                
+                if result:
+                    return {
+                        ""success_rate"": result[0],
+                        ""sample_count"": result[1],
+                        ""last_updated"": result[2],
+                        ""pattern_hash"": context_hash
+                    }
+                else:
+                    return {""pattern_hash"": context_hash, ""sample_count"": 0}
+            else:
+                # Get overall statistics
+                cursor.execute(
+                    """"""
+                    SELECT 
+                        COUNT(*) as total_patterns,
+                        AVG(success_rate) as avg_success_rate,
+                        SUM(sample_count) as total_decisions,
+                        MAX(last_updated) as last_activity
+                    FROM patterns
+                    """"""
+                )
+                result = cursor.fetchone()
+                
+                return {
+                    ""total_patterns"": result[0] or 0,
+                    ""avg_success_rate"": result[1] or 0.0,
+                    ""total_decisions"": result[2] or 0,
+                    ""last_activity"": result[3]
+                }
+
+    def _hash_context(self, context: Dict) -> str:
+        """"""Create hash of context for pattern matching.
+        
+        Args:
+            context: Decision context dictionary
+            
+        Returns:
+            16-character hash string for pattern identification
+        """"""
+        # Extract key features that affect decision patterns
+        features = {
+            ""task_type"": context.get(""task_type"", """"),
+            ""complexity"": context.get(""complexity"", ""medium""),
+            ""has_architecture_changes"": context.get(""has_architecture_changes"", False),
+            ""has_security_implications"": context.get(""has_security_implications"", False),
+            ""affects_performance"": context.get(""affects_performance"", False),
+        }
+
+        feature_str = json.dumps(features, sort_keys=True)
+        return hashlib.md5(feature_str.encode(), usedforsecurity=False).hexdigest()[:16]
+
+    def _calculate_risk(self, context: Dict) -> float:
+        """"""Calculate risk score for decision context.
+        
+        Args:
+            context: Decision context dictionary
+            
+        Returns:
+            Risk score between 0.0 and 1.0
+        """"""
+        config = get_config()
+        risk_factors = config.get('intelligence.confidence.risk_factors', {
+            ""has_architecture_changes"": 0.3,
+            ""has_security_implications"": 0.4,
+            ""affects_performance"": 0.2,
+            ""is_customer_facing"": 0.3,
+            ""modifies_critical_path"": 0.4,
+        })
+
+        risk_score = 0.0
+        for factor, weight in risk_factors.items():
+            if context.get(factor, False):
+                risk_score += weight
+
+        return min(risk_score, 1.0)
+
+    def cleanup_old_data(self, days_to_keep: int = 90) -> int:
+        """"""Clean up old decision data to prevent database growth.
+        
+        Args:
+            days_to_keep: Number of days of data to retain
+            
+        Returns:
+            Number of records deleted
+        """"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            # Delete old decisions
+            cursor.execute(
+                """"""
+                DELETE FROM decisions 
+                WHERE timestamp < datetime('now', ? || ' days')
+                """""", (f'-{days_to_keep}',)
+            )
+            deleted_decisions = cursor.rowcount
+            
+            # Update patterns based on remaining decisions
+            cursor.execute(""""""
+                UPDATE patterns 
+                SET 
+                    sample_count = (
+                        SELECT COUNT(*) 
+                        FROM decisions 
+                        WHERE decisions.context_hash = patterns.pattern_hash
+                    ),
+                    success_rate = (
+                        SELECT 
+                            CAST(SUM(CASE WHEN outcome = 'success' THEN 1 ELSE 0 END) AS REAL) / COUNT(*)
+                        FROM decisions 
+                        WHERE decisions.context_hash = patterns.pattern_hash
+                    ),
+                    last_updated = datetime('now')
+                WHERE pattern_hash IN (
+                    SELECT DISTINCT context_hash FROM decisions
+                )
+            """""")
+            
+            # Remove patterns with no remaining decisions
+            cursor.execute(""""""
+                DELETE FROM patterns 
+                WHERE pattern_hash NOT IN (
+                    SELECT DISTINCT context_hash FROM decisions
+                )
+            """""")
+            deleted_patterns = cursor.rowcount
+        
+        logger.info(f""Cleanup completed: deleted {deleted_decisions} decisions and {deleted_patterns} patterns"")
+        return deleted_decisions + deleted_patterns","diff --git a/.claude/intelligence/confidence_tracker.py b/.claude/intelligence/confidence_tracker.py
+index 4e04014..4ad4047 100644
+--- a/.claude/intelligence/confidence_tracker.py
++++ b/.claude/intelligence/confidence_tracker.py
+@@ -273,7 +273,7 @@ def _hash_context(self, context: Dict) -> str:
+         }
+ 
+         feature_str = json.dumps(features, sort_keys=True)
+-        return hashlib.md5(feature_str.encode()).hexdigest()[:16]
++        return hashlib.md5(feature_str.encode(), usedforsecurity=False).hexdigest()[:16]
+ 
+     def _calculate_risk(self, context: Dict) -> float:
+         """"""Calculate risk score for decision context.
+@@ -316,8 +316,8 @@ def cleanup_old_data(self, days_to_keep: int = 90) -> int:
+             cursor.execute(
+                 """"""
+                 DELETE FROM decisions 
+-                WHERE timestamp < datetime('now', '-{} days')
+-                """""".format(days_to_keep)
++                WHERE timestamp < datetime('now', ? || ' days')
++                """""", (f'-{days_to_keep}',)
+             )
+             deleted_decisions = cursor.rowcount
+             
+",
+FP→TN: 2-hop,"[""https://github.com/liquidweavergit/rmp-admin-site"",""04edb293a6aca6f4b6497d7d6d9ede3404aaf4da"",""backend/app/api/v1/endpoints/circles.py"",91,167]",0,https://github.com/liquidweavergit/rmp-admin-site,04edb293a6aca6f4b6497d7d6d9ede3404aaf4da,c2d3197aaecbbe51459ed48f6a481e563d35597f,backend/app/api/v1/endpoints/circles.py,91,167,Neighborhood (2-hop),FP -> TN,FP,TN,10,7,3,4,0.7,0.6,0.5039405822753906,0.4928631484508514,"""""""
+Circle API endpoints for creating and managing circles
+""""""
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi.security import HTTPAuthorizationCredentials
+
+from ....schemas.circle import (
+    CircleCreate,
+    CircleUpdate,
+    CircleResponse,
+    CircleListResponse,
+    CircleSearchParams,
+    CircleMemberAdd,
+    CircleMemberResponse,
+    CircleMemberTransfer,
+    CircleMemberPaymentUpdate,
+    CircleMemberListResponse
+)
+from ....services.circle_service import CircleService, get_circle_service
+from ....core.deps import get_current_user
+from ....models.user import User
+from ....models.circle import CircleStatus
+
+router = APIRouter()
+
+
+@router.post(
+    """",
+    response_model=CircleResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary=""Create a new circle"",
+    description=""Create a new circle with the current user as facilitator""
+)
+async def create_circle(
+    circle_data: CircleCreate,
+    current_user: User = Depends(get_current_user),
+    circle_service: CircleService = Depends(get_circle_service)
+) -> CircleResponse:
+    """"""
+    Create a new circle with automatic facilitator assignment.
+    
+    - **name**: Circle name (required, 1-100 characters)
+    - **description**: Circle description (optional, max 1000 characters)
+    - **capacity_min**: Minimum circle capacity (2-10 members, default: 2)
+    - **capacity_max**: Maximum circle capacity (2-10 members, default: 8)
+    - **location_name**: Location name (optional, max 200 characters)
+    - **location_address**: Location address (optional, max 500 characters)
+    - **meeting_schedule**: Meeting schedule as JSON object (optional)
+    
+    The current authenticated user will automatically be assigned as the facilitator.
+    
+    Returns the created circle information with assigned facilitator.
+    """"""
+    try:
+        circle = await circle_service.create_circle(circle_data, current_user.id)
+        
+        # Convert to response format
+        return CircleResponse(
+            id=circle.id,
+            name=circle.name,
+            description=circle.description,
+            facilitator_id=circle.facilitator_id,
+            capacity_min=circle.capacity_min,
+            capacity_max=circle.capacity_max,
+            location_name=circle.location_name,
+            location_address=circle.location_address,
+            meeting_schedule=circle.meeting_schedule,
+            status=circle.status.value,
+            is_active=circle.is_active,
+            current_member_count=circle.current_member_count,
+            created_at=circle.created_at,
+            updated_at=circle.updated_at
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=""Failed to create circle""
+        )
+
+
+@router.get(
+    """",
+    response_model=List[CircleResponse],
+    summary=""List circles"",
+    description=""Get a list of circles the user has access to""
+)
+async def list_circles(
+    page: int = Query(1, ge=1, description=""Page number (starts at 1)""),
+    per_page: int = Query(10, ge=1, le=100, description=""Items per page (1-100)""),
+    search: Optional[str] = Query(None, description=""Search term for circle name or description""),
+    status: Optional[CircleStatus] = Query(None, description=""Filter by circle status""),
+    facilitator_id: Optional[int] = Query(None, description=""Filter by facilitator ID""),
+    location: Optional[str] = Query(None, description=""Filter by location""),
+    capacity_min: Optional[int] = Query(None, ge=1, le=10, description=""Filter by minimum capacity""),
+    capacity_max: Optional[int] = Query(None, ge=1, le=10, description=""Filter by maximum capacity""),
+    sort_by: Optional[str] = Query(""created_at"", description=""Sort field (created_at, name, updated_at)""),
+    sort_order: Optional[str] = Query(""desc"", description=""Sort order (asc, desc)""),
+    current_user: User = Depends(get_current_user),
+    circle_service: CircleService = Depends(get_circle_service)
+) -> List[CircleResponse]:
+    """"""
+    List circles that the current user has access to.
+    
+    Access is determined by:
+    - User is the facilitator of the circle
+    - User is a member of the circle
+    - User has role-based permissions (TODO: implement)
+    
+    Supports filtering by:
+    - **search**: Text search in circle name or description
+    - **status**: Filter by circle status (forming, active, paused, archived)
+    - **facilitator_id**: Filter by facilitator user ID
+    - **location**: Text search in location name or address
+    
+    Supports pagination with page and per_page parameters.
+    """"""
+    try:
+        search_params = CircleSearchParams(
+            page=page,
+            per_page=per_page,
+            search=search,
+            status=status,
+            facilitator_id=facilitator_id,
+            location=location,
+            capacity_min=capacity_min,
+            capacity_max=capacity_max,
+            sort_by=sort_by,
+            sort_order=sort_order
+        )
+        
+        circles, total = await circle_service.list_circles_for_user(
+            current_user.id, 
+            search_params
+        )
+        
+        # Convert to response format
+        circle_responses = []
+        for circle in circles:
+            circle_responses.append(CircleResponse(
+                id=circle.id,
+                name=circle.name,
+                description=circle.description,
+                facilitator_id=circle.facilitator_id,
+                capacity_min=circle.capacity_min,
+                capacity_max=circle.capacity_max,
+                location_name=circle.location_name,
+                location_address=circle.location_address,
+                meeting_schedule=circle.meeting_schedule,
+                status=circle.status.value,
+                is_active=circle.is_active,
+                current_member_count=circle.current_member_count,
+                created_at=circle.created_at,
+                updated_at=circle.updated_at
+            ))
+        
+        return circle_responses
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=""Failed to list circles""
+        )
+
+
+@router.get(
+    ""/{circle_id}"",
+    response_model=CircleResponse,
+    summary=""Get circle details"",
+    description=""Get detailed information about a specific circle""
+)
+async def get_circle(
+    circle_id: int,
+    current_user: User = Depends(get_current_user),
+    circle_service: CircleService = Depends(get_circle_service)
+) -> CircleResponse:
+    """"""
+    Get detailed information about a specific circle.
+    
+    - **circle_id**: ID of the circle to retrieve
+    
+    Access is verified based on user permissions:
+    - Facilitator can always access their circles
+    - Members can access circles they belong to
+    - Role-based access control (TODO: implement)
+    
+    Returns detailed circle information including current member count.
+    """"""
+    try:
+        circle = await circle_service.get_circle_by_id(circle_id, current_user.id)
+        
+        if not circle:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=""Circle not found or access denied""
+            )
+        
+        # Convert to response format
+        return CircleResponse(
+            id=circle.id,
+            name=circle.name,
+            description=circle.description,
+            facilitator_id=circle.facilitator_id,
+            capacity_min=circle.capacity_min,
+            capacity_max=circle.capacity_max,
+            location_name=circle.location_name,
+            location_address=circle.location_address,
+            meeting_schedule=circle.meeting_schedule,
+            status=circle.status.value,
+            is_active=circle.is_active,
+            current_member_count=circle.current_member_count,
+            created_at=circle.created_at,
+            updated_at=circle.updated_at
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=""Failed to retrieve circle""
+        )
+
+
+@router.put(
+    ""/{circle_id}"",
+    response_model=CircleResponse,
+    summary=""Update circle"",
+    description=""Update circle information (facilitator only)""
+)
+async def update_circle(
+    circle_id: int,
+    circle_data: CircleUpdate,
+    current_user: User = Depends(get_current_user),
+    circle_service: CircleService = Depends(get_circle_service)
+) -> CircleResponse:
+    """"""
+    Update circle information.
+    
+    - **circle_id**: ID of the circle to update
+    - **circle_data**: Updated circle information
+    
+    Only the circle facilitator can update circle information.
+    
+    Updatable fields:
+    - name, description, capacity settings
+    - location information, meeting schedule
+    - status and active flag
+    
+    Returns the updated circle information.
+    """"""
+    try:
+        circle = await circle_service.update_circle(
+            circle_id, 
+            circle_data, 
+            current_user.id
+        )
+        
+        if not circle:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=""Circle not found or access denied""
+            )
+        
+        # Convert to response format
+        return CircleResponse(
+            id=circle.id,
+            name=circle.name,
+            description=circle.description,
+            facilitator_id=circle.facilitator_id,
+            capacity_min=circle.capacity_min,
+            capacity_max=circle.capacity_max,
+            location_name=circle.location_name,
+            location_address=circle.location_address,
+            meeting_schedule=circle.meeting_schedule,
+            status=circle.status.value,
+            is_active=circle.is_active,
+            current_member_count=circle.current_member_count,
+            created_at=circle.created_at,
+            updated_at=circle.updated_at
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=""Failed to update circle""
+        )
+
+
+@router.post(
+    ""/{circle_id}/members"",
+    response_model=CircleMemberResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary=""Add member to circle"",
+    description=""Add a new member to the circle (facilitator only)""
+)
+async def add_circle_member(
+    circle_id: int,
+    member_data: CircleMemberAdd,
+    current_user: User = Depends(get_current_user),
+    circle_service: CircleService = Depends(get_circle_service)
+) -> CircleMemberResponse:
+    """"""
+    Add a new member to the circle.
+    
+    - **circle_id**: ID of the circle
+    - **user_id**: ID of the user to add to the circle
+    - **payment_status**: Initial payment status (default: ""pending"")
+    
+    Only the circle facilitator can add members.
+    
+    Validates:
+    - Circle capacity constraints
+    - User is not already a member
+    - Circle is accepting new members
+    
+    Returns the created membership information.
+    """"""
+    try:
+        membership = await circle_service.add_member_to_circle(
+            circle_id,
+            member_data.user_id,
+            current_user.id,
+            member_data.payment_status
+        )
+        
+        # Convert to response format
+        return CircleMemberResponse(
+            user_id=membership.user_id,
+            circle_id=membership.circle_id,
+            is_active=membership.is_active,
+            payment_status=membership.payment_status,
+            joined_at=membership.joined_at
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=""Failed to add member to circle""
+        )
+
+
+@router.get(
+    ""/{circle_id}/members"",
+    response_model=CircleMemberListResponse,
+    summary=""List circle members"",
+    description=""Get all active members of a circle""
+)
+async def list_circle_members(
+    circle_id: int,
+    current_user: User = Depends(get_current_user),
+    circle_service: CircleService = Depends(get_circle_service)
+) -> CircleMemberListResponse:
+    """"""
+    Get all active members of a circle.
+    
+    - **circle_id**: ID of the circle
+    
+    Access is verified based on user permissions:
+    - Facilitator can always view members
+    - Members can view other members in their circle
+    - Role-based access control (TODO: implement)
+    
+    Returns list of active memberships with payment status.
+    """"""
+    try:
+        memberships = await circle_service.get_circle_members(circle_id, current_user.id)
+        
+        # Convert to response format
+        member_responses = []
+        for membership in memberships:
+            member_responses.append(CircleMemberResponse(
+                user_id=membership.user_id,
+                circle_id=membership.circle_id,
+                is_active=membership.is_active,
+                payment_status=membership.payment_status,
+                joined_at=membership.joined_at
+            ))
+        
+        return CircleMemberListResponse(
+            members=member_responses,
+            total=len(member_responses)
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=""Failed to list circle members""
+        )
+
+
+@router.delete(
+    ""/{circle_id}/members/{user_id}"",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary=""Remove member from circle"",
+    description=""Remove a member from the circle (facilitator only)""
+)
+async def remove_circle_member(
+    circle_id: int,
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    circle_service: CircleService = Depends(get_circle_service)
+):
+    """"""
+    Remove a member from the circle.
+    
+    - **circle_id**: ID of the circle
+    - **user_id**: ID of the user to remove
+    
+    Only the circle facilitator can remove members.
+    
+    The membership is marked as inactive rather than deleted to preserve history.
+    
+    Returns 204 No Content on success, 404 if member not found.
+    """"""
+    try:
+        success = await circle_service.remove_member_from_circle(
+            circle_id,
+            user_id,
+            current_user.id
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=""Member not found in circle""
+            )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=""Failed to remove member from circle""
+        )
+
+
+@router.post(
+    ""/{circle_id}/members/{user_id}/transfer"",
+    response_model=CircleMemberResponse,
+    summary=""Transfer member between circles"",
+    description=""Transfer a member from one circle to another (facilitator only)""
+)
+async def transfer_circle_member(
+    circle_id: int,
+    user_id: int,
+    transfer_data: CircleMemberTransfer,
+    current_user: User = Depends(get_current_user),
+    circle_service: CircleService = Depends(get_circle_service)
+) -> CircleMemberResponse:
+    """"""
+    Transfer a member from one circle to another.
+    
+    - **circle_id**: ID of the source circle
+    - **user_id**: ID of the user to transfer
+    - **target_circle_id**: ID of the target circle
+    - **reason**: Optional reason for the transfer
+    
+    Only facilitators can transfer members. The facilitator must have access to both circles.
+    
+    Validates:
+    - Target circle capacity constraints
+    - User is not already in target circle
+    - User is active member of source circle
+    
+    The payment status is preserved during transfer.
+    
+    Returns the new membership in the target circle.
+    """"""
+    try:
+        new_membership = await circle_service.transfer_member_between_circles(
+            circle_id,
+            transfer_data.target_circle_id,
+            user_id,
+            current_user.id,
+            transfer_data.reason
+        )
+        
+        # Convert to response format
+        return CircleMemberResponse(
+            user_id=new_membership.user_id,
+            circle_id=new_membership.circle_id,
+            is_active=new_membership.is_active,
+            payment_status=new_membership.payment_status,
+            joined_at=new_membership.joined_at
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=""Failed to transfer member between circles""
+        )
+
+
+@router.patch(
+    ""/{circle_id}/members/{user_id}/payment"",
+    response_model=CircleMemberResponse,
+    summary=""Update member payment status"",
+    description=""Update a member's payment status (facilitator only)""
+)
+async def update_member_payment_status(
+    circle_id: int,
+    user_id: int,
+    payment_data: CircleMemberPaymentUpdate,
+    current_user: User = Depends(get_current_user),
+    circle_service: CircleService = Depends(get_circle_service)
+) -> CircleMemberResponse:
+    """"""
+    Update a member's payment status.
+    
+    - **circle_id**: ID of the circle
+    - **user_id**: ID of the member
+    - **payment_status**: New payment status (pending, current, overdue, paused)
+    
+    Only the circle facilitator can update payment status.
+    
+    Valid payment statuses:
+    - pending: Payment not yet processed
+    - current: Payment up to date
+    - overdue: Payment is late
+    - paused: Membership temporarily paused
+    
+    Returns the updated membership information.
+    """"""
+    try:
+        membership = await circle_service.update_member_payment_status(
+            circle_id,
+            user_id,
+            payment_data.payment_status,
+            current_user.id
+        )
+        
+        if not membership:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=""Member not found in circle""
+            )
+        
+        # Convert to response format
+        return CircleMemberResponse(
+            user_id=membership.user_id,
+            circle_id=membership.circle_id,
+            is_active=membership.is_active,
+            payment_status=membership.payment_status,
+            joined_at=membership.joined_at
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=""Failed to update member payment status""
+        ) ","diff --git a/backend/app/api/v1/endpoints/circles.py b/backend/app/api/v1/endpoints/circles.py
+index a04b167..4c8380a 100644
+--- a/backend/app/api/v1/endpoints/circles.py
++++ b/backend/app/api/v1/endpoints/circles.py
+@@ -95,6 +95,10 @@ async def list_circles(
+     status: Optional[CircleStatus] = Query(None, description=""Filter by circle status""),
+     facilitator_id: Optional[int] = Query(None, description=""Filter by facilitator ID""),
+     location: Optional[str] = Query(None, description=""Filter by location""),
++    capacity_min: Optional[int] = Query(None, ge=1, le=10, description=""Filter by minimum capacity""),
++    capacity_max: Optional[int] = Query(None, ge=1, le=10, description=""Filter by maximum capacity""),
++    sort_by: Optional[str] = Query(""created_at"", description=""Sort field (created_at, name, updated_at)""),
++    sort_order: Optional[str] = Query(""desc"", description=""Sort order (asc, desc)""),
+     current_user: User = Depends(get_current_user),
+     circle_service: CircleService = Depends(get_circle_service)
+ ) -> List[CircleResponse]:
+@@ -121,7 +125,11 @@ async def list_circles(
+             search=search,
+             status=status,
+             facilitator_id=facilitator_id,
+-            location=location
++            location=location,
++            capacity_min=capacity_min,
++            capacity_max=capacity_max,
++            sort_by=sort_by,
++            sort_order=sort_order
+         )
+         
+         circles, total = await circle_service.list_circles_for_user(
+",
+TN→FP: backward slice,"[""https://github.com/awslabs/open-hostfactory-plugin"",""fd133c899e38a31b2a773edf73a93666196998d1"",""src/infrastructure/persistence/components/sql_query_builder.py"",315,354]",0,https://github.com/awslabs/open-hostfactory-plugin,fd133c899e38a31b2a773edf73a93666196998d1,caf33b2eb48afbeb06ae0c3919316cda2c6929a2,src/infrastructure/persistence/components/sql_query_builder.py,315,354,Backward Slice,TN -> FP,TN,FP,17,11,6,7,0.6470588235294118,0.65,0.4952679276466369,0.5008112192153931,"""""""SQL query builder components for database operations.""""""
+
+import re
+from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
+
+from infrastructure.logging.logger import get_logger
+from infrastructure.persistence.components.resource_manager import QueryManager
+
+
+class QueryType(str, Enum):
+    """"""SQL query type enumeration.""""""
+
+    SELECT = ""SELECT""
+    INSERT = ""INSERT""
+    UPDATE = ""UPDATE""
+    DELETE = ""DELETE""
+    CREATE_TABLE = ""CREATE TABLE""
+
+
+class SQLQueryBuilder(QueryManager):
+    """"""
+    SQL query builder for generating parameterized queries.
+
+    Builds safe, parameterized SQL queries to prevent SQL injection.
+    """"""
+
+    def __init__(self, table_name: str, columns: Dict[str, str]):
+        """"""
+        Initialize query builder.
+
+        Args:
+            table_name: Name of the database table
+            columns: Dictionary of column names and types
+        """"""
+        self.table_name = table_name
+        self.columns = columns
+        self.logger = get_logger(__name__)
+
+        # Validate table name and column names
+        self._validate_identifier(table_name)
+        for column in columns:
+            self._validate_identifier(column)
+
+    def _validate_identifier(self, identifier: str) -> None:
+        """"""
+        Validate SQL identifier against whitelist pattern.
+
+        Args:
+            identifier: SQL identifier to validate
+
+        Raises:
+            ValueError: If identifier contains invalid characters
+        """"""
+        if not re.match(r""^[a-zA-Z0-9_]+$"", identifier):
+            raise ValueError(f""Invalid SQL identifier: {identifier}"")
+
+    def build_create_query(self, **kwargs) -> str:
+        """"""Build CREATE TABLE query (implements QueryManager interface).""""""
+        return self.build_create_table()
+
+    def build_read_query(
+        self,
+        entity_id: Optional[str] = None,
+        criteria: Optional[Dict[str, Any]] = None,
+        **kwargs,
+    ) -> Tuple[str, Dict[str, Any]]:
+        """"""Build SELECT query (implements QueryManager interface).""""""
+        if entity_id:
+            id_column = kwargs.get(""id_column"", ""id"")
+            return self.build_select_by_id(id_column)
+        elif criteria:
+            return self.build_select_by_criteria(criteria)
+        else:
+            return self.build_select_all(), {}
+
+    def build_update_query(
+        self, data: Dict[str, Any], entity_id: str, id_column: str = ""id"", **kwargs
+    ) -> Tuple[str, Dict[str, Any]]:
+        """"""Build UPDATE query (implements QueryManager interface).""""""
+        return self.build_update(data, id_column, entity_id)
+
+    def build_delete_query(
+        self, entity_id: str, id_column: str = ""id"", **kwargs
+    ) -> Tuple[str, str]:
+        """"""Build DELETE query (implements QueryManager interface).""""""
+        return self.build_delete(id_column)
+
+    def build_create_table(self) -> str:
+        """"""
+        Build CREATE TABLE query.
+
+        Returns:
+            CREATE TABLE SQL statement
+        """"""
+        column_definitions = []
+        for column_name, column_type in self.columns.items():
+            column_definitions.append(f""{column_name} {column_type}"")
+
+        query = f""CREATE TABLE IF NOT EXISTS {self.table_name} (\n""  # nosec B608
+        query += "",\n"".join(f""    {col_def}"" for col_def in column_definitions)
+        query += ""\n)""
+
+        self.logger.debug(f""Built CREATE TABLE query for {self.table_name}"")
+        return query
+
+    def build_insert(self, data: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
+        """"""
+        Build INSERT query with parameters.
+
+        Args:
+            data: Data to insert
+
+        Returns:
+            Tuple of (query, parameters)
+        """"""
+        # Filter data to only include known columns
+        filtered_data = {k: v for k, v in data.items() if k in self.columns}
+
+        if not filtered_data:
+            raise ValueError(""No valid columns found in data"")
+
+        columns = list(filtered_data.keys())
+        placeholders = [f"":{col}"" for col in columns]
+
+        # Validate all column names
+        for column in columns:
+            self._validate_identifier(column)
+
+        # Build query using validated identifiers
+        # 1. Validating table_name and column names against a whitelist pattern
+        # 2. Using parameterized queries for all values with :param syntax
+        # nosec B608
+        query = f""INSERT INTO {self.table_name} ({', '.join(columns)}) VALUES ({', '.join(placeholders)})""  # nosec B608""  # nosec B608
+
+        self.logger.debug(f""Built INSERT query for {self.table_name}"")
+        return query, filtered_data
+
+    def build_select_by_id(self, id_column: str) -> Tuple[str, str]:
+        """"""
+        Build SELECT by ID query.
+
+        Args:
+            id_column: Name of the ID column
+
+        Returns:
+            Tuple of (query, parameter_name)
+        """"""
+        # Validate identifier
+        self._validate_identifier(id_column)
+
+        # nosec B608
+        query = f""SELECT * FROM {self.table_name} WHERE {id_column} = :{id_column}""  # nosec B608
+
+        self.logger.debug(f""Built SELECT by ID query for {self.table_name}"")
+        return query, id_column
+
+    def build_select_all(self) -> str:
+        """"""
+        Build SELECT all query.
+
+        Returns:
+            SELECT all SQL statement
+        """"""
+        # Table name already validated in constructor
+        query = f""SELECT * FROM {self.table_name}  # nosec B608""  # nosec B608
+
+        self.logger.debug(f""Built SELECT all query for {self.table_name}"")
+        return query
+
+    def build_update(
+        self, data: Dict[str, Any], id_column: str, entity_id: str
+    ) -> Tuple[str, Dict[str, Any]]:
+        """"""
+        Build UPDATE query with parameters.
+
+        Args:
+            data: Data to update
+            id_column: Name of the ID column
+            entity_id: ID of entity to update
+
+        Returns:
+            Tuple of (query, parameters)
+        """"""
+        # Validate id_column
+        self._validate_identifier(id_column)
+
+        # Filter data to only include known columns (excluding ID)
+        filtered_data = {k: v for k, v in data.items() if k in self.columns and k != id_column}
+
+        if not filtered_data:
+            raise ValueError(""No valid columns found in data for update"")
+
+        # Validate all column names
+        for column in filtered_data.keys():
+            self._validate_identifier(column)
+
+        set_clauses = [f""{col} = :{col}"" for col in filtered_data.keys()]
+        # nosec B608
+        query = (
+            f""UPDATE {self.table_name} SET {', '.join(set_clauses)} WHERE {id_column} = :entity_id""  # nosec B608
+        )
+
+        # Add entity_id to parameters
+        parameters = filtered_data.copy()
+        parameters[""entity_id""] = entity_id
+
+        self.logger.debug(f""Built UPDATE query for {self.table_name}"")
+        return query, parameters
+
+    def build_delete(self, id_column: str) -> Tuple[str, str]:
+        """"""
+        Build DELETE query.
+
+        Args:
+            id_column: Name of the ID column
+
+        Returns:
+            Tuple of (query, parameter_name)
+        """"""
+        # Validate id_column
+        self._validate_identifier(id_column)
+
+        # nosec B608
+        query = f""DELETE FROM { self.table_name} WHERE {id_column} = :{id_column}""  # nosec B608
+
+        self.logger.debug(f""Built DELETE query for {self.table_name}"")
+        return query, id_column
+
+    def build_exists(self, id_column: str) -> Tuple[str, str]:
+        """"""
+        Build EXISTS check query.
+
+        Args:
+            id_column: Name of the ID column
+
+        Returns:
+            Tuple of (query, parameter_name)
+        """"""
+        query = f""SELECT 1 FROM { self.table_name} WHERE {id_column} = :{id_column} LIMIT 1""  # nosec B608
+
+        self.logger.debug(f""Built EXISTS query for {self.table_name}"")
+        return query, id_column
+
+    def build_select_by_criteria(self, criteria: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
+        """"""
+        Build SELECT with WHERE criteria.
+
+        Args:
+            criteria: Search criteria
+
+        Returns:
+            Tuple of (query, parameters)
+        """"""
+        if not criteria:
+            return self.build_select_all(), {}
+
+        # Filter criteria to only include known columns
+        filtered_criteria = {k: v for k, v in criteria.items() if k in self.columns}
+
+        if not filtered_criteria:
+            return self.build_select_all(), {}
+
+        # Validate all column names
+        for column in filtered_criteria.keys():
+            self._validate_identifier(column)
+
+        where_clauses = []
+        parameters = {}
+
+        for column, value in filtered_criteria.items():
+            if isinstance(value, dict):
+                # Handle special operators
+                if ""$in"" in value:
+                    placeholders = []
+                    for i, item in enumerate(value[""$in""]):
+                        param_name = f""{column}_in_{i}""
+                        placeholders.append(f"":{param_name}"")
+                        parameters[param_name] = item
+                    where_clauses.append(f""{column} IN ({', '.join(placeholders)})"")
+                elif ""$like"" in value:
+                    param_name = f""{column}_like""
+                    where_clauses.append(f""{column} LIKE :{param_name}"")
+                    parameters[param_name] = value[""$like""]
+                else:
+                    # Default equality
+                    param_name = f""{column}_eq""
+                    where_clauses.append(f""{column} = :{param_name}"")
+                    parameters[param_name] = value
+            else:
+                # Simple equality
+                param_name = f""{column}_eq""
+                where_clauses.append(f""{column} = :{param_name}"")
+                parameters[param_name] = value
+
+        # nosec B608
+        query = f""SELECT * FROM {self.table_name} WHERE {' AND '.join(where_clauses)}""  # nosec B608
+
+        self.logger.debug(f""Built SELECT with criteria query for {self.table_name}"")
+        return query, parameters
+
+    def build_count(self) -> str:
+        """"""
+        Build COUNT query.
+
+        Returns:
+            COUNT SQL statement
+        """"""
+        # Table name already validated in constructor
+        query = f""SELECT COUNT(*) FROM {self.table_name}""  # nosec B608
+
+        self.logger.debug(f""Built COUNT query for {self.table_name}"")
+        return query
+
+    def build_batch_insert(
+        self, data_list: List[Dict[str, Any]]
+    ) -> Tuple[str, List[Dict[str, Any]]]:
+        """"""
+        Build batch INSERT query.
+
+        Args:
+            data_list: List of data dictionaries to insert
+
+        Returns:
+            Tuple of (query, parameters_list)
+        """"""
+        if not data_list:
+            raise ValueError(""No data provided for batch insert"")
+
+        # Use first item to determine columns
+        first_item = data_list[0]
+        filtered_columns = [k for k in first_item.keys() if k in self.columns]
+
+        # Validate all column names
+        for column in filtered_columns:
+            self._validate_identifier(column)
+
+        if not filtered_columns:
+            raise ValueError(""No valid columns found in data"")
+
+        placeholders = [f"":{col}"" for col in filtered_columns]
+        # nosec B608
+        query = f""INSERT INTO {self.table_name} ({', '.join(filtered_columns)}) VALUES ({', '.join(placeholders)})""  # nosec B608
+
+        # Filter all data items
+        filtered_data_list = []
+        for data in data_list:
+            filtered_data = {k: v for k, v in data.items() if k in filtered_columns}
+            filtered_data_list.append(filtered_data)
+
+        self.logger.debug(
+            f""Built batch INSERT query for { self.table_name} with { len(data_list)} items""
+        )
+        return query, filtered_data_list
+","diff --git a/src/infrastructure/persistence/components/sql_query_builder.py b/src/infrastructure/persistence/components/sql_query_builder.py
+index a5786e5a..5d1ff7da 100644
+--- a/src/infrastructure/persistence/components/sql_query_builder.py
++++ b/src/infrastructure/persistence/components/sql_query_builder.py
+@@ -131,7 +131,7 @@ def build_insert(self, data: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
+         # 1. Validating table_name and column names against a whitelist pattern
+         # 2. Using parameterized queries for all values with :param syntax
+         # nosec B608
+-        query = f""INSERT INTO {self.table_name} ({', '.join(columns)}) VALUES ({', '.join(placeholders)})""
++        query = f""INSERT INTO {self.table_name} ({', '.join(columns)}) VALUES ({', '.join(placeholders)})""  # nosec B608""  # nosec B608
+ 
+         self.logger.debug(f""Built INSERT query for {self.table_name}"")
+         return query, filtered_data
+@@ -150,7 +150,7 @@ def build_select_by_id(self, id_column: str) -> Tuple[str, str]:
+         self._validate_identifier(id_column)
+ 
+         # nosec B608
+-        query = f""SELECT * FROM {self.table_name} WHERE {id_column} = :{id_column}""
++        query = f""SELECT * FROM {self.table_name} WHERE {id_column} = :{id_column}""  # nosec B608
+ 
+         self.logger.debug(f""Built SELECT by ID query for {self.table_name}"")
+         return query, id_column
+@@ -163,7 +163,7 @@ def build_select_all(self) -> str:
+             SELECT all SQL statement
+         """"""
+         # Table name already validated in constructor
+-        query = f""SELECT * FROM {self.table_name}""  # nosec B608
++        query = f""SELECT * FROM {self.table_name}  # nosec B608""  # nosec B608
+ 
+         self.logger.debug(f""Built SELECT all query for {self.table_name}"")
+         return query
+@@ -198,7 +198,7 @@ def build_update(
+         set_clauses = [f""{col} = :{col}"" for col in filtered_data.keys()]
+         # nosec B608
+         query = (
+-            f""UPDATE {self.table_name} SET {', '.join(set_clauses)} WHERE {id_column} = :entity_id""
++            f""UPDATE {self.table_name} SET {', '.join(set_clauses)} WHERE {id_column} = :entity_id""  # nosec B608
+         )
+ 
+         # Add entity_id to parameters
+@@ -222,7 +222,7 @@ def build_delete(self, id_column: str) -> Tuple[str, str]:
+         self._validate_identifier(id_column)
+ 
+         # nosec B608
+-        query = f""DELETE FROM { self.table_name} WHERE {id_column} = :{id_column}""
++        query = f""DELETE FROM { self.table_name} WHERE {id_column} = :{id_column}""  # nosec B608
+ 
+         self.logger.debug(f""Built DELETE query for {self.table_name}"")
+         return query, id_column
+@@ -294,7 +294,7 @@ def build_select_by_criteria(self, criteria: Dict[str, Any]) -> Tuple[str, Dict[
+                 parameters[param_name] = value
+ 
+         # nosec B608
+-        query = f""SELECT * FROM {self.table_name} WHERE {' AND '.join(where_clauses)}""
++        query = f""SELECT * FROM {self.table_name} WHERE {' AND '.join(where_clauses)}""  # nosec B608
+ 
+         self.logger.debug(f""Built SELECT with criteria query for {self.table_name}"")
+         return query, parameters
+@@ -340,7 +340,7 @@ def build_batch_insert(
+ 
+         placeholders = [f"":{col}"" for col in filtered_columns]
+         # nosec B608
+-        query = f""INSERT INTO {self.table_name} ({', '.join(filtered_columns)}) VALUES ({', '.join(placeholders)})""
++        query = f""INSERT INTO {self.table_name} ({', '.join(filtered_columns)}) VALUES ({', '.join(placeholders)})""  # nosec B608
+ 
+         # Filter all data items
+         filtered_data_list = []
+",
+TN→FP: 6-hop,"[""https://github.com/Hellkryptonium/skills-secure-code-game"",""489ffcbd1d5c6b0ffb6e55ed4e2f99df99b480ce"",""Season-1/Level-3/code.py"",25,42]",0,https://github.com/Hellkryptonium/skills-secure-code-game,489ffcbd1d5c6b0ffb6e55ed4e2f99df99b480ce,685229d8bcb5e1e235d2e85d7b73077aa6c36f0e,Season-1/Level-3/code.py,25,42,Neighborhood (6-hop),TN -> FP,TN,FP,9,9,0,0,1.0,1.0,0.4467873871326446,0.543727457523346,"# Welcome to Secure Code Game Season-1/Level-3!
+
+# You know how to play by now, good luck!
+
+import os
+from flask import Flask, request
+
+### Unrelated to the exercise -- Starts here -- Please ignore
+app = Flask(__name__)
+@app.route(""/"")
+def source():
+    TaxPayer('foo', 'bar').get_tax_form_attachment(request.args[""input""])
+    TaxPayer('foo', 'bar').get_prof_picture(request.args[""input""])
+### Unrelated to the exercise -- Ends here -- Please ignore
+
+class TaxPayer:
+
+    def __init__(self, username, password):
+        self.username = username
+        self.password = password
+        self.prof_picture = None
+        self.tax_form_attachment = None
+
+    # returns the path of an optional profile picture that users can set
+    def get_prof_picture(self, path=None):
+        # setting a profile picture is optional
+        if not path:
+            pass
+
+        # builds path
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        prof_picture_path = os.path.normpath(os.path.join(base_dir, path))
+        
+        # Properly validate path to prevent path traversal attacks
+        if not prof_picture_path.startswith(base_dir):
+            return None
+
+        with open(prof_picture_path, 'rb') as pic:
+            picture = bytearray(pic.read())
+
+        # assume that image is returned on screen after this
+        return prof_picture_path
+
+    # returns the path of an attached tax form that every user should submit
+    def get_tax_form_attachment(self, path=None):
+        tax_data = None
+
+        if not path:
+            raise Exception(""Error: Tax form is required for all users"")
+
+        # Validate the path to prevent path traversal attacks
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        tax_form_path = os.path.normpath(os.path.join(base_dir, path))
+        if not tax_form_path.startswith(base_dir):
+            return None
+
+        with open(tax_form_path, 'rb') as form:
+            tax_data = bytearray(form.read())
+
+        # assume that tax data is returned on screen after this
+        return tax_form_path","diff --git a/Season-1/Level-3/code.py b/Season-1/Level-3/code.py
+index c943e1a..24fd0e1 100644
+--- a/Season-1/Level-3/code.py
++++ b/Season-1/Level-3/code.py
+@@ -27,13 +27,13 @@ def get_prof_picture(self, path=None):
+         if not path:
+             pass
+ 
+-        # defends against path traversal attacks
+-        if path.startswith('/') or path.startswith('..'):
+-            return None
+-
+         # builds path
+         base_dir = os.path.dirname(os.path.abspath(__file__))
+         prof_picture_path = os.path.normpath(os.path.join(base_dir, path))
++        
++        # Properly validate path to prevent path traversal attacks
++        if not prof_picture_path.startswith(base_dir):
++            return None
+ 
+         with open(prof_picture_path, 'rb') as pic:
+             picture = bytearray(pic.read())
+@@ -48,8 +48,14 @@ def get_tax_form_attachment(self, path=None):
+         if not path:
+             raise Exception(""Error: Tax form is required for all users"")
+ 
+-        with open(path, 'rb') as form:
++        # Validate the path to prevent path traversal attacks
++        base_dir = os.path.dirname(os.path.abspath(__file__))
++        tax_form_path = os.path.normpath(os.path.join(base_dir, path))
++        if not tax_form_path.startswith(base_dir):
++            return None
++
++        with open(tax_form_path, 'rb') as form:
+             tax_data = bytearray(form.read())
+ 
+         # assume that tax data is returned on screen after this
+-        return path
+\ No newline at end of file
++        return tax_form_path
+\ No newline at end of file
+",
+Control case: FP→TN despite unchanged graph; investigate model/training effect,"[""https://github.com/awslabs/open-hostfactory-plugin"",""fd133c899e38a31b2a773edf73a93666196998d1"",""src/providers/aws/domain/template/value_objects.py"",203,244]",0,https://github.com/awslabs/open-hostfactory-plugin,fd133c899e38a31b2a773edf73a93666196998d1,caf33b2eb48afbeb06ae0c3919316cda2c6929a2,src/providers/aws/domain/template/value_objects.py,203,244,Neighborhood (5-hop),FP -> TN,FP,TN,19,19,0,0,1.0,1.0,0.5011097192764282,0.4972074329853058,"""""""AWS-specific value objects and domain extensions.""""""
+
+import re
+from enum import Enum
+from typing import Any, ClassVar, Dict, List, Optional
+
+from pydantic import ConfigDict, field_validator, model_validator
+
+# Import core domain primitives
+from domain.base.value_objects import (
+    ARN,
+    AllocationStrategy,
+    InstanceType,
+    PriceType,
+    ResourceId,
+    Tags,
+    ValueObject,
+)
+
+# Import domain protocols
+
+
+class ResourceId(ResourceId):
+    """"""Base class for AWS resource IDs with AWS-specific validation.""""""
+
+    pattern_key: ClassVar[str] = """"
+
+    @field_validator(""value"")
+    @classmethod
+    def validate_format(cls, v: str) -> str:
+        """"""Validate AWS resource ID format.""""""
+        # Get pattern from AWS configuration
+        from providers.aws.configuration.config import get_aws_config_manager
+        from providers.aws.configuration.validator import AWSNamingConfig
+
+        config = get_aws_config_manager().get_typed(AWSNamingConfig)
+        pattern = config.patterns.get(cls.pattern_key)
+
+        # Fall back to class pattern if not in config
+        if not pattern:
+            raise ValueError(f""Pattern for {cls.resource_type} not found in AWS configuration"")
+
+        if not re.match(pattern, v):
+            raise ValueError(f""Invalid AWS {cls.resource_type} ID format: {v}"")
+        return v
+
+
+class AWSSubnetId(ResourceId):
+    """"""AWS Subnet ID value object.""""""
+
+    resource_type: ClassVar[str] = ""Subnet""
+    pattern_key: ClassVar[str] = ""subnet""
+
+
+class AWSSecurityGroupId(ResourceId):
+    """"""AWS Security Group ID value object.""""""
+
+    resource_type: ClassVar[str] = ""Security Group""
+    pattern_key: ClassVar[str] = ""security_group""
+
+
+class InstanceId(ResourceId):
+    """"""AWS Instance ID value object.""""""
+
+    resource_type: ClassVar[str] = ""Instance""
+    pattern_key: ClassVar[str] = ""ec2_instance""
+
+    def to_aws_format(self) -> str:
+        """"""Convert to AWS API format.""""""
+        return self.value
+
+
+class AWSImageId(ResourceId):
+    """"""AWS AMI ID value object.""""""
+
+    resource_type: ClassVar[str] = ""AMI""
+    pattern_key: ClassVar[str] = ""ami""
+
+    def to_aws_format(self) -> str:
+        """"""Convert to AWS API format.""""""
+        return self.value
+
+
+class AWSFleetId(ResourceId):
+    """"""AWS Fleet ID value object.""""""
+
+    resource_type: ClassVar[str] = ""Fleet""
+    pattern_key: ClassVar[str] = ""ec2_fleet""
+
+
+class AWSLaunchTemplateId(ResourceId):
+    """"""AWS Launch Template ID value object.""""""
+
+    resource_type: ClassVar[str] = ""Launch Template""
+    pattern_key: ClassVar[str] = ""launch_template""
+
+
+class AWSInstanceType(InstanceType):
+    """"""AWS Instance Type value object with AWS-specific validation.""""""
+
+    @field_validator(""value"")
+    @classmethod
+    def validate_instance_type(cls, v: str) -> str:
+        """"""Validate AWS instance type format.""""""
+        # Get pattern from AWS configuration
+        from providers.aws.configuration.config import get_aws_config_manager
+        from providers.aws.configuration.validator import AWSNamingConfig
+
+        config = get_aws_config_manager().get_typed(AWSNamingConfig)
+        pattern = config.patterns[""instance_type""]
+
+        if not re.match(pattern, v):
+            raise ValueError(f""Invalid AWS instance type format: {v}"")
+        return v
+
+    @property
+    def family(self) -> str:
+        """"""Get the AWS instance family (e.g., t2, m5).""""""
+        return self.value.split(""."")[0]
+
+    @property
+    def size(self) -> str:
+        """"""Get the AWS instance size (e.g., micro, large).""""""
+        return self.value.split(""."")[1]
+
+
+class AWSTags(Tags):
+    """"""AWS resource tags with AWS-specific validation.""""""
+
+    @field_validator(""tags"")
+    @classmethod
+    def validate_aws_tags(cls, v: Dict[str, str]) -> Dict[str, str]:
+        """"""Validate AWS tags format and constraints.""""""
+        # Get AWS tag validation rules from configuration
+        from providers.aws.configuration.config import get_aws_config_manager
+        from providers.aws.configuration.validator import AWSNamingConfig
+
+        config = get_aws_config_manager().get_typed(AWSNamingConfig)
+
+        for key, value in v.items():
+            if not isinstance(key, str) or not isinstance(value, str):
+                raise ValueError(""AWS tags must be strings"")
+
+            # Use AWS limits from configuration
+            if len(key) > config.limits.tag_key_length:
+                raise ValueError(
+                    f""AWS tag key length exceeds limit of {config.limits.tag_key_length}""
+                )
+            if len(value) > config.limits.tag_value_length:
+                raise ValueError(
+                    f""AWS tag value length exceeds limit of {config.limits.tag_value_length}""
+                )
+
+            # Use AWS pattern from configuration
+            if not re.match(config.patterns[""tag_key""], key):
+                raise ValueError(f""Invalid AWS tag key format: {key}"")
+        return v
+
+    def to_aws_format(self) -> List[Dict[str, str]]:
+        """"""Convert to AWS API format.""""""
+        return [{""Key"": k, ""Value"": v} for k, v in self.values.items()]
+
+
+class AWSARN(ARN):
+    """"""AWS ARN value object with AWS-specific parsing.""""""
+
+    partition: Optional[str] = None
+    service: Optional[str] = None
+    region: Optional[str] = None
+    account_id: Optional[str] = None
+    resource: Optional[str] = None
+
+    @field_validator(""value"")
+    @classmethod
+    def validate_arn(cls, v: str) -> str:
+        """"""Validate AWS ARN format.""""""
+        # Get pattern from AWS configuration
+        from providers.aws.configuration.config import get_aws_config_manager
+        from providers.aws.configuration.validator import AWSNamingConfig
+
+        config = get_aws_config_manager().get_typed(AWSNamingConfig)
+        pattern = config.patterns[""arn""]
+
+        if not re.match(pattern, v):
+            raise ValueError(f""Invalid AWS ARN format: {v}"")
+        return v
+
+    def model_post_init(self, __context: Any) -> None:
+        """"""Parse AWS ARN components after initialization.""""""
+        parts = self.value.split("":"")
+        if len(parts) >= 6:
+            object.__setattr__(self, ""partition"", parts[1])
+            object.__setattr__(self, ""service"", parts[2])
+            object.__setattr__(self, ""region"", parts[3])
+            object.__setattr__(self, ""account_id"", parts[4])
+            object.__setattr__(self, ""resource"", "":"".join(parts[5:]))
+
+
+class ProviderApi(str, Enum):
+    """"""AWS-specific provider API types - dynamically loaded from configuration.""""""
+
+    @classmethod
+    def _missing_(cls, value):
+        """"""Handle missing enum values by checking configuration.""""""
+        # Get valid APIs from configuration
+        try:
+            from config.manager import get_config_manager
+
+            config_manager = get_config_manager()
+            raw_config = config_manager.get_raw_config()
+
+            # Navigate to AWS handlers in configuration
+            aws_handlers = (
+                raw_config.get(""provider"", {})
+                .get(""provider_defaults"", {})
+                .get(""aws"", {})
+                .get(""handlers"", {})
+            )
+
+            if value in aws_handlers:
+                # Dynamically create enum member
+                new_member = object.__new__(cls)
+                new_member._name_ = value
+                new_member._value_ = value
+                return new_member
+        except Exception:
+            # Fall through to hardcoded fallback
+            pass  # nosec B110
+
+        # Fallback to hardcoded values for safety
+        fallback_values = {
+            ""EC2Fleet"": ""EC2Fleet"",
+            ""SpotFleet"": ""SpotFleet"",
+            ""ASG"": ""ASG"",
+            ""RunInstances"": ""RunInstances"",
+        }
+
+        if value in fallback_values:
+            new_member = object.__new__(cls)
+            new_member._name_ = value
+            new_member._value_ = value
+            return new_member
+
+        return None
+
+    # Define common values as class attributes for IDE support
+    EC2_FLEET = ""EC2Fleet""
+    SPOT_FLEET = ""SpotFleet""
+    ASG = ""ASG""
+    RUN_INSTANCES = ""RunInstances""
+
+
+class AWSFleetType(str, Enum):
+    """"""AWS Fleet type - dynamically loaded from configuration.""""""
+
+    @classmethod
+    def _missing_(cls, value):
+        """"""Handle missing enum values by checking configuration.""""""
+        # Get valid fleet types from configuration
+        try:
+            from config.manager import get_config_manager
+
+            config_manager = get_config_manager()
+            raw_config = config_manager.get_raw_config()
+
+            # Check all handlers for supported fleet types
+            aws_handlers = (
+                raw_config.get(""provider"", {})
+                .get(""provider_defaults"", {})
+                .get(""aws"", {})
+                .get(""handlers"", {})
+            )
+
+            # Collect all unique fleet types from all handlers
+            all_fleet_types = set()
+            for handler_config in aws_handlers.values():
+                fleet_types = handler_config.get(""supported_fleet_types"", [])
+                all_fleet_types.update(fleet_types)
+
+            if value in all_fleet_types:
+                # Dynamically create enum member
+                new_member = object.__new__(cls)
+                new_member._name_ = value.upper()
+                new_member._value_ = value
+                return new_member
+        except Exception:
+            # Fall through to hardcoded fallback
+            pass  # nosec B110
+
+        # Fallback to hardcoded values for safety
+        fallback_values = {
+            ""instant"": ""instant"",
+            ""request"": ""request"",
+            ""maintain"": ""maintain"",
+        }
+
+        if value in fallback_values:
+            new_member = object.__new__(cls)
+            new_member._name_ = value.upper()
+            new_member._value_ = value
+            return new_member
+
+        return None
+
+    # Define common values as class attributes for IDE support
+    INSTANT = ""instant""  # EC2 Fleet only
+    REQUEST = ""request""  # Both EC2 Fleet and Spot Fleet
+    MAINTAIN = ""maintain""  # Both EC2 Fleet and Spot Fleet
+
+
+class AWSAllocationStrategy:
+    """"""AWS-specific allocation strategy wrapper with AWS API formatting.""""""
+
+    def __init__(self, strategy: AllocationStrategy):
+        """"""Initialize the instance.""""""
+        self._strategy = strategy
+
+    @property
+    def value(self) -> str:
+        """"""Get the strategy value.""""""
+        return self._strategy.value
+
+    @classmethod
+    def from_core(cls, strategy: AllocationStrategy) -> ""AWSAllocationStrategy"":
+        """"""Create from core allocation strategy.""""""
+        return cls(strategy)
+
+    def to_ec2_fleet_format(self) -> str:
+        """"""Convert to EC2 Fleet API format.""""""
+        mapping = {
+            AllocationStrategy.CAPACITY_OPTIMIZED: ""capacity-optimized"",
+            AllocationStrategy.DIVERSIFIED: ""diversified"",
+            AllocationStrategy.LOWEST_PRICE: ""lowest-price"",
+            AllocationStrategy.PRICE_CAPACITY_OPTIMIZED: ""price-capacity-optimized"",
+        }
+        return mapping.get(self._strategy, ""lowest-price"")
+
+    def to_spot_fleet_format(self) -> str:
+        """"""Convert to Spot Fleet API format.""""""
+        mapping = {
+            AllocationStrategy.CAPACITY_OPTIMIZED: ""capacityOptimized"",
+            AllocationStrategy.DIVERSIFIED: ""diversified"",
+            AllocationStrategy.LOWEST_PRICE: ""lowestPrice"",
+            AllocationStrategy.PRICE_CAPACITY_OPTIMIZED: ""priceCapacityOptimized"",
+        }
+        return mapping.get(self._strategy, ""lowestPrice"")
+
+    def to_asg_format(self) -> str:
+        """"""Convert to Auto Scaling Group API format.""""""
+        mapping = {
+            AllocationStrategy.CAPACITY_OPTIMIZED: ""capacity-optimized"",
+            AllocationStrategy.DIVERSIFIED: ""diversified"",
+            AllocationStrategy.LOWEST_PRICE: ""lowest-price"",
+            AllocationStrategy.PRICE_CAPACITY_OPTIMIZED: ""price-capacity-optimized"",
+        }
+        return mapping.get(self._strategy, ""lowest-price"")
+
+
+class AWSConfiguration(ValueObject):
+    """"""AWS-specific configuration value object - clean domain object without infrastructure dependencies.""""""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    handler_type: ProviderApi
+    fleet_type: Optional[AWSFleetType] = None
+    # Use core enum, not wrapper
+    allocation_strategy: Optional[AllocationStrategy] = None
+    price_type: Optional[PriceType] = None
+    subnet_ids: List[AWSSubnetId] = []
+    security_group_ids: List[AWSSecurityGroupId] = []
+
+    @model_validator(mode=""after"")
+    def validate_aws_configuration(self) -> ""AWSConfiguration"":
+        """"""Validate AWS-specific configuration - basic domain validation only.""""""
+        # Set default fleet type if not provided
+        if not self.fleet_type:
+            # Use simple default without configuration dependency
+            object.__setattr__(self, ""fleet_type"", AWSFleetType.REQUEST)
+
+        # Set default allocation strategy if not provided
+        if not self.allocation_strategy:
+            object.__setattr__(self, ""allocation_strategy"", AllocationStrategy.LOWEST_PRICE)
+
+        # Set default price type if not provided
+        if not self.price_type:
+            object.__setattr__(self, ""price_type"", PriceType.ONDEMAND)
+
+        return self
+
+    def to_aws_api_format(self) -> Dict[str, Any]:
+        """"""Convert to AWS API format.""""""
+        return {
+            ""handler_type"": self.handler_type.value,
+            ""fleet_type"": self.fleet_type.value if self.fleet_type else None,
+            ""allocation_strategy"": (
+                self.allocation_strategy.value if self.allocation_strategy else None
+            ),
+            ""price_type"": self.price_type.value if self.price_type else None,
+            ""subnet_ids"": [subnet.value for subnet in self.subnet_ids],
+            ""security_group_ids"": [sg.value for sg in self.security_group_ids],
+        }
+","diff --git a/src/providers/aws/domain/template/value_objects.py b/src/providers/aws/domain/template/value_objects.py
+index 492fb551..38b0d75f 100644
+--- a/src/providers/aws/domain/template/value_objects.py
++++ b/src/providers/aws/domain/template/value_objects.py
+@@ -225,7 +225,7 @@ def _missing_(cls, value):
+                 return new_member
+         except Exception:
+             # Fall through to hardcoded fallback
+-            pass
++            pass  # nosec B110
+ 
+         # Fallback to hardcoded values for safety
+         fallback_values = {
+@@ -285,7 +285,7 @@ def _missing_(cls, value):
+                 return new_member
+         except Exception:
+             # Fall through to hardcoded fallback
+-            pass
++            pass  # nosec B110
+ 
+         # Fallback to hardcoded values for safety
+         fallback_values = {
+",
