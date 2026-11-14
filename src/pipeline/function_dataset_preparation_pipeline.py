@@ -363,7 +363,7 @@ class FunctionDatasetPreparationPipeline:
     # 4. PIPELINE
     # ==========================================================
 
-    def prepare(self, samples):
+    def prepare(self, samples,split_name="all"):
         self.audit = self._new_audit()
 
         samples = list(samples)
@@ -375,7 +375,7 @@ class FunctionDatasetPreparationPipeline:
         self._record_stage("raw", samples)
 
         if self.audit_exporter:
-            self.audit_exporter.export_raw_samples(samples)
+            self.audit_exporter.export_raw_samples(samples,split_name)
 
         print_statistics("Raw Samples", samples)
 
@@ -395,7 +395,8 @@ class FunctionDatasetPreparationPipeline:
 
         if self.audit_exporter:
             self.audit_exporter.export_diff_localized(
-                diff_samples
+                diff_samples,
+                split_name
             )
 
         print_statistics(
@@ -425,7 +426,8 @@ class FunctionDatasetPreparationPipeline:
 
         if self.audit_exporter:
             self.audit_exporter.export_function_samples(
-                function_samples
+                function_samples,
+                split_name
             )
 
         print_statistics(
@@ -459,7 +461,8 @@ class FunctionDatasetPreparationPipeline:
 
         if self.audit_exporter:
             self.audit_exporter.export_paired_function_samples(
-                paired_function_samples
+                paired_function_samples,
+                split_name
             )
 
         print_statistics(
@@ -521,7 +524,7 @@ class FunctionDatasetPreparationPipeline:
         self._record_stage("cfg_construction", cfg_samples)
 
         if self.audit_exporter:
-            self.audit_exporter.export_cfg(cfg_samples)
+            self.audit_exporter.export_cfg(cfg_samples,split_name)
 
         print_statistics(
             "After CFG Construction",
@@ -692,7 +695,8 @@ class FunctionDatasetPreparationPipeline:
 
         if self.audit_exporter:
             self.audit_exporter.export_localized(
-                localized_samples
+                localized_samples,
+                split_name
             )
 
         print_statistics(
@@ -776,7 +780,8 @@ class FunctionDatasetPreparationPipeline:
 
         if self.audit_exporter:
             self.audit_exporter.export_function_scope(
-                scoped_samples
+                scoped_samples,
+                split_name
             )
 
         print_statistics(
@@ -837,6 +842,7 @@ class FunctionDatasetPreparationPipeline:
             self.audit_exporter.export_pruned(
                 prepared_samples,
                 export_name,
+                split_name
             )
 
         print_statistics(
