@@ -2,319 +2,151 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from torch_geometric.nn import (
-    GCNConv,
-    global_max_pool
-)
+from torch_geometric.nn import GCNConv, global_max_pool
 
 
 class PhpNetGraph(nn.Module):
+    """
+    PHP vulnerability classifier with three ablation modes.
 
-    def __init__(
-        self,
-        cfg_vocab_size,
-        word2vec_dim=200
-    ):
+    Modes
+    -----
+    gcn_only:
+        CFG node-type embeddings -> GCN -> global max pooling -> classifier.
+        Ignores token vectors.
 
+    gru_only:
+        Word2Vec tokens are encoded independently within each CFG node using
+        the BiGRU. Node vectors are pooled per graph without message passing.
+        Ignores CFG node-type embeddings and CFG edges.
+
+    combined:
+        Original architecture: concatenate each node's BiGRU representation
+        and CFG node-type embedding, then apply GCN and graph pooling.
+
+    All modes return two-class logits with shape [batch_size, 2].
+    """
+
+    VALID_MODES = {"gcn_only", "gru_only", "combined"}
+
+    def __init__(self, cfg_vocab_size, word2vec_dim=200, mode="combined"):
         super().__init__()
 
-        #
-        # =====================================================
-        # CFG node type embedding
-        # =====================================================
-        #
+        if mode not in self.VALID_MODES:
+            raise ValueError(
+                f"Invalid mode {mode!r}. Expected one of "
+                f"{sorted(self.VALID_MODES)}."
+            )
+
+        self.mode = mode
+        self.word2vec_dim = word2vec_dim
+
+        # CFG node-type embedding (used by GCN-only and combined modes).
         self.cfg_embedding = nn.Embedding(
             num_embeddings=cfg_vocab_size,
-            embedding_dim=32
+            embedding_dim=32,
         )
 
-        #
-        # =====================================================
-        # Encode each CFG node from its Word2Vec sequence.
-        #
-        # Input:
-        #     200-d VUDENC Word2Vec
-        #
-        # Output:
-        #     64 forward + 64 backward = 128
-        # =====================================================
-        #
+        # Encode the token sequence belonging to each CFG node.
         self.gru = nn.GRU(
             input_size=word2vec_dim,
             hidden_size=64,
             num_layers=2,
             batch_first=True,
-            bidirectional=True
+            bidirectional=True,
         )
 
-        #
-        # =====================================================
-        # Graph Encoder
-        #
-        # 128-d GRU representation
-        # +
-        # 32-d CFG type representation
-        # =
-        # 160-d node representation
-        # =====================================================
-        #
-        self.conv1 = GCNConv(
-            160,
-            128
-        )
+        # GCN input dimension depends on whether token features are included.
+        gcn_input_dim = 32 if mode == "gcn_only" else 160
 
-        self.conv2 = GCNConv(
-            128,
-            256
-        )
+        self.conv1 = GCNConv(gcn_input_dim, 128)
+        self.conv2 = GCNConv(128, 256)
+        self.conv3 = GCNConv(256, 256)
 
-        self.conv3 = GCNConv(
-            256,
-            256
-        )
+        # GRU-only pools 128-dimensional node vectors; other modes pool 256.
+        classifier_input_dim = 128 if mode == "gru_only" else 256
 
-        #
-        # =====================================================
-        # Graph classifier
-        # =====================================================
-        #
         self.classifier = nn.Sequential(
-
-            nn.Linear(
-                256,
-                128
-            ),
-
+            nn.Linear(classifier_input_dim, 128),
             nn.ReLU(),
-
-            nn.Dropout(
-                0.3
-            ),
-
-            nn.Linear(
-                128,
-                2
-            )
+            nn.Dropout(0.3),
+            nn.Linear(128, 2),
         )
 
-    def encode_node(
-        self,
-        node_vectors
-    ):
+    def encode_node(self, node_vectors):
         """
-        Encode one CFG node.
+        Encode one CFG node's token vectors.
 
-        Input:
-            [num_tokens, 200]
+        Parameters
+        ----------
+        node_vectors : Tensor
+            Shape [num_tokens, word2vec_dim].
 
-        Output:
-            [128]
+        Returns
+        -------
+        Tensor
+            Shape [128], concatenating the last-layer forward and backward
+            GRU hidden states.
         """
-
-        #
-        # No usable Word2Vec tokens.
-        #
         if node_vectors.size(0) == 0:
-
             return torch.zeros(
                 128,
                 dtype=torch.float32,
-                device=node_vectors.device
+                device=node_vectors.device,
             )
 
-        #
-        # Add batch dimension.
-        #
-        # [num_tokens, 200]
-        #
-        # becomes:
-        #
-        # [1, num_tokens, 200]
-        #
-        node_vectors = (
-            node_vectors.unsqueeze(0)
-        )
+        node_vectors = node_vectors.unsqueeze(0)
+        _, hidden = self.gru(node_vectors)
 
-        #
-        # BiGRU.
-        #
-        _, hidden = self.gru(
-            node_vectors
-        )
+        forward = hidden[-2, 0]
+        backward = hidden[-1, 0]
 
-        #
-        # hidden shape:
-        #
-        # [num_layers * directions,
-        #  batch,
-        #  hidden_size]
-        #
-        # = [4, 1, 64]
-        #
-        # Last layer forward:
-        #
-        forward = hidden[
-            -2,
-            0
-        ]
+        return torch.cat((forward, backward), dim=0)
 
-        #
-        # Last layer backward:
-        #
-        backward = hidden[
-            -1,
-            0
-        ]
-
-        #
-        # 64 + 64 = 128
-        #
-        return torch.cat(
-            (
-                forward,
-                backward
-            ),
-            dim=0
-        )
-
-    def build_node_features(
-        self,
-        graph
-    ):
-
-        #
-        # =====================================================
-        # Encode every CFG node.
-        # =====================================================
-        #
-
+    def build_token_features(self, graph):
+        """Return one 128-dimensional BiGRU vector per CFG node."""
         token_features = []
 
-        for node_vectors in (
-            graph.node_token_vectors
-        ):
+        for node_vectors in graph.node_token_vectors:
+            node_vectors = node_vectors.to(graph.node_types.device)
+            token_features.append(self.encode_node(node_vectors))
 
-            node_vectors = (
-                node_vectors.to(
-                    graph.node_types.device
-                )
-            )
+        if not token_features:
+            raise ValueError("Graph batch contains no CFG nodes.")
 
-            feature = self.encode_node(
-                node_vectors
-            )
+        return torch.stack(token_features, dim=0)
 
-            token_features.append(
-                feature
-            )
+    def build_node_features(self, graph):
+        """Concatenate each node's BiGRU and CFG-type representations."""
+        token_features = self.build_token_features(graph)
+        cfg_features = self.cfg_embedding(graph.node_types)
 
-        #
-        # [num_nodes, 128]
-        #
-        token_feature = torch.stack(
-            token_features,
-            dim=0
-        )
+        return torch.cat((token_features, cfg_features), dim=1)
 
-        #
-        # =====================================================
-        # CFG node type embedding
-        # =====================================================
-        #
+    def forward(self, graph):
+        if self.mode == "gru_only":
+            # No GCN and no CFG type embedding: pool token-derived node
+            # representations directly for each graph in the batch.
+            x = self.build_token_features(graph)
+            x = global_max_pool(x, graph.batch)
 
-        cfg_feature = self.cfg_embedding(
-            graph.node_types
-        )
+        elif self.mode == "gcn_only":
+            # No GRU/token features: use CFG node types and graph edges only.
+            x = self.cfg_embedding(graph.node_types)
 
-        #
-        # [num_nodes, 32]
-        #
-        #
-        # 128 + 32 = 160
-        #
-        x = torch.cat(
-            (
-                token_feature,
-                cfg_feature
-            ),
-            dim=1
-        )
+            x = F.relu(self.conv1(x, graph.edge_index))
+            x = F.relu(self.conv2(x, graph.edge_index))
+            x = F.relu(self.conv3(x, graph.edge_index))
 
-        return x
+            x = global_max_pool(x, graph.batch)
 
-    def forward(
-        self,
-        graph
-    ):
+        else:  # combined: original architecture
+            x = self.build_node_features(graph)
 
-        #
-        # =====================================================
-        # Build node representations.
-        # =====================================================
-        #
+            x = F.relu(self.conv1(x, graph.edge_index))
+            x = F.relu(self.conv2(x, graph.edge_index))
+            x = F.relu(self.conv3(x, graph.edge_index))
 
-        x = self.build_node_features(
-            graph
-        )
+            x = global_max_pool(x, graph.batch)
 
-        #
-        # =====================================================
-        # Graph structure.
-        # =====================================================
-        #
-
-        edge_index = (
-            graph.edge_index
-        )
-
-        batch = graph.batch
-
-        #
-        # =====================================================
-        # GCN
-        # =====================================================
-        #
-
-        x = self.conv1(
-            x,
-            edge_index
-        )
-
-        x = F.relu(x)
-
-        x = self.conv2(
-            x,
-            edge_index
-        )
-
-        x = F.relu(x)
-
-        x = self.conv3(
-            x,
-            edge_index
-        )
-
-        x = F.relu(x)
-
-        #
-        # =====================================================
-        # Graph embedding
-        # =====================================================
-        #
-
-        x = global_max_pool(
-            x,
-            batch
-        )
-
-        #
-        # =====================================================
-        # Classification
-        # =====================================================
-        #
-
-        logits = self.classifier(
-            x
-        )
-
-        return logits
+        return self.classifier(x)
