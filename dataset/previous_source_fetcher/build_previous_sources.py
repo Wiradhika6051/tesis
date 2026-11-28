@@ -9,7 +9,7 @@ from checkpoint import (
 )
 
 
-DATASET = "../../data/plain_sql.jsonl"
+DATASET = "../../data/plain_xss.jsonl"
 
 REPOSITORY_ROOT = "../../data/repositories"
 
@@ -20,50 +20,49 @@ OUTPUT_FILE = "../../data/previous_sources.pkl"
 REPORT_FILE = "../../data/previous_sources_report.json"
 
 
-def load_dataset(
-    jsonl_path
-):
 
+def load_dataset(jsonl_path):
+    repositories = {}
+
+    with open(jsonl_path, "r", encoding="utf-8") as f:
+        for line_number, line in enumerate(f, start=1):
+            if not line.strip():
+                continue
+
+            data = json.loads(line)
+
+            repo_url = data["repo_url"]
+            commit_sha = data.get("commit_sha") or data["sha"]
+
+            if repo_url not in repositories:
+                repositories[repo_url] = {
+                    "repo": repo_url,
+                    "commits": [],
+                    "_seen_commits": set(),
+                }
+
+            repo = repositories[repo_url]
+
+            # Avoid adding the same commit twice.
+            if commit_sha in repo["_seen_commits"]:
+                continue
+
+            repo["_seen_commits"].add(commit_sha)
+
+            repo["commits"].append({
+                "sha": commit_sha,
+                "files": data.get("files", {}),
+            })
+
+    # Remove internal deduplication metadata.
     dataset = []
 
-    with open(
-        jsonl_path,
-        "r",
-        encoding="utf-8"
-    ) as f:
-
-        for line in f:
-
-            data = json.loads(
-                line
-            )
-
-            for repo_url, repo in data.items():
-
-                commits = []
-
-                for commit in repo.values():
-
-                    commits.append({
-
-                        "sha": commit["sha"],
-
-                        "files": commit.get(
-                            "files",
-                            {}
-                        )
-
-                    })
-
-                dataset.append({
-
-                    "repo": repo_url,
-
-                    "commits": commits
-
-                })
+    for repo in repositories.values():
+        repo.pop("_seen_commits")
+        dataset.append(repo)
 
     return dataset
+
 
 
 def main():

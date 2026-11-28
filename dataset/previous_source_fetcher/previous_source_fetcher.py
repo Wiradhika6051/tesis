@@ -101,69 +101,51 @@ def fetch_previous_sources(
             #
             # Process files
             #
-            for filename in commit.get(
-                "files",
-                {}
-            ):
 
-                stats.increment(
-                    "files"
+            for filename in commit.get("files", {}):
+
+                stats.increment("files")
+
+                filename = filename.lstrip("/")
+
+                key = (repo_url, sha, filename)
+
+                if key in repo_lookup:
+                    continue
+
+                # Source before the fix.
+                vulnerable_source = git.get_source(
+                    parent_sha,
+                    filename
                 )
 
-                filename = filename.lstrip(
-                    "/"
-                )
-
-                key = (
-                    repo_url,
+                # Source after the fix.
+                fixed_source = git.get_source(
                     sha,
                     filename
                 )
 
-                #
-                # Already fetched
-                #
-                if key in repo_lookup:
-
-                    continue
-
-                source = git.get_previous_source(
-                    parent_sha,
-                    filename
-                )
-                
-
-                if source is None:
-
+                # Both revisions must be available.
+                if (
+                    vulnerable_source is None
+                    or fixed_source is None
+                ):
                     repo_lookup[key] = None
 
-                    stats.increment(
-                        "files_missing"
-                    )
-
-                    stats.increment(
-                        "file_failures"
-                    )
-
+                    stats.increment("files_missing")
+                    stats.increment("file_failures")
                     continue
 
                 repo_lookup[key] = {
-
                     "repo": repo_url,
-
                     "commit": sha,
-
                     "parent": parent_sha,
-
                     "filename": filename,
-
-                    "source": source
-
+                    "vulnerable_source": vulnerable_source,
+                    "fixed_source": fixed_source,
                 }
 
-                stats.increment(
-                    "files_success"
-                )
+                stats.increment("files_success")
 
         #
         # Save checkpoint
